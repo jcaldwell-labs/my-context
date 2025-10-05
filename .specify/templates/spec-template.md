@@ -100,6 +100,12 @@ When creating this spec from a user prompt:
 - [ ] Scope is clearly bounded
 - [ ] Dependencies and assumptions identified
 
+### Cross-Platform Considerations *(for CLI tools)*
+- [ ] Path handling scenarios identified (Windows vs POSIX)
+- [ ] Shell environment compatibility addressed (cmd/PowerShell/bash/WSL)
+- [ ] Text I/O format specified (for composability with shell tools)
+- [ ] Platform-specific edge cases documented
+
 ---
 
 ## Execution Status

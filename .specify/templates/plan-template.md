@@ -1,4 +1,3 @@
-
 # Implementation Plan: [FEATURE]
 
 **Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
@@ -47,7 +46,33 @@
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+**I. Unix Philosophy Compliance**
+- [ ] Each component does one thing well
+- [ ] Commands use text-based I/O (stdin/args → stdout, errors → stderr)
+- [ ] Components are composable and chainable with standard shell tools
+- [ ] No unnecessary coupling between commands
+
+**II. Cross-Platform Compatibility**
+- [ ] Design works across cmd.exe, PowerShell, git-bash, and WSL
+- [ ] Path handling normalizes Windows and POSIX conventions
+- [ ] No platform-specific dependencies without abstraction layer
+
+**III. Stateful Context Management**
+- [ ] Feature respects single active context model
+- [ ] Context state persists in home directory (not dev folder)
+- [ ] Operations default to current context appropriately
+
+**IV. Minimal Surface Area**
+- [ ] No new commands unless absolutely necessary (prefer extending existing)
+- [ ] Configuration avoided - sensible defaults used
+- [ ] Help documentation included for any user-facing changes
+
+**V. Data Portability**
+- [ ] All data stored as plain text (JSON for structured, newline-delimited for logs)
+- [ ] No proprietary formats introduced
+- [ ] Data remains readable/editable with standard tools (grep, cat, text editors)
+
+**Violations & Justifications**: [Document any principle violations with rationale]
 
 ## Project Structure
 
