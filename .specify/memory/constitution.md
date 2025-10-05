@@ -1,3 +1,32 @@
+<!--
+SYNC IMPACT REPORT (2025-10-05)
+
+Version Change: 1.0.0 → 1.0.1
+
+Change Summary:
+- PATCH bump: Constitution restored after accidental template reset
+- No principle modifications
+- No new sections added or removed
+- Clarification: Project transitioning from initial development to maintenance phase
+
+Template Sync Status:
+✅ plan-template.md - Constitution Check section references 5 principles (verified)
+✅ spec-template.md - Cross-platform testing guidance present (verified)
+✅ tasks-template.md - Phase 3.2 TDD enforcement present (verified)
+✅ agent-file-template.md - Generic guidance, no constitution-specific updates needed
+
+Follow-up Items:
+- None (all templates remain aligned with constitution v1.0.0 principles)
+
+Notes:
+- Project status: Transitioning to maintenance mode with a few more features planned
+- Constitution principles remain stable and applicable
+- Next version bump likely MINOR when new maintenance-phase principles emerge
+
+Suggested Commit Message:
+docs: restore constitution to v1.0.1 (patch - no principle changes)
+-->
+
 # My-Context-Copilot Constitution
 
 ## Core Principles
@@ -27,7 +56,7 @@ Context lifecycle: start → (note/file/touch operations) → stop/start-new.
 **Rationale**: Mental context switching requires clear boundaries. Automatic context closure prevents state confusion. Centralized state storage enables cross-shell context sharing and prevents orphaned context data.
 
 ### IV. Minimal Surface Area
-Commands: start, stop, note, file, touch, list, show (minimal essential operations).
+Commands: start, stop, note, file, touch, list, show, history (minimal essential operations).
 Each command has single-letter alias (e.g., `my-context n` for note).
 No configuration files unless absolutely necessary - sensible defaults.
 Help system built-in and always available.
@@ -45,16 +74,24 @@ Context home directory is self-contained and relocatable.
 ## Development Workflow
 
 ### Test-First Development
-All commands must have tests before implementation (TDD mandatory).
+All commands MUST have tests before implementation (TDD mandatory).
 Tests verify: correct output format, error handling, state transitions, cross-platform paths.
 Integration tests validate shell wrapper behavior across cmd/bash/WSL.
 Red-Green-Refactor cycle strictly enforced.
+
+**Blocking Gate**: Phase 3.2 (Write Tests) must complete before Phase 3.3 (Implementation).
+Cannot proceed to implementation without failing tests proving no code exists yet.
 
 ### Code Review Gates
 PRs must verify compliance with all five core principles.
 Path handling changes require tests on Windows (backslash) and POSIX (forward slash).
 New subcommands require documentation update and help text.
 Breaking changes to command output format require MAJOR version bump.
+
+### Specification-Driven Development
+Every feature starts with a specification (see SDLC.md).
+Quality gates enforce: spec → clarify → plan → tasks → implement → review → merge.
+Constitution compliance checked at planning stage and before merge.
 
 ## Governance
 
@@ -64,40 +101,15 @@ Amendments require:
 1. Documentation of principle change rationale
 2. Update to all affected templates (plan, spec, tasks)
 3. Migration plan for existing users if breaking changes introduced
+4. Version bump following semantic versioning rules
 
 All code reviews and design discussions must reference applicable principles when making decisions.
 
 Versioning follows semantic versioning (MAJOR.MINOR.PATCH):
-- MAJOR: Breaking CLI changes, output format incompatibilities
-- MINOR: New subcommands, new optional flags, backward-compatible additions
-- PATCH: Bug fixes, documentation, internal refactoring
+- **MAJOR**: Breaking CLI changes, output format incompatibilities, principle removal/redefinition
+- **MINOR**: New subcommands, new optional flags, backward-compatible additions, new principles
+- **PATCH**: Bug fixes, documentation, internal refactoring, clarifications
 
-**Version**: 1.0.0 | **Ratified**: 2025-10-04 | **Last Amended**: 2025-10-04
+For runtime development guidance, refer to `CLAUDE.md` (Claude Code), `README.md` (user documentation), and `SDLC.md` (development process).
 
-<!--
-SYNC IMPACT REPORT (2025-10-04)
-
-Version Change: Initial creation → 1.0.0
-
-Constitution Summary:
-- Five core principles established
-- Unix Philosophy: composability, text I/O, single-purpose commands
-- Cross-Platform Compatibility: cmd/bash/WSL support requirement
-- Stateful Context Management: one active context, automatic transitions
-- Minimal Surface Area: <10 commands, zero-config defaults
-- Data Portability: plain text storage, no lock-in
-
-Template Sync Status:
-✅ plan-template.md - Constitution Check section needs update to reflect 5 principles
-✅ spec-template.md - Requirements must validate cross-platform compatibility
-✅ tasks-template.md - Test tasks must include Windows/POSIX path testing
-
-Action Items:
-1. Update plan-template.md Constitution Check with new principles
-2. Update spec-template.md to include cross-platform testing scenarios
-3. Update tasks-template.md Phase 3.2 to mandate platform-specific tests
-4. Consider adding command-specific templates for CLI tool development
-
-Suggested Commit Message:
-docs: establish constitution v1.0.0 (Unix philosophy + cross-platform CLI principles)
--->
+**Version**: 1.0.1 | **Ratified**: 2025-10-04 | **Last Amended**: 2025-10-05
