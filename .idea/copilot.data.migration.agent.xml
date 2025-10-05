@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="AgentMigrationStateService">
+    <option name="pendingSessionIds">
+      <option value="fb9a0383-2e61-482c-a256-418116796b19" />
+    </option>
     <option name="pendingTurns">
       <map>
         <entry key="27dbac8b-29de-468b-8478-7e615882441b">
@@ -10,15 +13,21 @@
             </set>
           </value>
         </entry>
+        <entry key="fb9a0383-2e61-482c-a256-418116796b19">
+          <value>
+            <set>
+              <option value="c0c5882d-f40f-4f6d-bf1f-244a91f80f73" />
+              <option value="eccd2c27-8ada-4331-ae5f-ec46afcc9781" />
+            </set>
+          </value>
+        </entry>
       </map>
     </option>
     <pendingWorkingSetItems>
-      <entry key="27dbac8b-29de-468b-8478-7e615882441b">
+      <entry key="27dbac8b-29de-468b-8478-7e615882441b" />
+      <entry key="fb9a0383-2e61-482c-a256-418116796b19">
         <set>
-          <option value="file://$PROJECT_DIR$/specs/002-gap-analysis-and/spec.md" />
-          <option value="file://$PROJECT_DIR$/specs/002-gap-analysis-and/plan.md" />
-          <option value="file://$PROJECT_DIR$/specs/002-gap-analysis-and/gap-analysis.md" />
-          <option value="file://$PROJECT_DIR$/SDLC.md" />
+          <option value="file://$PROJECT_DIR$/SPRINT-01-RETROSPECTIVE.md" />
         </set>
       </entry>
     </pendingWorkingSetItems>
