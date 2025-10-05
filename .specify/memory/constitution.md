@@ -1,30 +1,46 @@
 <!--
 SYNC IMPACT REPORT (2025-10-05)
 
-Version Change: 1.0.0 → 1.0.1
+Version Change: 1.0.1 → 1.1.0
 
 Change Summary:
-- PATCH bump: Constitution restored after accidental template reset
-- No principle modifications
-- No new sections added or removed
-- Clarification: Project transitioning from initial development to maintenance phase
+- MINOR bump: New principle added (Principle VI: User-Driven Design)
+- Sprint 1 retrospective findings incorporated
+- No existing principles modified
+- Added guidance on observing organic user patterns and prioritizing user-requested features
+
+New Sections Added:
+- Principle VI: User-Driven Design (prioritize observed user workflows over assumed needs)
+
+Modified Sections:
+- Development Workflow: Added "Sprint Retrospectives" subsection
+- Governance: Updated to reference Sprint 1 learnings
 
 Template Sync Status:
-✅ plan-template.md - Constitution Check section references 5 principles (verified)
-✅ spec-template.md - Cross-platform testing guidance present (verified)
-✅ tasks-template.md - Phase 3.2 TDD enforcement present (verified)
-✅ agent-file-template.md - Generic guidance, no constitution-specific updates needed
+✅ plan-template.md - Constitution Check will need VI added (pending update)
+✅ spec-template.md - User Scenarios section aligns with VI (no changes needed)
+✅ tasks-template.md - TDD principles remain unchanged (verified)
+⚠️ Templates need VI added to Constitution Check gates
 
 Follow-up Items:
-- None (all templates remain aligned with constitution v1.0.0 principles)
+- Update plan-template.md Constitution Check to include Principle VI
+- Sprint 2 spec should validate against all 6 principles
+- Consider adding "user workflow observation" to research.md template
+
+Rationale for MINOR bump:
+- New principle expands governance without invalidating existing work
+- Sprint 1 delivered successfully under 5 principles
+- VI formalizes emergent best practice discovered during Sprint 1
+- Backward compatible: existing features comply with VI retroactively
 
 Notes:
-- Project status: Transitioning to maintenance mode with a few more features planned
-- Constitution principles remain stable and applicable
-- Next version bump likely MINOR when new maintenance-phase principles emerge
+- Sprint 1 revealed users adopted "project: phase - description" naming convention organically
+- Users manually exported contexts and prefixed notes (PLAN/WORK/OVERHEAD)
+- Project filter and export commands are direct responses to observed behavior
+- This principle ensures future features validate against real usage patterns
 
 Suggested Commit Message:
-docs: restore constitution to v1.0.1 (patch - no principle changes)
+docs: amend constitution to v1.1.0 (add Principle VI: User-Driven Design from Sprint 1 learnings)
 -->
 
 # My-Context-Copilot Constitution
@@ -71,6 +87,14 @@ Context home directory is self-contained and relocatable.
 
 **Rationale**: Users must own their data without tool lock-in. Plain text enables git versioning, grep searches, and direct editing. Standard formats support scripting and third-party tool integration.
 
+### VI. User-Driven Design
+Observe and formalize organic user patterns before imposing structure.
+Prioritize features that automate existing manual workflows over assumed needs.
+User-requested features (validated through retrospectives) take precedence over speculative enhancements.
+Tool adapts to user conventions (e.g., naming patterns) rather than enforcing rigid schemas.
+
+**Rationale**: Sprint 1 revealed users organically adopted `"project: phase - description"` naming conventions and manual export workflows without prompting. High-value features emerge from observing real usage patterns, not predicted requirements. Features that automate existing manual processes (export command, project filters) deliver immediate ROI. User feedback loops (retrospectives, feature requests) prevent feature bloat and ensure development focuses on validated needs.
+
 ## Development Workflow
 
 ### Test-First Development
@@ -83,7 +107,7 @@ Red-Green-Refactor cycle strictly enforced.
 Cannot proceed to implementation without failing tests proving no code exists yet.
 
 ### Code Review Gates
-PRs must verify compliance with all five core principles.
+PRs must verify compliance with all six core principles.
 Path handling changes require tests on Windows (backslash) and POSIX (forward slash).
 New subcommands require documentation update and help text.
 Breaking changes to command output format require MAJOR version bump.
@@ -93,9 +117,20 @@ Every feature starts with a specification (see SDLC.md).
 Quality gates enforce: spec → clarify → plan → tasks → implement → review → merge.
 Constitution compliance checked at planning stage and before merge.
 
+### Sprint Retrospectives
+Each sprint concludes with retrospective ceremony documenting:
+- What went well (preserve patterns)
+- What went wrong (tech debt, bugs)
+- User-requested features with priority rankings
+- Observed user patterns and organic conventions
+- Constitution compliance assessment
+
+User requests validated through retrospectives must be prioritized over speculative features.
+Retrospective findings inform constitution amendments and next sprint planning.
+
 ## Governance
 
-This constitution supersedes all implementation decisions. When design conflicts arise, principles above determine resolution priority (I > II > III > IV > V).
+This constitution supersedes all implementation decisions. When design conflicts arise, principles above determine resolution priority (I > II > III > IV > V > VI).
 
 Amendments require:
 1. Documentation of principle change rationale
@@ -112,4 +147,8 @@ Versioning follows semantic versioning (MAJOR.MINOR.PATCH):
 
 For runtime development guidance, refer to `CLAUDE.md` (Claude Code), `README.md` (user documentation), and `SDLC.md` (development process).
 
-**Version**: 1.0.1 | **Ratified**: 2025-10-04 | **Last Amended**: 2025-10-05
+**Sprint History**:
+- Sprint 1 (2025-10-04 to 2025-10-05): Initial release, 8 commands delivered, 100% completion
+- Retrospective findings: WSL installation issues, user naming conventions discovered, project filter requested
+
+**Version**: 1.1.0 | **Ratified**: 2025-10-04 | **Last Amended**: 2025-10-05

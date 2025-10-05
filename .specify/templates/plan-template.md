@@ -1,4 +1,3 @@
-
 # Implementation Plan: [FEATURE]
 
 **Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
@@ -47,7 +46,44 @@
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+**I. Unix Philosophy** (composability, text I/O, single-purpose commands)
+- [ ] Each component does one thing well
+- [ ] Commands accept text input and produce text output (stdin/stdout/stderr)
+- [ ] No unnecessary coupling between components
+- [ ] Can be chained with standard shell tools (pipes, grep, etc.)
+
+**II. Cross-Platform Compatibility** (Windows, git-bash, WSL)
+- [ ] Works identically across cmd.exe, PowerShell, git-bash, and WSL
+- [ ] Path handling normalizes Windows backslashes and POSIX forward slashes
+- [ ] Single executable with environment detection
+- [ ] Installation separates dev folder from runtime home directory
+
+**III. Stateful Context Management** (one active context, automatic transitions)
+- [ ] Only one active context at a time
+- [ ] Starting new context automatically stops previous
+- [ ] State persists in dedicated home directory
+- [ ] All operations default to active context
+
+**IV. Minimal Surface Area** (<=10 commands, single-letter aliases, zero config)
+- [ ] Feature adds minimal new commands/flags (justify if >1 new command)
+- [ ] Each command has single-letter alias
+- [ ] Defaults are sensible (no config required)
+- [ ] Built-in help available
+
+**V. Data Portability** (plain text, no lock-in, greppable)
+- [ ] All data stored as plain text (JSON or newline-delimited logs)
+- [ ] Can export/import with standard file operations (cp, cat, grep)
+- [ ] No proprietary formats
+- [ ] Data directory is self-contained and relocatable
+
+**VI. User-Driven Design** (observe patterns, automate workflows, validate requests)
+- [ ] Feature responds to observed user behavior (not speculative)
+- [ ] Automates existing manual workflow (if applicable)
+- [ ] User request validated through retrospective or feedback (if applicable)
+- [ ] Adapts to user conventions rather than enforcing rigid structure
+
+**Violations (if any)**:
+- None / [Document justification if principles violated]
 
 ## Project Structure
 

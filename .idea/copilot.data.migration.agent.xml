@@ -18,6 +18,7 @@
             <set>
               <option value="c0c5882d-f40f-4f6d-bf1f-244a91f80f73" />
               <option value="eccd2c27-8ada-4331-ae5f-ec46afcc9781" />
+              <option value="2ee2a8c8-46c8-46df-903c-0c2d394c90ae" />
             </set>
           </value>
         </entry>
@@ -28,6 +29,8 @@
       <entry key="fb9a0383-2e61-482c-a256-418116796b19">
         <set>
           <option value="file://$PROJECT_DIR$/SPRINT-01-RETROSPECTIVE.md" />
+          <option value="file://$PROJECT_DIR$/.specify/memory/constitution.md" />
+          <option value="file://$PROJECT_DIR$/.specify/templates/plan-template.md" />
         </set>
       </entry>
     </pendingWorkingSetItems>
