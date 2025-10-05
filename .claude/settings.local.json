@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/JefferyCaldwell/projects/fl-setup/worktrees/ps-cli-dev//**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
