@@ -19,6 +19,11 @@
               <option value="c0c5882d-f40f-4f6d-bf1f-244a91f80f73" />
               <option value="eccd2c27-8ada-4331-ae5f-ec46afcc9781" />
               <option value="2ee2a8c8-46c8-46df-903c-0c2d394c90ae" />
+              <option value="316a5b17-f515-41d7-adff-31e0a9c4af50" />
+              <option value="ea6f307d-27a9-4148-a8bd-d9e70a2fbda9" />
+              <option value="b7935245-2ecb-4f54-9009-0ef3646dccd3" />
+              <option value="beb7c6f0-ab98-4461-b496-7bf19e827cfe" />
+              <option value="87cffbe9-2240-4d15-8c0f-a2dd4bba06fc" />
             </set>
           </value>
         </entry>
@@ -31,6 +36,18 @@
           <option value="file://$PROJECT_DIR$/SPRINT-01-RETROSPECTIVE.md" />
           <option value="file://$PROJECT_DIR$/.specify/memory/constitution.md" />
           <option value="file://$PROJECT_DIR$/.specify/templates/plan-template.md" />
+          <option value="file://$PROJECT_DIR$/specs/002-installation-improvements-and/spec.md" />
+          <option value="file://$PROJECT_DIR$/specs/002-installation-improvements-and/plan.md" />
+          <option value="file://$PROJECT_DIR$/specs/002-installation-improvements-and/research.md" />
+          <option value="file://$PROJECT_DIR$/specs/002-installation-improvements-and/data-model.md" />
+          <option value="file://$PROJECT_DIR$/specs/002-installation-improvements-and/contracts/export.md" />
+          <option value="file://$PROJECT_DIR$/specs/002-installation-improvements-and/contracts/archive.md" />
+          <option value="file://$PROJECT_DIR$/specs/002-installation-improvements-and/contracts/delete.md" />
+          <option value="file://$PROJECT_DIR$/specs/002-installation-improvements-and/contracts/list-enhanced.md" />
+          <option value="file://$PROJECT_DIR$/specs/002-installation-improvements-and/contracts/project-filter.md" />
+          <option value="file://$PROJECT_DIR$/specs/002-installation-improvements-and/quickstart.md" />
+          <option value="file://$PROJECT_DIR$/CLAUDE.md" />
+          <option value="file://$PROJECT_DIR$/specs/002-installation-improvements-and/tasks.md" />
         </set>
       </entry>
     </pendingWorkingSetItems>

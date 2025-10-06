@@ -71,6 +71,8 @@ specs/                   # Feature specifications
 - Each context gets isolated directory with meta.json, notes.log, files.log, touch.log
 - Global state.json tracks active context
 - Global transitions.log tracks all context switches
+- **NEW Sprint 2**: Contexts can be archived (is_archived flag in meta.json)
+- **NEW Sprint 2**: Archived contexts hidden from default list, visible with --archived flag
 
 **Cross-Platform Path Handling**:
 - Internal storage uses POSIX format (forward slashes)
@@ -84,10 +86,20 @@ specs/                   # Feature specifications
 - Each command supports single-letter aliases (e.g., `start` → `s`)
 - `--json` flag available globally for machine-readable output
 - Commands delegate to `internal/core/` for business logic
+- **NEW Sprint 2**: export (e), archive (a), delete (d) commands
+- **NEW Sprint 2**: list command supports --project, --limit, --search, --all, --archived, --active-only
+- **NEW Sprint 2**: start command supports --project flag for "project: phase" naming
+
+**Project Organization** (Sprint 2):
+- Users organize contexts with "project: phase - description" naming convention
+- `list --project <name>` filters by project (extracts text before first colon)
+- `start "Phase 1" --project ps-cli` creates "ps-cli: Phase 1"
+- Case-insensitive project matching
 
 **Output Strategy**:
 - `internal/output/human.go`: Human-readable formatting
 - `internal/output/json.go`: Machine-readable JSON with status/data/error structure
+- **NEW Sprint 2**: `internal/output/markdown.go`: Markdown export formatter
 - All commands support both formats via `--json` flag
 
 ### Data Flow Example (Start Command)
@@ -228,3 +240,36 @@ Go version: 1.25.1
 - `IMPLEMENTATION.md` - Implementation roadmap and task breakdown
 - `specs/001-cli-context-management/` - Core feature specification
 - `.specify/memory/constitution.md` - Project principles (needs customization)
+
+## Recent Changes
+
+### Sprint 2 (2025-10-05): Installation & Usability Improvements
+- **Multi-platform builds**: Static binaries for Windows, Linux, macOS (amd64 + arm64)
+- **Installation scripts**: install.sh, install.bat, install.ps1 for all platforms
+- **Project filtering**: `list --project <name>` and `start --project <name>` flags
+- **Export command**: Generate markdown summaries with `export <context> --to <path>`
+- **Archive command**: Mark completed work with `archive <context>`
+- **Delete command**: Remove contexts permanently with `delete <context>`
+- **List enhancements**: --limit, --search, --all, --archived, --active-only flags
+- **Bug fixes**: $ character preserved in notes, NULL replaced with "(none)" in history
+- **Backward compatibility**: Sprint 1 data works seamlessly with Sprint 2 binary
+
+### Sprint 1 (2025-10-04 to 2025-10-05): Initial Release
+- 8 core commands: start, stop, note, file, touch, show, list, history
+- Plain-text storage in ~/.my-context/
+- Cross-platform support (Windows, Linux, macOS, WSL)
+- Automatic context switching
+- JSON output mode
+
+## Constitution Principles
+
+This project follows strict design principles documented in `.specify/memory/constitution.md`:
+
+1. **Unix Philosophy**: Composable commands, text I/O, single purpose
+2. **Cross-Platform Compatibility**: Works on Windows, Linux, macOS, WSL
+3. **Stateful Context Management**: One active context, automatic transitions
+4. **Minimal Surface Area**: <12 commands total, single-letter aliases
+5. **Data Portability**: Plain text, no lock-in, greppable
+6. **User-Driven Design** (Sprint 2): Observe and formalize organic user patterns
+
+All feature development must align with these principles.
