@@ -42,13 +42,13 @@ Single project structure (from plan.md):
 
 ## Phase 3.1: Setup & Build Infrastructure
 
-- [ ] **T001** Create `.github/workflows/release.yml` - GitHub Actions workflow for multi-platform builds (linux/amd64, windows/amd64, darwin/amd64, darwin/arm64), generate SHA256 checksums, upload to releases
+- [x] **T001** Create `.github/workflows/release.yml` - GitHub Actions workflow for multi-platform builds (linux/amd64, windows/amd64, darwin/amd64, darwin/arm64), generate SHA256 checksums, upload to releases
 
-- [ ] **T002** Create `scripts/build-all.sh` - Shell script to build all 4 platform binaries locally with CGO_ENABLED=0, output to `bin/` directory with platform suffixes
+- [x] **T002** Create `scripts/build-all.sh` - Shell script to build all 4 platform binaries locally with CGO_ENABLED=0, output to `bin/` directory with platform suffixes
 
-- [ ] **T003** [P] Update `cmd/my-context/main.go` - Add version variables (Version, BuildTime, GitCommit) set via ldflags, update root command to display version info
+- [x] **T003** [P] Update `cmd/my-context/main.go` - Add version variables (Version, BuildTime, GitCommit) set via ldflags, update root command to display version info
 
-- [ ] **T004** [P] Create `docs/TROUBLESHOOTING.md` - Installation troubleshooting guide with platform-specific issues (WSL, Windows PATH, macOS Gatekeeper, permission errors)
+- [x] **T004** [P] Create `docs/TROUBLESHOOTING.md` - Installation troubleshooting guide with platform-specific issues (WSL, Windows PATH, macOS Gatekeeper, permission errors)
 
 ---
 
@@ -191,7 +191,7 @@ Single project structure (from plan.md):
 
 ## Phase 3.4: Build & Installation Scripts
 
-- [ ] **T027** Modify `scripts/install.sh` - Enhance Unix installer:
+- [x] **T027** Modify `scripts/install.sh` - Enhance Unix installer:
   - Detect existing installation (backup old binary)
   - Install to ~/.local/bin/ (create if needed)
   - Add to PATH in shell rc file (detect bash/zsh)
@@ -219,7 +219,7 @@ Single project structure (from plan.md):
   - Make executable
   - Call install.sh with downloaded binary
 
-- [ ] **T031** Update `scripts/build.sh` (if exists) or create wrapper - Add reference to build-all.sh for local multi-platform builds, document GOOS/GOARCH usage
+- [x] **T031** Update `scripts/build.sh` (if exists) or create wrapper - Add reference to build-all.sh for local multi-platform builds, document GOOS/GOARCH usage
 
 ---
 
