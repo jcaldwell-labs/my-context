@@ -11,10 +11,29 @@ import (
 func GetContextHome() string {
 	home := os.Getenv("MY_CONTEXT_HOME")
 	if home == "" {
-		userHome, _ := os.UserHomeDir()
-		home = filepath.Join(userHome, ".my-context")
+		// On WSL, prefer $HOME over os.UserHomeDir() for per-user isolation
+		// os.UserHomeDir() returns /mnt/c/Users/... which is shared across WSL users
+		if isWSL() {
+			home = filepath.Join(os.Getenv("HOME"), ".my-context")
+		} else {
+			userHome, _ := os.UserHomeDir()
+			home = filepath.Join(userHome, ".my-context")
+		}
 	}
 	return home
+}
+
+// isWSL detects if running in WSL environment
+func isWSL() bool {
+	// Check for WSL-specific indicators
+	if _, err := os.Stat("/proc/sys/fs/binfmt_misc/WSLInterop"); err == nil {
+		return true
+	}
+	// Fallback: check if /proc/version contains "microsoft"
+	if data, err := os.ReadFile("/proc/version"); err == nil {
+		return strings.Contains(strings.ToLower(string(data)), "microsoft")
+	}
+	return false
 }
 
 // EnsureContextHome creates the context home directory if it doesn't exist

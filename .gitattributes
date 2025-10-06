@@ -1,0 +1,21 @@
+# Enforce LF line endings across all platforms
+* text=auto eol=lf
+
+# Explicitly set text files to LF
+*.go text eol=lf
+*.md text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.txt text eol=lf
+
+# Windows scripts use CRLF
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files
+*.exe binary
+*.png binary
+*.jpg binary
+*.gif binary

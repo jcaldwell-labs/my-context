@@ -157,6 +157,19 @@ func ExtractProjectName(contextName string) string {
 - Separate metadata file: More complex, harder to share
 - **Selected**: Single markdown file with embedded metadata
 
+### Decision: Overwrite Prompt (No Automatic Timestamp Suffix)
+**Rationale**: Explicit user control prevents accidental data loss. Automatic timestamp suffixes create file clutter and make export paths unpredictable.
+
+**Implementation**:
+- If target file exists, prompt: `File exists: {path}. Overwrite? (y/N):`
+- User accepts (y): Overwrite file
+- User declines (n/Enter): Cancel export, exit code 2
+- Future consideration: Add `--force` flag to skip prompt (Sprint 3+)
+
+**Alternatives Considered**:
+- Automatic timestamp suffix: Creates unpredictable filenames, harder to script
+- Always overwrite: Too dangerous, no user control
+- **Selected**: Explicit confirmation prompt
 ### Decision: Markdown Compatibility with GitHub/VS Code/Obsidian
 **Rationale**: These are the three most popular markdown viewers/editors. Test format renders correctly in all three.
 

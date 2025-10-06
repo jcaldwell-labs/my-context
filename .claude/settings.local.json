@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Read(//c/Users/JefferyCaldwell/projects/fl-setup/worktrees/ps-cli-dev//**)"
+      "Read(//c/Users/JefferyCaldwell/projects/fl-setup/worktrees/ps-cli-dev//**)",
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)"
     ],
     "deny": [],
     "ask": []

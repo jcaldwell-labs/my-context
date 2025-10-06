@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="AgentMigrationStateService">
+    <option name="migrationStatus" value="IN_PROGRESS" />
     <option name="pendingSessionIds">
+      <option value="c9cab131-ad0f-43a3-a84f-60df09e6034c" />
       <option value="fb9a0383-2e61-482c-a256-418116796b19" />
     </option>
     <option name="pendingTurns">
@@ -10,6 +12,13 @@
           <value>
             <set>
               <option value="47327320-777c-4c98-913c-f88477bdc914" />
+            </set>
+          </value>
+        </entry>
+        <entry key="c9cab131-ad0f-43a3-a84f-60df09e6034c">
+          <value>
+            <set>
+              <option value="34a8dd91-34cd-4dff-827b-534cd0892986" />
             </set>
           </value>
         </entry>
@@ -24,6 +33,11 @@
               <option value="b7935245-2ecb-4f54-9009-0ef3646dccd3" />
               <option value="beb7c6f0-ab98-4461-b496-7bf19e827cfe" />
               <option value="87cffbe9-2240-4d15-8c0f-a2dd4bba06fc" />
+              <option value="db391fb2-110d-4721-abe0-113d46bc08ee" />
+              <option value="761c44e0-d1e8-4249-9315-a98e55692581" />
+              <option value="bff20657-7940-439b-9280-5a9fdb80d367" />
+              <option value="69d94a5e-eb1c-4f00-adc1-1499baa8d375" />
+              <option value="5c7c9212-dd0c-4dff-b2d2-7d64c9960856" />
             </set>
           </value>
         </entry>
@@ -48,6 +62,16 @@
           <option value="file://$PROJECT_DIR$/specs/002-installation-improvements-and/quickstart.md" />
           <option value="file://$PROJECT_DIR$/CLAUDE.md" />
           <option value="file://$PROJECT_DIR$/specs/002-installation-improvements-and/tasks.md" />
+          <option value="file://$PROJECT_DIR$/.github/workflows/release.yml" />
+          <option value="file://$PROJECT_DIR$/scripts/build-all.sh" />
+          <option value="file://$PROJECT_DIR$/cmd/my-context/main.go" />
+          <option value="file://$PROJECT_DIR$/docs/TROUBLESHOOTING.md" />
+          <option value="file://$PROJECT_DIR$/tests/integration/export_test.go" />
+          <option value="file://$PROJECT_DIR$/tests/integration/archive_test.go" />
+          <option value="file://$PROJECT_DIR$/tests/integration/delete_test.go" />
+          <option value="file://$PROJECT_DIR$/tests/integration/list_enhanced_test.go" />
+          <option value="file://$PROJECT_DIR$/tests/integration/project_filter_test.go" />
+          <option value="file://$PROJECT_DIR$/tests/integration/bug_fixes_test.go" />
         </set>
       </entry>
     </pendingWorkingSetItems>

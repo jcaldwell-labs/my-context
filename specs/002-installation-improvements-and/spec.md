@@ -110,7 +110,7 @@ A developer downloads my-context for the first time on their WSL environment. Th
 - What happens when a user tries to export a non-existent context?
   - System should display clear error: "Context '<name>' not found"
 - What happens when export output file already exists?
-  - System should prompt for overwrite confirmation or add timestamp suffix
+  - System should prompt for overwrite confirmation (y/N). If user declines, export is cancelled with exit code 2.
 - What happens when filtering by project that has no contexts?
   - System should display "No contexts found for project '<name>'"
 - What happens when trying to archive an already-archived context?

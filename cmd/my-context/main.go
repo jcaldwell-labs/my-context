@@ -11,7 +11,11 @@ import (
 
 var (
 	jsonOutput bool
-	version    = "1.0.0"
+
+	// Version information - set via ldflags during build
+	Version   = "dev"
+	BuildTime = "unknown"
+	GitCommit = "unknown"
 )
 
 var rootCmd = &cobra.Command{
@@ -19,7 +23,12 @@ var rootCmd = &cobra.Command{
 	Short: "Context management tool for developers",
 	Long: `my-context is a CLI tool for managing work contexts.
 Track your work sessions with notes, file associations, and timestamps.`,
-	Version: version,
+	Version: formatVersion(),
+}
+
+// formatVersion returns a formatted version string with build metadata
+func formatVersion() string {
+	return fmt.Sprintf("%s (build: %s, commit: %s)", Version, BuildTime, GitCommit)
 }
 
 func init() {
@@ -48,4 +57,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-
