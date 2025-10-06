@@ -71,7 +71,7 @@ echo -e "${GREEN}All builds completed successfully!${NC}"
 echo "Output directory: $OUTPUT_DIR/"
 echo ""
 echo "Binaries:"
-ls -lh "$OUTPUT_DIR"/*.{exe,,} 2>/dev/null | grep -v ".sha256"
+ls -lh "$OUTPUT_DIR"/my-context-* 2>/dev/null | grep -v ".sha256"
 
 echo ""
 echo "Checksums:"
@@ -84,110 +84,3 @@ echo "  ./$OUTPUT_DIR/my-context-windows-amd64.exe --version"
 echo ""
 echo -e "${YELLOW}To install locally:${NC}"
 echo "  ./scripts/install.sh"
-name: Release
-
-on:
-  push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
-jobs:
-  build:
-    name: Build Multi-Platform Binaries
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - goos: linux
-            goarch: amd64
-            output: my-context-linux-amd64
-          - goos: windows
-            goarch: amd64
-            output: my-context-windows-amd64.exe
-          - goos: darwin
-            goarch: amd64
-            output: my-context-darwin-amd64
-          - goos: darwin
-            goarch: arm64
-            output: my-context-darwin-arm64
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.21'
-
-      - name: Get version info
-        id: version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          if [ -z "$VERSION" ]; then
-            VERSION=$(git describe --tags --always --dirty)
-          fi
-          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          GIT_COMMIT=$(git rev-parse --short HEAD)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "build_time=$BUILD_TIME" >> $GITHUB_OUTPUT
-          echo "git_commit=$GIT_COMMIT" >> $GITHUB_OUTPUT
-
-      - name: Build binary for ${{ matrix.goos }}/${{ matrix.goarch }}
-        env:
-          CGO_ENABLED: 0
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          go build -ldflags "\
-            -X main.Version=${{ steps.version.outputs.version }} \
-            -X main.BuildTime=${{ steps.version.outputs.build_time }} \
-            -X main.GitCommit=${{ steps.version.outputs.git_commit }}" \
-            -o ${{ matrix.output }} ./cmd/my-context/
-
-      - name: Generate SHA256 checksum
-        run: |
-          sha256sum ${{ matrix.output }} > ${{ matrix.output }}.sha256
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: binaries
-          path: |
-            ${{ matrix.output }}
-            ${{ matrix.output }}.sha256
-
-  release:
-    name: Create Release
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: binaries
-          path: ./binaries
-
-      - name: List artifacts
-        run: ls -lh ./binaries/
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ./binaries/*
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
