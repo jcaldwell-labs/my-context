@@ -30,7 +30,7 @@
 4. Generate Functional Requirements
    → Build system, installation scripts, new flags, new commands
 5. Identify Key Entities
-   → Binary artifacts, installation scripts, project metadata, export documents
+   → Binary artifacts, installation scripts, project extraction, export documents
 6. Run Review Checklist
    → All requirements testable and aligned with Sprint 1 retrospective findings
 7. Return: SUCCESS (spec ready for planning)
@@ -161,7 +161,8 @@ A developer downloads my-context for the first time on their WSL environment. Th
 - **FR-005.4**: Export MUST support `--all` flag to export all contexts
 - **FR-005.5**: Export output MUST be markdown format containing: context name, start/end times, duration, notes (with timestamps), file associations, touch events
 - **FR-005.6**: Export MUST create parent directories if output path doesn't exist
-- **FR-005.7**: Export MUST handle file overwrite with confirmation or timestamp suffix
+- **FR-005.7**: Export MUST prompt for confirmation if output file exists (unless --force flag skips prompt)
+- **FR-005.8**: Export MUST support `--force` flag to overwrite existing files without confirmation
 
 #### FR-006: List Command Enhancements
 - **FR-006.1**: `list` command MUST show only last 10 contexts by default

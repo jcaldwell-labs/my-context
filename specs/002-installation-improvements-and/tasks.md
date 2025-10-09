@@ -9,7 +9,7 @@
 1. Load plan.md from feature directory
    → ✅ Loaded: Go 1.21+, Cobra (existing), multi-platform builds
 2. Load design documents:
-   → ✅ research.md: 7 key decisions (static builds, user install, project parsing, etc.)
+   → ✅ research.md: 7 key decisions (static builds, user install, project extraction, etc.)
    → ✅ data-model.md: 5 entities (Context modified, ProjectMetadata, ExportDocument, BinaryArtifact, InstallationMetadata)
    → ✅ contracts/: 5 command contracts (export, archive, delete, list-enhanced, project-filter)
    → ✅ quickstart.md: 9 test scenarios

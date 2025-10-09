@@ -8,11 +8,12 @@ import (
 
 // Context represents a work session with associated metadata
 type Context struct {
-	Name             string    `json:"name"`
-	StartTime        time.Time `json:"start_time"`
+	Name             string     `json:"name"`
+	StartTime        time.Time  `json:"start_time"`
 	EndTime          *time.Time `json:"end_time,omitempty"`
-	Status           string    `json:"status"` // "active" or "stopped"
-	SubdirectoryPath string    `json:"subdirectory_path,omitempty"`
+	Status           string     `json:"status"` // "active" or "stopped"
+	SubdirectoryPath string     `json:"subdirectory_path,omitempty"`
+	IsArchived       bool       `json:"is_archived"`
 }
 
 // Validate checks if the context has valid data
@@ -41,6 +42,10 @@ func (c *Context) Validate() error {
 		return fmt.Errorf("active context cannot have an end time")
 	}
 
+	if c.IsArchived && c.Status == "active" {
+		return fmt.Errorf("cannot archive an active context")
+	}
+
 	return nil
 }
 
@@ -56,4 +61,3 @@ func (c *Context) Duration() time.Duration {
 func (c *Context) IsActive() bool {
 	return c.Status == "active"
 }
-

@@ -140,6 +140,8 @@ func GetContextDir(contextName string) string {
 func SanitizeContextName(name string) string {
 	// Replace spaces with underscores
 	sanitized := strings.ReplaceAll(name, " ", "_")
+	// Replace colons (invalid on Windows)
+	sanitized = strings.ReplaceAll(sanitized, ":", "_")
 	// Remove any remaining path separators
 	sanitized = strings.ReplaceAll(sanitized, "/", "_")
 	sanitized = strings.ReplaceAll(sanitized, "\\", "_")
@@ -180,20 +182,53 @@ func GetTransitionsLogPath() string {
 
 // GetMetaJSONPath returns the path to a context's meta.json file
 func GetMetaJSONPath(contextName string) string {
-	return filepath.Join(GetContextDir(contextName), "meta.json")
+	sanitized := SanitizeContextName(contextName)
+	return filepath.Join(GetContextDir(sanitized), "meta.json")
 }
 
 // GetNotesLogPath returns the path to a context's notes.log file
 func GetNotesLogPath(contextName string) string {
-	return filepath.Join(GetContextDir(contextName), "notes.log")
+	sanitized := SanitizeContextName(contextName)
+	return filepath.Join(GetContextDir(sanitized), "notes.log")
 }
 
 // GetFilesLogPath returns the path to a context's files.log file
 func GetFilesLogPath(contextName string) string {
-	return filepath.Join(GetContextDir(contextName), "files.log")
+	sanitized := SanitizeContextName(contextName)
+	return filepath.Join(GetContextDir(sanitized), "files.log")
 }
 
 // GetTouchLogPath returns the path to a context's touch.log file
 func GetTouchLogPath(contextName string) string {
-	return filepath.Join(GetContextDir(contextName), "touch.log")
+	sanitized := SanitizeContextName(contextName)
+	return filepath.Join(GetContextDir(sanitized), "touch.log")
+}
+
+// SanitizeFilename sanitizes a filename by replacing invalid characters
+func SanitizeFilename(name string) string {
+	// Replace invalid filename characters with underscores
+	replacer := strings.NewReplacer(
+		"/", "_",
+		"\\", "_",
+		":", "_",
+		"*", "_",
+		"?", "_",
+		"\"", "_",
+		"<", "_",
+		">", "_",
+		"|", "_",
+		" ", "_",
+	)
+	sanitized := replacer.Replace(name)
+	// Collapse multiple underscores
+	for strings.Contains(sanitized, "__") {
+		sanitized = strings.ReplaceAll(sanitized, "__", "_")
+	}
+	return strings.TrimSpace(sanitized)
+}
+
+// CreateParentDirs creates parent directories for a file path if they don't exist
+func CreateParentDirs(filePath string) error {
+	dir := filepath.Dir(filePath)
+	return os.MkdirAll(dir, 0755)
 }

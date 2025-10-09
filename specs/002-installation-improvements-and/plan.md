@@ -1,382 +1,220 @@
-# Implementation Plan: Installation & Usability Improvements
+# Implementation Plan: [FEATURE]
 
-**Branch**: `002-installation-improvements-and` | **Date**: 2025-10-05 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/002-installation-improvements-and/spec.md`
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+
+## Execution Flow (/plan command scope)
+```
+1. Load feature spec from Input path
+   → If not found: ERROR "No feature spec at {path}"
+2. Fill Technical Context (scan for NEEDS CLARIFICATION)
+   → Detect Project Type from file system structure or context (web=frontend+backend, mobile=app+api)
+   → Set Structure Decision based on project type
+3. Fill the Constitution Check section based on the content of the constitution document.
+4. Evaluate Constitution Check section below
+   → If violations exist: Document in Complexity Tracking
+   → If no justification possible: ERROR "Simplify approach first"
+   → Update Progress Tracking: Initial Constitution Check
+5. Execute Phase 0 → research.md
+   → If NEEDS CLARIFICATION remain: ERROR "Resolve unknowns"
+6. Execute Phase 1 → contracts, data-model.md, quickstart.md, agent-specific template file (e.g., `CLAUDE.md` for Claude Code, `.github/copilot-instructions.md` for GitHub Copilot, `GEMINI.md` for Gemini CLI, `QWEN.md` for Qwen Code, or `AGENTS.md` for all other agents).
+7. Re-evaluate Constitution Check section
+   → If new violations: Refactor design, return to Phase 1
+   → Update Progress Tracking: Post-Design Constitution Check
+8. Plan Phase 2 → Describe task generation approach (DO NOT create tasks.md)
+9. STOP - Ready for /tasks command
+```
+
+**IMPORTANT**: The /plan command STOPS at step 7. Phases 2-4 are executed by other commands:
+- Phase 2: /tasks command creates tasks.md
+- Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
-
-Sprint 2 addresses critical installation blockers and delivers high-value user-requested features identified in the Sprint 1 retrospective. Primary focus: multi-platform binary distribution (Windows, Linux, macOS including ARM), installation scripts for all environments, project filtering based on organic user naming conventions ("project: phase - description"), markdown export for sharing contexts, list command enhancements (pagination, search, filters), and archive/delete commands for context lifecycle management. Also fixes bugs identified in Sprint 1 ($ character in notes, NULL display in history).
+[Extract from feature spec: primary requirement + technical approach from research]
 
 ## Technical Context
-
-**Language/Version**: Go 1.21+  
-**Primary Dependencies**: 
-- github.com/spf13/cobra (CLI framework, existing)
-- github.com/spf13/viper (config, existing)
-- No new external dependencies required
-
-**Storage**: Plain-text files in `~/.my-context/` (existing structure, extended with archive flag in meta.json)  
-**Testing**: Go testing package with integration tests (existing framework)  
-**Target Platform**: Windows (amd64), Linux (amd64), macOS (amd64, arm64) - all via single Go codebase  
-**Project Type**: Single (CLI tool with `cmd/`, `internal/`, `tests/` structure)  
-
-**Performance Goals**: 
-- Build time: <30 seconds per platform
-- Binary size: <10MB per platform
-- List command: Handle 1000+ contexts with <1s response time
-- Export: Generate markdown file in <1s for typical context (50 notes)
-
-**Constraints**: 
-- Must maintain backward compatibility with Sprint 1 data structures
-- Cannot break existing CLI interface (only additions allowed)
-- Installation scripts must work on clean systems (no Go required)
-- Archive flag must be optional in meta.json (existing files lack it)
-
-**Scale/Scope**: 
-- 4 platform builds per release
-- 3 new commands (export, archive, delete)
-- 4 new flags on existing commands (--project, --limit, --search, --all, --archived, --active-only, --force)
-- 3 installation scripts (install.sh, install.bat, install.ps1)
-- 1 curl-based installer
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [single/web/mobile - determines source structure]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 **I. Unix Philosophy** (composability, text I/O, single-purpose commands)
-- [x] Each component does one thing well - Export creates markdown, archive marks status, delete removes data
-- [x] Commands accept text input and produce text output (stdin/stdout/stderr) - All new commands follow existing pattern
-- [x] No unnecessary coupling between components - Export/archive/delete are independent operations
-- [x] Can be chained with standard shell tools (pipes, grep, etc.) - Export output is markdown (greppable), list filters work with standard tools
+- [ ] Each component does one thing well
+- [ ] Commands accept text input and produce text output (stdin/stdout/stderr)
+- [ ] No unnecessary coupling between components
+- [ ] Can be chained with standard shell tools (pipes, grep, etc.)
 
 **II. Cross-Platform Compatibility** (Windows, git-bash, WSL)
-- [x] Works identically across cmd.exe, PowerShell, git-bash, and WSL - Multi-platform binaries ensure this
-- [x] Path handling normalizes Windows backslashes and POSIX forward slashes - Existing normalization in storage.go applies to new commands
-- [x] Single executable with environment detection - Go's GOOS/GOARCH handles this automatically
-- [x] Installation separates dev folder from runtime home directory - Installation scripts place binary in PATH, data stays in `~/.my-context/`
+- [ ] Works identically across cmd.exe, PowerShell, git-bash, and WSL
+- [ ] Path handling normalizes Windows backslashes and POSIX forward slashes
+- [ ] Single executable with environment detection
+- [ ] Installation separates dev folder from runtime home directory
 
 **III. Stateful Context Management** (one active context, automatic transitions)
-- [x] Only one active context at a time - No changes to this model
-- [x] Starting new context automatically stops previous - No changes to this behavior
-- [x] State persists in dedicated home directory - Archive flag added to existing meta.json
-- [x] All operations default to active context - Export/archive/delete operate on named contexts (explicit selection)
+- [ ] Only one active context at a time
+- [ ] Starting new context automatically stops previous
+- [ ] State persists in dedicated home directory
+- [ ] All operations default to active context
 
 **IV. Minimal Surface Area** (<=10 commands, single-letter aliases, zero config)
-- [x] Feature adds minimal new commands/flags (justify if >1 new command) - Adding 3 commands (export, archive, delete) brings total to 11, but all are essential lifecycle operations
-- [x] Each command has single-letter alias - export (e), archive (a), delete (d)
-- [x] Defaults are sensible (no config required) - List shows 10 by default, export outputs to current dir, delete requires confirmation
-- [x] Built-in help available - All new commands will have --help text
-
-**Justification for 3 new commands**: Export, archive, and delete represent distinct lifecycle stages (share, complete, remove) that cannot be overloaded onto existing commands without violating Unix philosophy. Total command count (11) remains reasonable for tool complexity.
+- [ ] Feature adds minimal new commands/flags (justify if >1 new command)
+- [ ] Each command has single-letter alias
+- [ ] Defaults are sensible (no config required)
+- [ ] Built-in help available
 
 **V. Data Portability** (plain text, no lock-in, greppable)
-- [x] All data stored as plain text (JSON or newline-delimited logs) - Archive adds boolean to meta.json, export generates markdown
-- [x] Can export/import with standard file operations (cp, cat, grep) - Export explicitly enables this, archive flag is readable JSON
-- [x] No proprietary formats - Markdown export is universally readable
-- [x] Data directory is self-contained and relocatable - No changes to `~/.my-context/` structure
+- [ ] All data stored as plain text (JSON or newline-delimited logs)
+- [ ] Can export/import with standard file operations (cp, cat, grep)
+- [ ] No proprietary formats
+- [ ] Data directory is self-contained and relocatable
 
 **VI. User-Driven Design** (observe patterns, automate workflows, validate requests)
-- [x] Feature responds to observed user behavior (not speculative) - Project filter responds to "project: phase" naming convention observed in Sprint 1
-- [x] Automates existing manual workflow (if applicable) - Export automates manual copy to contexts/ directory, project filter formalizes manual parsing
-- [x] User request validated through retrospective or feedback (if applicable) - All features from Sprint 1 retrospective P1 user requests
-- [x] Adapts to user conventions rather than enforcing rigid structure - Project filter parses existing names, doesn't require schema change
+- [ ] Feature responds to observed user behavior (not speculative)
+- [ ] Automates existing manual workflow (if applicable)
+- [ ] User request validated through retrospective or feedback (if applicable)
+- [ ] Adapts to user conventions rather than enforcing rigid structure
 
 **Violations (if any)**:
-- None - All principles satisfied. The addition of 3 commands (bringing total to 11) is justified by distinct lifecycle operations and remains within reasonable cognitive load.
+- None / [Document justification if principles violated]
 
 ## Project Structure
 
 ### Documentation (this feature)
 ```
-specs/002-installation-improvements-and/
-├── plan.md              # This file
-├── spec.md              # Feature specification (exists)
-├── research.md          # Phase 0 output (to be generated)
-├── data-model.md        # Phase 1 output (to be generated)
-├── quickstart.md        # Phase 1 output (to be generated)
-├── contracts/           # Phase 1 output (to be generated)
-│   ├── export.md
-│   ├── archive.md
-│   ├── delete.md
-│   ├── list-enhanced.md
-│   └── project-filter.md
+specs/[###-feature]/
+├── plan.md              # This file (/plan command output)
+├── research.md          # Phase 0 output (/plan command)
+├── data-model.md        # Phase 1 output (/plan command)
+├── quickstart.md        # Phase 1 output (/plan command)
+├── contracts/           # Phase 1 output (/plan command)
 └── tasks.md             # Phase 2 output (/tasks command - NOT created by /plan)
 ```
 
 ### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 ```
-cmd/
-└── my-context/
-    └── main.go          # Add version info for binaries
-
-internal/
-├── commands/
-│   ├── export.go        # NEW: Export command implementation
-│   ├── archive.go       # NEW: Archive command implementation
-│   ├── delete.go        # NEW: Delete command implementation
-│   ├── list.go          # MODIFY: Add --project, --limit, --search, --all, --archived, --active-only flags
-│   ├── start.go         # MODIFY: Add --project flag
-│   ├── note.go          # MODIFY: Fix $ character escaping bug
-│   └── history.go       # MODIFY: Replace NULL with "(none)"
-├── core/
-│   ├── context.go       # MODIFY: Add archive status handling, project extraction, delete operation
-│   └── storage.go       # MODIFY: Add markdown export formatter
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
+src/
 ├── models/
-│   └── context.go       # MODIFY: Add IsArchived field to Context struct
-└── output/
-    ├── human.go         # MODIFY: Update NULL display logic
-    └── markdown.go      # NEW: Markdown export formatter
+├── services/
+├── cli/
+└── lib/
 
 tests/
+├── contract/
 ├── integration/
-│   ├── export_test.go   # NEW: Export command tests
-│   ├── archive_test.go  # NEW: Archive command tests
-│   ├── delete_test.go   # NEW: Delete command tests
-│   ├── list_enhanced_test.go  # NEW: List enhancements tests
-│   ├── project_filter_test.go # NEW: Project filtering tests
-│   └── bug_fixes_test.go      # NEW: Bug fix validation tests
 └── unit/
-    └── project_parser_test.go  # NEW: Unit tests for project name extraction
 
-scripts/
-├── build-all.sh         # NEW: Multi-platform build script
-├── install.sh           # MODIFY: Enhanced with upgrade detection
-├── install.bat          # NEW: Windows cmd.exe installer
-├── install.ps1          # NEW: Windows PowerShell installer
-└── curl-install.sh      # NEW: One-liner curl installer
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
+backend/
+├── src/
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
 
-.github/
-└── workflows/
-    └── release.yml      # NEW: GitHub Actions workflow for multi-platform builds
+frontend/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
 
-docs/
-└── TROUBLESHOOTING.md   # NEW: Installation troubleshooting guide
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Structure Decision**: Single project structure maintained. All new functionality integrates into existing `internal/` packages following established patterns. Build scripts added at repository root under `scripts/`. GitHub Actions workflow added for automated releases.
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
 ## Phase 0: Outline & Research
+1. **Extract unknowns from Technical Context** above:
+   - For each NEEDS CLARIFICATION → research task
+   - For each dependency → best practices task
+   - For each integration → patterns task
 
-### Research Tasks
+2. **Generate and dispatch research agents**:
+   ```
+   For each unknown in Technical Context:
+     Task: "Research {unknown} for {feature context}"
+   For each technology choice:
+     Task: "Find best practices for {tech} in {domain}"
+   ```
 
-1. **Multi-platform Go builds**
-   - Research: Go cross-compilation best practices (CGO_ENABLED=0 for static linking)
-   - Decision needed: Build automation (Makefile vs shell scripts vs GitHub Actions)
-   - Investigate: Binary signing and notarization for macOS (future consideration)
+3. **Consolidate findings** in `research.md` using format:
+   - Decision: [what was chosen]
+   - Rationale: [why chosen]
+   - Alternatives considered: [what else evaluated]
 
-2. **Installation patterns for CLI tools**
-   - Research: Standard installation locations per platform (Unix: /usr/local/bin, Windows: user-specific PATH)
-   - Decision needed: Upgrade strategy (in-place replacement vs backup-and-replace)
-   - Investigate: PATH modification across different shells (bash profile, zsh rc, PowerShell profile)
-
-3. **Project name parsing strategy**
-   - Research: Edge cases in "project: phase" pattern (multiple colons, no colons, special characters)
-   - Decision needed: Case sensitivity for project filtering
-   - Investigate: Unicode handling in project names
-
-4. **Markdown export format**
-   - Research: Standard markdown conventions for structured data (tables vs lists vs headers)
-   - Decision needed: Include metadata (timestamps, duration) vs content-only export
-   - Investigate: Compatibility with popular markdown viewers (GitHub, VS Code, Obsidian)
-
-5. **Archive vs Delete semantics**
-   - Research: Industry patterns (soft delete, trash, archive folders)
-   - Decision needed: Archive as metadata flag vs moving to subdirectory
-   - Investigate: Recovery mechanisms (unarchive command for Sprint 3?)
-
-6. **List pagination approaches**
-   - Research: CLI pagination patterns (limit/offset vs cursor-based)
-   - Decision needed: Sort order when limit applied (newest first vs oldest first)
-   - Investigate: Performance of filtering 1000+ contexts
-
-7. **Backward compatibility testing**
-   - Research: Strategies for testing old data with new code
-   - Decision needed: Migration script vs graceful degradation
-   - Investigate: Semantic versioning for data format changes
-
-**Output**: research.md with all decisions documented
+**Output**: research.md with all NEEDS CLARIFICATION resolved
 
 ## Phase 1: Design & Contracts
+*Prerequisites: research.md complete*
 
-### Data Model Changes
+1. **Extract entities from feature spec** → `data-model.md`:
+   - Entity name, fields, relationships
+   - Validation rules from requirements
+   - State transitions if applicable
 
-**Context Entity** (existing, modified):
-```
-{
-  "name": string,
-  "start_time": timestamp,
-  "end_time": timestamp (optional),
-  "status": "active" | "stopped",
-  "subdirectory_path": string,
-  "is_archived": boolean (NEW, optional for backward compat)
-}
-```
+2. **Generate API contracts** from functional requirements:
+   - For each user action → endpoint
+   - Use standard REST/GraphQL patterns
+   - Output OpenAPI/GraphQL schema to `/contracts/`
 
-**Project Metadata** (derived, not stored):
-- project_name: extracted from context name before first colon
-- Extraction logic: `strings.Split(contextName, ":")[0]` with trim
+3. **Generate contract tests** from contracts:
+   - One test file per endpoint
+   - Assert request/response schemas
+   - Tests must fail (no implementation yet)
 
-**Export Document** (output format):
-```markdown
-# Context: {name}
+4. **Extract test scenarios** from user stories:
+   - Each story → integration test scenario
+   - Quickstart test = story validation steps
 
-**Started**: {start_time}
-**Ended**: {end_time or "Active"}
-**Duration**: {calculated duration}
+5. **Update agent file incrementally** (O(1) operation):
+   - Run `.specify/scripts/bash/update-agent-context.sh claude`
+     **IMPORTANT**: Execute it exactly as specified above. Do not add or remove any arguments.
+   - If exists: Add only NEW tech from current plan
+   - Preserve manual additions between markers
+   - Update recent changes (keep last 3)
+   - Keep under 150 lines for token efficiency
+   - Output to repository root
 
-## Notes
-
-- [{timestamp}] {note_text}
-...
-
-## Associated Files
-
-- {file_path} (added {timestamp})
-...
-
-## Activity
-
-- {touch_count} touch events
-```
-
-### API Contracts
-
-**Export Command**:
-```
-Input: my-context export <context-name> [--to <path>] [--all]
-Output: Markdown file(s) with context data
-Exit codes: 0 (success), 1 (context not found), 2 (file write error)
-```
-
-**Archive Command**:
-```
-Input: my-context archive <context-name>
-Output: "Archived context: {name}"
-Side effect: Sets is_archived=true in meta.json
-Exit codes: 0 (success), 1 (context not found), 2 (already archived), 3 (context is active)
-```
-
-**Delete Command**:
-```
-Input: my-context delete <context-name> [--force]
-Output: Confirmation prompt (unless --force), then "Deleted context: {name}"
-Side effect: Removes entire context directory
-Exit codes: 0 (success), 1 (context not found), 2 (deletion cancelled), 3 (context is active)
-```
-
-**List Command Enhancements**:
-```
-Input: my-context list [--project <name>] [--limit <n>] [--search <term>] [--all] [--archived] [--active-only]
-Output: Filtered list of contexts
-Exit codes: 0 (success, even if no matches)
-```
-
-**Project Filter (Start Command)**:
-```
-Input: my-context start "<phase>" --project <project-name>
-Output: Creates context named "{project}: {phase}"
-Exit codes: 0 (success)
-```
-
-### Contract Tests (Phase 1)
-
-Generate failing tests in `tests/integration/`:
-- export_test.go: Verify markdown generation, file creation, --all flag
-- archive_test.go: Verify meta.json update, list filtering, active context rejection
-- delete_test.go: Verify directory removal, confirmation prompt, active context rejection
-- list_enhanced_test.go: Verify --limit, --search, --all flags
-- project_filter_test.go: Verify project extraction, filtering, start with --project
-- bug_fixes_test.go: Verify $ character preservation, NULL replacement
-
-### Quickstart Scenarios
-
-1. **Multi-platform installation**:
-   ```bash
-   # Linux/WSL
-   curl -sSL https://raw.githubusercontent.com/.../install.sh | bash
-   my-context --version
-   
-   # Windows (PowerShell)
-   Invoke-WebRequest -Uri "..." -OutFile install.ps1
-   .\install.ps1
-   my-context --version
-   ```
-
-2. **Project-based workflow**:
-   ```bash
-   my-context start "Phase 1 - Foundation" --project ps-cli
-   my-context note "PLAN: Initial setup"
-   my-context list --project ps-cli
-   # Shows only ps-cli contexts
-   ```
-
-3. **Export and share**:
-   ```bash
-   my-context export "ps-cli: Phase 1" --to ./docs/phase-1-summary.md
-   cat docs/phase-1-summary.md
-   # Human-readable markdown
-   ```
-
-4. **Context lifecycle**:
-   ```bash
-   my-context archive "ps-cli: Phase 1"
-   my-context list
-   # Phase 1 hidden
-   my-context list --archived
-   # Phase 1 visible
-   my-context delete "Test Context"
-   # Confirm: y
-   # Context removed permanently
-   ```
-
-### Agent Context Update
-
-Since we're using Claude Code, update `CLAUDE.md` incrementally:
-- Add: Multi-platform build commands (go build with GOOS/GOARCH)
-- Add: New commands (export, archive, delete) with brief descriptions
-- Add: Project filtering pattern ("project: phase" convention)
-- Update: Recent changes section with Sprint 2 additions
-- Keep under 150 lines for token efficiency
-
-**Output**: data-model.md, contracts/, quickstart.md, failing tests, updated CLAUDE.md
+**Output**: data-model.md, /contracts/*, failing tests, quickstart.md, agent-specific file
 
 ## Phase 2: Task Planning Approach
 *This section describes what the /tasks command will do - DO NOT execute during /plan*
 
 **Task Generation Strategy**:
-1. Load `.specify/templates/tasks-template.md` as base
-2. Generate tasks from Phase 1 contracts:
-   - Each contract → contract test task [P]
-   - Each new command → implementation task
-   - Each modified command → enhancement task
-   - Build/install infrastructure → setup tasks
-3. Order by TDD principles:
-   - Phase 3.1: Setup (build scripts, GitHub Actions)
-   - Phase 3.2: Tests First (all contract tests must fail)
-   - Phase 3.3: Core Implementation (make tests pass)
-   - Phase 3.4: Integration (installation scripts)
-   - Phase 3.5: Documentation
+- Load `.specify/templates/tasks-template.md` as base
+- Generate tasks from Phase 1 design docs (contracts, data model, quickstart)
+- Each contract → contract test task [P]
+- Each entity → model creation task [P] 
+- Each user story → integration test task
+- Implementation tasks to make tests pass
 
 **Ordering Strategy**:
-- Tests before implementation (TDD mandatory)
-- Independent tasks marked [P] for parallel execution:
-  - All contract tests can run in parallel
-  - Export, archive, delete implementations are independent
-  - Build scripts for different platforms are independent
-- Sequential tasks:
-  - Model changes before command implementations
-  - Core functions before commands that use them
-  - Bug fixes before integration tests
+- TDD order: Tests before implementation 
+- Dependency order: Models before services before UI
+- Mark [P] for parallel execution (independent files)
 
-**Estimated Output**: ~35-40 tasks
-- Setup: 3 tasks (build scripts, CI/CD, tools)
-- Tests: 8 tasks (6 integration test files + 2 unit tests)
-- Models: 2 tasks (Context model update, project extraction utility)
-- Core: 4 tasks (archive/delete/export logic, markdown formatter)
-- Commands: 6 tasks (3 new commands + 3 modified commands)
-- Installation: 4 tasks (3 scripts + 1 curl installer)
-- Documentation: 3 tasks (README, TROUBLESHOOTING, inline help)
-- Bug fixes: 2 tasks ($ character, NULL display)
-- Integration: 3 tasks (backward compat tests, upgrade tests, multi-platform validation)
+**Estimated Output**: 25-30 numbered, ordered tasks in tasks.md
 
 **IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
@@ -385,41 +223,33 @@ Since we're using Claude Code, update `CLAUDE.md` incrementally:
 
 **Phase 3**: Task execution (/tasks command creates tasks.md)  
 **Phase 4**: Implementation (execute tasks.md following constitutional principles)  
-**Phase 5**: Validation (run tests, execute quickstart.md, cross-platform validation)
+**Phase 5**: Validation (run tests, execute quickstart.md, performance validation)
 
 ## Complexity Tracking
-*No violations - Constitution Check passed*
+*Fill ONLY if Constitution Check has violations that must be justified*
 
-No additional complexity beyond Sprint 1. The 3 new commands (export, archive, delete) represent natural lifecycle operations rather than scope creep. All features directly address Sprint 1 retrospective findings and user requests.
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+
 
 ## Progress Tracking
+*This checklist is updated during execution flow*
 
 **Phase Status**:
-- [x] Phase 0: Research complete (/plan command)
-- [x] Phase 1: Design complete (/plan command)
-- [x] Phase 2: Task planning complete (/plan command - describe approach only)
+- [ ] Phase 0: Research complete (/plan command)
+- [ ] Phase 1: Design complete (/plan command)
+- [ ] Phase 2: Task planning complete (/plan command - describe approach only)
 - [ ] Phase 3: Tasks generated (/tasks command)
 - [ ] Phase 4: Implementation complete
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
-- [x] Initial Constitution Check: PASS (all 6 principles satisfied)
-- [x] Post-Design Constitution Check: PASS (re-verified after Phase 1)
-- [x] All NEEDS CLARIFICATION resolved (Sprint 1 retrospective provided all answers)
-- [x] Complexity deviations documented (none)
-
-**Artifacts Generated**:
-- [x] plan.md (this file)
-- [x] research.md (7 key decisions documented)
-- [x] data-model.md (5 entities defined)
-- [x] contracts/ directory (5 contract files)
-  - [x] export.md
-  - [x] archive.md
-  - [x] delete.md
-  - [x] list-enhanced.md
-  - [x] project-filter.md
-- [x] quickstart.md (9 end-to-end scenarios)
-- [x] CLAUDE.md updated (Sprint 2 additions)
+- [ ] Initial Constitution Check: PASS
+- [ ] Post-Design Constitution Check: PASS
+- [ ] All NEEDS CLARIFICATION resolved
+- [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v1.1.0 - See `/.specify/memory/constitution.md`*
+*Based on Constitution v2.1.1 - See `/memory/constitution.md`*

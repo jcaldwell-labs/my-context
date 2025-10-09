@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Read(//c/Users/JefferyCaldwell/projects/fl-setup/worktrees/ps-cli-dev//**)",
-      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)"
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+      "Bash(./my-context.exe export --help)",
+      "Bash(go build:*)",
+      "Bash(./my-context.exe start --help)",
+      "Bash(./my-context.exe start:*)",
+      "Bash(./my-context.exe show)",
+      "Read(//c/Users/JefferyCaldwell/.my-context/**)",
+      "Bash(cat:*)",
+      "Bash(git diff:*)",
+      "Bash(./my-context.exe list)",
+      "Bash(./my-context.exe --version)"
     ],
     "deny": [],
     "ask": []

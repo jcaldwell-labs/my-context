@@ -2,11 +2,14 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
 	"github.com/spf13/cobra"
 )
+
+var startProject string
 
 func NewStartCmd(jsonOutput *bool) *cobra.Command {
 	cmd := &cobra.Command{
@@ -20,6 +23,11 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 
 			if contextName == "" {
 				return fmt.Errorf("context name cannot be empty")
+			}
+
+			// Apply project prefix if --project flag is provided
+			if startProject != "" {
+				contextName = strings.TrimSpace(startProject) + ": " + strings.TrimSpace(contextName)
 			}
 
 			// Create the context
@@ -49,9 +57,9 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 				}
 				fmt.Print(jsonStr)
 			} else {
-				// Check if name was modified
-				if context.Name != core.SanitizeContextName(contextName) {
-					fmt.Printf("Context \"%s\" already exists.\n", core.SanitizeContextName(contextName))
+				// Check if name was modified due to duplicate (e.g., "Bug fix" → "Bug fix_2")
+				if context.Name != contextName {
+					fmt.Printf("Context \"%s\" already exists.\n", contextName)
 				}
 
 				// Show previous context stop message
@@ -65,6 +73,8 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVar(&startProject, "project", "", "Project name prefix (creates \"project: name\" format)")
 
 	return cmd
 }

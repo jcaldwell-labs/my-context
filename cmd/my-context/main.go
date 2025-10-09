@@ -13,7 +13,7 @@ var (
 	jsonOutput bool
 
 	// Version information - set via ldflags during build
-	Version   = "dev"
+	Version   = "2.0.0-dev+debian"
 	BuildTime = "unknown"
 	GitCommit = "unknown"
 )
@@ -44,6 +44,9 @@ func init() {
 	rootCmd.AddCommand(commands.NewShowCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewListCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewHistoryCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewExportCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewArchiveCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewDeleteCmd(&jsonOutput))
 }
 
 func main() {

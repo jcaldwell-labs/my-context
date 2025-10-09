@@ -8,8 +8,8 @@
 ## Signature
 
 ```bash
-my-context export <context-name> [--to <path>] [--all] [--json]
-my-context e <context-name> [--to <path>] [--all] [--json]
+my-context export <context-name> [--to <path>] [--all] [--json] [--force]
+my-context e <context-name> [--to <path>] [--all] [--json] [--force]
 ```
 
 ---
@@ -23,6 +23,7 @@ my-context e <context-name> [--to <path>] [--all] [--json]
 - `--to <path>`: Output file path (default: `./{context_name}.md`)
 - `--all`: Export all contexts to separate files
 - `--json`: Output JSON instead of markdown (optional, for programmatic use)
+- `--force`: Skip overwrite confirmation prompts (default: false)
 
 ---
 
@@ -53,16 +54,47 @@ Exported context "ps-cli: Phase 1" to ./ps-cli_Phase_1.md
 **Actions**:
 1. Create parent directories if needed (`mkdir -p contexts/`)
 2. Check if file exists at target path
-3. If exists: Prompt for overwrite confirmation (y/N)
-4. Write markdown to specified path
-5. Print success message
+3. If exists AND --force NOT specified: Prompt for overwrite confirmation (y/N)
+4. If exists AND --force specified: Overwrite without prompting
+5. Write markdown to specified path
+6. Print success message
 
-**Output**:
+**Output** (file doesn't exist or --force used):
 ```
 Exported context "Phase 1" to contexts/phase-1-summary.md
 ```
 
+**Output** (file exists, user confirms):
+```
+File exists: contexts/phase-1-summary.md
+Overwrite? (y/N): y
+Exported context "Phase 1" to contexts/phase-1-summary.md
+```
+
+**Output** (file exists, user cancels):
+```
+File exists: contexts/phase-1-summary.md
+Overwrite? (y/N): n
+Export cancelled
+```
+
 **Exit Code**: 0 (success), 2 (user cancelled overwrite)
+
+### Export with Force Flag
+
+**Input**: `my-context export "Phase 1" --to existing-file.md --force`
+
+**Actions**:
+1. Check if file exists (no prompt)
+2. Overwrite existing file without confirmation
+3. Print success message
+
+**Output**:
+```
+Exported context "Phase 1" to existing-file.md (overwritten)
+```
+
+**Exit Code**: 0 (success)
 
 ### Export All Contexts
 
@@ -110,10 +142,21 @@ Run 'my-context list --all' to see available contexts.
 
 **Output**:
 ```
-Error: Cannot write to /root/protected.md: permission denied
+Error: Permission denied writing to /root/protected.md
 ```
 
-**Exit Code**: 2
+**Exit Code**: 1 (error)
+
+### Invalid Path
+
+**Input**: `my-context export "Phase 1" --to "invalid<>path.md"`
+
+**Output**:
+```
+Error: Invalid file path: invalid<>path.md
+```
+
+**Exit Code**: 1 (error)
 
 ### No Context Name with --all Missing
 

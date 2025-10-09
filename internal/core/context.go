@@ -3,10 +3,12 @@ package core
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/models"
+	"github.com/jefferycaldwell/my-context-copilot/internal/output"
 )
 
 // CreateContext creates a new context, handling duplicate names and previous active context
@@ -15,11 +17,19 @@ func CreateContext(name string) (*models.Context, string, error) {
 		return nil, "", err
 	}
 
-	// Sanitize the name
+	// Sanitize the name for directory use
 	sanitizedName := SanitizeContextName(name)
 
-	// Resolve duplicate name
-	finalName := resolveDuplicateName(sanitizedName)
+	// Resolve duplicate directory name
+	finalDirName := resolveDuplicateName(sanitizedName)
+
+	// Preserve original name for display, append suffix if duplicate
+	displayName := name
+	if finalDirName != sanitizedName {
+		// If duplicate detected (e.g., sanitizedName_2), append to display name
+		suffix := finalDirName[len(sanitizedName):]
+		displayName = name + suffix
+	}
 
 	// Get current active context (if any)
 	state, err := GetActiveContext()
@@ -44,11 +54,11 @@ func CreateContext(name string) (*models.Context, string, error) {
 	// Create new context
 	now := time.Now()
 	context := &models.Context{
-		Name:             finalName,
+		Name:             displayName,
 		StartTime:        now,
 		EndTime:          nil,
 		Status:           "active",
-		SubdirectoryPath: GetContextDir(finalName),
+		SubdirectoryPath: GetContextDir(finalDirName),
 	}
 
 	// Create context directory
@@ -57,30 +67,30 @@ func CreateContext(name string) (*models.Context, string, error) {
 	}
 
 	// Write meta.json
-	if err := WriteJSON(GetMetaJSONPath(finalName), context); err != nil {
+	if err := WriteJSON(GetMetaJSONPath(finalDirName), context); err != nil {
 		return nil, "", err
 	}
 
 	// Create empty log files
 	for _, path := range []string{
-		GetNotesLogPath(finalName),
-		GetFilesLogPath(finalName),
-		GetTouchLogPath(finalName),
+		GetNotesLogPath(finalDirName),
+		GetFilesLogPath(finalDirName),
+		GetTouchLogPath(finalDirName),
 	} {
 		if err := os.WriteFile(path, []byte{}, 0600); err != nil {
 			return nil, "", err
 		}
 	}
 
-	// Update state
-	if err := SetActiveContext(finalName); err != nil {
+	// Update state (store display name)
+	if err := SetActiveContext(displayName); err != nil {
 		return nil, "", err
 	}
 
-	// Log transition
+	// Log transition (use display name)
 	transition := &models.ContextTransition{
 		Timestamp:      now,
-		NewContext:     &finalName,
+		NewContext:     &displayName,
 		TransitionType: transitionType,
 	}
 	if transitionType == models.TransitionSwitch {
@@ -369,3 +379,145 @@ func GetTransitions() ([]*models.ContextTransition, error) {
 	return transitions, nil
 }
 
+// ExportContext exports a context to a markdown file
+func ExportContext(contextName string, outputPath string) (string, error) {
+	// Load context data
+	ctx, notes, files, touches, err := GetContext(contextName)
+	if err != nil {
+		return "", fmt.Errorf("context %q not found", contextName)
+	}
+
+	// Convert to model types for export
+	var noteModels []models.Note
+	for _, n := range notes {
+		noteModels = append(noteModels, *n)
+	}
+
+	var fileModels []models.FileAssociation
+	for _, f := range files {
+		fileModels = append(fileModels, *f)
+	}
+
+	// Generate markdown content
+	content := output.FormatExportMarkdown(ctx, noteModels, fileModels, len(touches))
+
+	// Determine output file path
+	if outputPath == "" {
+		// Default: sanitized context name in current directory
+		sanitized := SanitizeFilename(contextName)
+		outputPath = sanitized + ".md"
+	}
+
+	// Create parent directories if needed
+	if err := CreateParentDirs(outputPath); err != nil {
+		return "", err
+	}
+
+	// Write file
+	if err := os.WriteFile(outputPath, []byte(content), 0644); err != nil {
+		return "", fmt.Errorf("failed to write export file: %w", err)
+	}
+
+	return outputPath, nil
+}
+
+// ExportAllContexts exports all contexts to separate markdown files in a directory
+func ExportAllContexts(outputDir string) ([]string, error) {
+	contexts, err := ListContexts()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := CreateDir(outputDir); err != nil {
+		return nil, err
+	}
+
+	var exportedPaths []string
+	for _, ctx := range contexts {
+		sanitized := SanitizeFilename(ctx.Name)
+		outputPath := filepath.Join(outputDir, sanitized+".md")
+
+		path, err := ExportContext(ctx.Name, outputPath)
+		if err != nil {
+			continue // Skip failed exports
+		}
+		exportedPaths = append(exportedPaths, path)
+	}
+
+	return exportedPaths, nil
+}
+
+// ArchiveContext marks a context as archived
+func ArchiveContext(contextName string) error {
+	// Load context
+	var ctx models.Context
+	metaPath := GetMetaJSONPath(contextName)
+	if err := ReadJSON(metaPath, &ctx); err != nil {
+		return fmt.Errorf("context %q not found", contextName)
+	}
+
+	// Validate: cannot archive active context
+	if ctx.Status == "active" {
+		return fmt.Errorf("cannot archive active context %q - stop it first", contextName)
+	}
+
+	// Check if already archived
+	if ctx.IsArchived {
+		return fmt.Errorf("context %q is already archived", contextName)
+	}
+
+	// Set archived flag
+	ctx.IsArchived = true
+
+	// Write updated meta.json
+	if err := WriteJSON(metaPath, &ctx); err != nil {
+		return fmt.Errorf("failed to update context: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteContext permanently removes a context and all its data
+func DeleteContext(contextName string, force bool, confirmed bool) error {
+	// Load context
+	var ctx models.Context
+	metaPath := GetMetaJSONPath(contextName)
+	if err := ReadJSON(metaPath, &ctx); err != nil {
+		return fmt.Errorf("context %q not found", contextName)
+	}
+
+	// Validate: cannot delete active context
+	if ctx.Status == "active" {
+		return fmt.Errorf("cannot delete active context %q - stop it first", contextName)
+	}
+
+	// Require confirmation unless force or already confirmed
+	if !force && !confirmed {
+		return fmt.Errorf("deletion requires confirmation")
+	}
+
+	// Remove context directory
+	// Use sanitized name to get the actual directory path (e.g., "demo: Test" → "demo__Test")
+	sanitizedName := SanitizeContextName(contextName)
+	actualDir := filepath.Join(GetContextHome(), sanitizedName)
+
+	if err := os.RemoveAll(actualDir); err != nil {
+		return fmt.Errorf("failed to delete context directory %q: %w", actualDir, err)
+	}
+
+	return nil
+}
+
+// LoadContext reads a context by name (Sprint 2: for backward compatibility testing)
+func LoadContext(contextName string) (*models.Context, error) {
+	var ctx models.Context
+	if err := ReadJSON(GetMetaJSONPath(contextName), &ctx); err != nil {
+		return nil, fmt.Errorf("context %q not found", contextName)
+	}
+	return &ctx, nil
+}
+
+// GetHomeDir returns the context home directory (for tests)
+func GetHomeDir() string {
+	return GetContextHome()
+}
