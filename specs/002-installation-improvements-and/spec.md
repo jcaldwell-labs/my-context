@@ -2,7 +2,7 @@
 
 **Feature Branch**: `002-installation-improvements-and`  
 **Created**: 2025-10-05  
-**Status**: Draft  
+**Status**: Specification Complete - Ready for Implementation  
 **Input**: User description: "Installation improvements and user-requested features: multi-platform builds, project filters, export command, list enhancements, archive/delete commands"
 
 ## Clarifications
@@ -108,9 +108,10 @@ A developer downloads my-context for the first time on their WSL environment. Th
 
 ### Edge Cases
 - What happens when a user tries to export a non-existent context?
-  - System should display clear error: "Context '<name>' not found"
+  - System should display clear error: "Context '<name>' not found" (exit code 1)
 - What happens when export output file already exists?
-  - System should prompt for overwrite confirmation (y/N). If user declines, export is cancelled with exit code 2.
+  - System should prompt for overwrite confirmation: "File exists. Overwrite? (y/N)"
+  - If user declines (enters 'n', 'N', or any non-yes input), export is cancelled with exit code 2 (following convention: 0=success, 1=error, 2=user cancellation)
 - What happens when filtering by project that has no contexts?
   - System should display "No contexts found for project '<name>'"
 - What happens when trying to archive an already-archived context?
@@ -159,9 +160,9 @@ A developer downloads my-context for the first time on their WSL environment. Th
 - **FR-005.2**: Export MUST accept context name as argument to export specific context
 - **FR-005.3**: Export MUST support `--to <path>` flag to specify output file location
 - **FR-005.4**: Export MUST support `--all` flag to export all contexts
-- **FR-005.5**: Export output MUST be markdown format containing: context name, start/end times, duration, notes (with timestamps), file associations, touch events
+- **FR-005.5**: Export output MUST be markdown format containing: context name, start/end times, duration, notes (with timestamps), file associations, touch events (file access history logged by `my-context touch <file>` command)
 - **FR-005.6**: Export MUST create parent directories if output path doesn't exist
-- **FR-005.7**: Export MUST prompt for confirmation if output file exists (unless --force flag skips prompt)
+- **FR-005.7**: Export MUST prompt for confirmation if output file exists (unless --force flag skips prompt): "File exists. Overwrite? (y/N)"
 - **FR-005.8**: Export MUST support `--force` flag to overwrite existing files without confirmation
 
 #### FR-006: List Command Enhancements
@@ -169,8 +170,8 @@ A developer downloads my-context for the first time on their WSL environment. Th
 - **FR-006.2**: `list` command MUST support `--all` flag to show all contexts
 - **FR-006.3**: `list` command MUST support `--limit <n>` flag to specify custom result count
 - **FR-006.4**: `list` command MUST support `--search <term>` flag for case-insensitive name filtering
-- **FR-006.5**: `list` command MUST support `--active-only` flag to show only active context
-- **FR-006.6**: `list` command MUST display message when more contexts exist than shown (e.g., "Showing 10 of 50 contexts. Use --all to see all.")
+- **FR-006.5**: `list` command MUST support `--active-only` flag to show only the currently active context (or message "No active context" if none is active)
+- **FR-006.6**: `list` command MUST display message when more contexts exist than shown: "Showing {displayed_count} of {total_count} contexts. Use --all to see all."
 - **FR-006.7**: Multiple filters MUST work together (e.g., `--project ps-cli --limit 5`)
 
 #### FR-007: Archive Command
@@ -263,11 +264,12 @@ A developer downloads my-context for the first time on their WSL environment. Th
 
 ---
 
-**Alignment with Constitution v1.1.0**:
-- Principle VI (User-Driven Design): ✅ Project filter and export features respond directly to observed user behavior from Sprint 1 retrospective
-- Principle II (Cross-Platform Compatibility): ✅ Multi-platform binaries address critical WSL installation blocker
-- Principle IV (Minimal Surface Area): ✅ Adds only 3 new commands (export, archive, delete) + flags to existing commands
-- Principle V (Data Portability): ✅ Export to markdown maintains plain-text philosophy
+**Design Principles Alignment**:
+This feature aligns with core design principles (formal constitution pending):
+- User-Driven Design: ✅ Project filter and export features respond directly to observed user behavior from Sprint 1 retrospective
+- Cross-Platform Compatibility: ✅ Multi-platform binaries address critical WSL installation blocker
+- Minimal Surface Area: ✅ Adds only 3 new commands (export, archive, delete) + flags to existing commands
+- Data Portability: ✅ Export to markdown maintains plain-text philosophy
 
 **Sprint 1 Retrospective Alignment**:
 - Addresses "What Went Wrong" items #1, #2, #3, #5, #7, #9

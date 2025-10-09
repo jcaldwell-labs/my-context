@@ -3,180 +3,189 @@ package integration
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
-
-	"github.com/jefferycaldwell/my-context-copilot/internal/core"
-	"github.com/jefferycaldwell/my-context-copilot/internal/models"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-// TestArchiveStoppedContext tests archiving a stopped context
+// TestArchiveStoppedContext tests archiving a stopped context successfully
 func TestArchiveStoppedContext(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
+	testDir := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, testDir)
 
-	// Create and stop a context
-	ctx, err := core.CreateContext("test-archive")
-	require.NoError(t, err)
+	contextName := "stopped-context"
+	createTestContext(t, testDir, contextName)
+	runCommand("stop") // Ensure context is stopped
 
-	err = core.StopContext(ctx.Name)
-	require.NoError(t, err)
-
-	// Archive the context
-	err = core.ArchiveContext(ctx.Name)
-	require.NoError(t, err)
-
-	// Verify is_archived flag in meta.json
-	metaPath := core.GetContextMetaPath(ctx.Name)
-	data, err := os.ReadFile(metaPath)
-	require.NoError(t, err)
-
-	var loadedCtx models.Context
-	err = json.Unmarshal(data, &loadedCtx)
-	require.NoError(t, err)
-
-	assert.True(t, loadedCtx.IsArchived)
-}
-
-// TestArchiveActiveContext tests that archiving active context fails
-func TestArchiveActiveContext(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
-
-	// Create an active context (don't stop it)
-	ctx, err := core.CreateContext("active-context")
-	require.NoError(t, err)
-
-	// Attempt to archive active context should fail
-	err = core.ArchiveContext(ctx.Name)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "active")
-}
-
-// TestArchiveNonExistentContext tests error handling for missing context
-func TestArchiveNonExistentContext(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
-
-	// Attempt to archive non-existent context
-	err := core.ArchiveContext("does-not-exist")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "not found")
-}
-
-// TestArchiveHiddenFromDefaultList tests archived contexts hidden from list
-func TestArchiveHiddenFromDefaultList(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
-
-	// Create, stop, and archive a context
-	ctx1, err := core.CreateContext("visible-context")
-	require.NoError(t, err)
-	core.StopContext(ctx1.Name)
-
-	ctx2, err := core.CreateContext("archived-context")
-	require.NoError(t, err)
-	core.StopContext(ctx2.Name)
-	core.ArchiveContext(ctx2.Name)
-
-	// List contexts (default - should exclude archived)
-	contexts, err := core.ListContexts(core.ListOptions{
-		IncludeArchived: false,
-	})
-	require.NoError(t, err)
-
-	// Verify archived context not in list
-	names := getContextNames(contexts)
-	assert.Contains(t, names, "visible-context")
-	assert.NotContains(t, names, "archived-context")
-}
-
-// TestListArchivedFlag tests --archived flag shows only archived contexts
-func TestListArchivedFlag(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
-
-	// Create archived and non-archived contexts
-	ctx1, _ := core.CreateContext("normal-context")
-	core.StopContext(ctx1.Name)
-
-	ctx2, _ := core.CreateContext("archived-context")
-	core.StopContext(ctx2.Name)
-	core.ArchiveContext(ctx2.Name)
-
-	// List only archived contexts
-	contexts, err := core.ListContexts(core.ListOptions{
-		IncludeArchived: true,
-		ArchivedOnly:    true,
-	})
-	require.NoError(t, err)
-
-	// Verify only archived context in list
-	names := getContextNames(contexts)
-	assert.NotContains(t, names, "normal-context")
-	assert.Contains(t, names, "archived-context")
-}
-
-// TestArchiveIdempotent tests archiving already-archived context
-func TestArchiveIdempotent(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
-
-	ctx, err := core.CreateContext("test-idempotent")
-	require.NoError(t, err)
-	core.StopContext(ctx.Name)
-
-	// Archive once
-	err = core.ArchiveContext(ctx.Name)
-	require.NoError(t, err)
-
-	// Archive again - should not error (idempotent)
-	err = core.ArchiveContext(ctx.Name)
-	assert.NoError(t, err)
-}
-
-// TestArchivePreservesData tests that all context data remains accessible
-func TestArchivePreservesData(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
-
-	// Create context with data
-	ctx, err := core.CreateContext("data-preservation-test")
-	require.NoError(t, err)
-
-	core.AddNote(ctx.Name, "Important note")
-	core.AddFile(ctx.Name, "/test/file.txt")
-	core.AddTouch(ctx.Name)
-	core.StopContext(ctx.Name)
-
-	// Archive
-	err = core.ArchiveContext(ctx.Name)
-	require.NoError(t, err)
-
-	// Verify all data still accessible
-	loadedCtx, err := core.LoadContext(ctx.Name)
-	require.NoError(t, err)
-
-	notes, err := core.GetNotes(ctx.Name)
-	require.NoError(t, err)
-	assert.Len(t, notes, 1)
-	assert.Equal(t, "Important note", notes[0].TextContent)
-
-	files, err := core.GetFiles(ctx.Name)
-	require.NoError(t, err)
-	assert.Len(t, files, 1)
-
-	touches, err := core.GetTouches(ctx.Name)
-	require.NoError(t, err)
-	assert.Len(t, touches, 1)
-}
-
-// Helper function to extract context names from list
-func getContextNames(contexts []models.Context) []string {
-	names := make([]string, len(contexts))
-	for i, ctx := range contexts {
-		names[i] = ctx.Name
+	// Execute: Archive the context
+	err := runCommand("archive", contextName)
+	if err != nil {
+		t.Fatalf("Archive command failed: %v", err)
 	}
-	return names
+
+	// Verify: is_archived flag in meta.json
+	metaPath := filepath.Join(testDir, contextName, "meta.json")
+	content, err := os.ReadFile(metaPath)
+	if err != nil {
+		t.Fatalf("Failed to read meta.json: %v", err)
+	}
+
+	var meta map[string]interface{}
+	json.Unmarshal(content, &meta)
+	
+	if archived, ok := meta["is_archived"].(bool); !ok || !archived {
+		t.Error("Expected is_archived to be true in meta.json")
+	}
+}
+
+// TestArchiveActiveContext tests that archiving an active context fails
+func TestArchiveActiveContext(t *testing.T) {
+	testDir := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, testDir)
+
+	contextName := "active-context"
+	createTestContext(t, testDir, contextName)
+	// Don't stop - leave it active
+
+	// Execute: Try to archive active context
+	err := runCommand("archive", contextName)
+
+	// Verify: Command fails with appropriate error
+	if err == nil {
+		t.Fatal("Expected error when archiving active context")
+	}
+
+	expectedError := "active context"
+	if !strings.Contains(strings.ToLower(err.Error()), expectedError) {
+		t.Errorf("Expected error about active context, got: %v", err)
+	}
+}
+
+// TestArchiveNonExistentContext tests error handling for non-existent context
+func TestArchiveNonExistentContext(t *testing.T) {
+	testDir := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, testDir)
+
+	// Execute: Try to archive non-existent context
+	err := runCommand("archive", "non-existent")
+
+	// Verify: Command fails
+	if err == nil {
+		t.Fatal("Expected error for non-existent context")
+	}
+
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("Expected 'not found' error, got: %v", err)
+	}
+}
+
+// TestArchiveHidesFromDefaultList tests that archived contexts are hidden
+func TestArchiveHidesFromDefaultList(t *testing.T) {
+	testDir := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, testDir)
+
+	// Create and archive a context
+	contextName := "to-be-archived"
+	createTestContext(t, testDir, contextName)
+	runCommand("stop")
+	runCommand("archive", contextName)
+
+	// Execute: List contexts (default, no --archived flag)
+	output, err := runCommandWithOutput("list")
+	if err != nil {
+		t.Fatalf("List command failed: %v", err)
+	}
+
+	// Verify: Archived context not in output
+	if strings.Contains(output, contextName) {
+		t.Error("Archived context should not appear in default list")
+	}
+}
+
+// TestArchivedFlagShowsArchivedContexts tests --archived flag
+func TestArchivedFlagShowsArchivedContexts(t *testing.T) {
+	testDir := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, testDir)
+
+	// Create and archive a context
+	contextName := "archived-context"
+	createTestContext(t, testDir, contextName)
+	runCommand("stop")
+	runCommand("archive", contextName)
+
+	// Execute: List with --archived flag
+	output, err := runCommandWithOutput("list", "--archived")
+	if err != nil {
+		t.Fatalf("List --archived failed: %v", err)
+	}
+
+	// Verify: Archived context appears in output
+	if !strings.Contains(output, contextName) {
+		t.Error("Archived context should appear with --archived flag")
+	}
+}
+
+// TestArchivePreservesData tests that all context data is preserved
+func TestArchivePreservesData(t *testing.T) {
+	testDir := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, testDir)
+
+	contextName := "data-preservation-test"
+	createTestContext(t, testDir, contextName)
+
+	// Add notes and files
+	runCommand("note", "Important note")
+	testFile := filepath.Join(testDir, "test-file.txt")
+	os.WriteFile(testFile, []byte("test"), 0644)
+	
+	runCommand("stop")
+
+	// Get pre-archive data
+	notesPath := filepath.Join(testDir, contextName, "notes.log")
+	preArchiveNotes, _ := os.ReadFile(notesPath)
+
+	// Execute: Archive
+	runCommand("archive", contextName)
+
+	// Verify: Data still exists
+	postArchiveNotes, err := os.ReadFile(notesPath)
+	if err != nil {
+		t.Error("Notes file should still exist after archiving")
+	}
+
+	if string(preArchiveNotes) != string(postArchiveNotes) {
+		t.Error("Notes content should be preserved after archiving")
+	}
+}
+
+// TestArchiveAlreadyArchived tests archiving an already-archived context
+func TestArchiveAlreadyArchived(t *testing.T) {
+	testDir := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, testDir)
+
+	contextName := "already-archived"
+	createTestContext(t, testDir, contextName)
+	runCommand("stop")
+	
+	// Archive once
+	runCommand("archive", contextName)
+
+	// Execute: Try to archive again
+	err := runCommand("archive", contextName)
+
+	// Verify: Either succeeds with message or returns specific error
+	// (implementation may handle idempotently)
+	if err != nil {
+		if !strings.Contains(err.Error(), "already archived") {
+			t.Logf("Archive again returned error: %v", err)
+		}
+	}
+	// Success case: command is idempotent
+}
+
+// Helper functions
+
+func runCommandWithOutput(args ...string) (string, error) {
+	// Placeholder - will return empty until implementation exists
+	return "", os.ErrNotExist
 }

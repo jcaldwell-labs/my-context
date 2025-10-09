@@ -1,429 +1,367 @@
 # Quickstart: Installation & Usability Improvements
 
 **Feature**: 002-installation-improvements-and  
-**Date**: 2025-10-05  
-**Purpose**: End-to-end testing scenarios for Sprint 2 features
+**Date**: 2025-10-09  
+**Purpose**: End-to-end validation scenarios for Sprint 2 features
+
+## Prerequisites
+
+- Go 1.21+ installed
+- Git repository cloned
+- Terminal access (bash/zsh for Unix, cmd.exe or PowerShell for Windows)
 
 ---
 
 ## Scenario 1: Multi-Platform Installation (WSL User)
 
-**Goal**: Install my-context on WSL without building from source
+**Objective**: Verify WSL user can install pre-built binary without building from source
 
 **Steps**:
-```bash
-# 1. Download Linux binary from releases page
-wget https://github.com/user/my-context-copilot/releases/download/v1.1.0/my-context-linux-amd64
-chmod +x my-context-linux-amd64
+1. Navigate to GitHub Releases page
+2. Download `my-context-linux-amd64`
+3. Download `my-context-linux-amd64.sha256`
+4. Verify checksum: `sha256sum -c my-context-linux-amd64.sha256`
+5. Run `./install.sh`
+6. Verify installation: `my-context --version`
+7. Verify PATH: `which my-context`
 
-# 2. Verify binary works
-./my-context-linux-amd64 --version
-# Expected: my-context version 1.1.0 (build: 2025-10-05, commit: abc123)
+**Expected Results**:
+- Checksum verification passes
+- Binary installed to `~/.local/bin/my-context`
+- PATH includes `~/.local/bin`
+- Version displays: "my-context version v2.0.0"
+- Existing ~/.my-context/ data preserved (if upgrading)
 
-# 3. Install using install script
-curl -sSL https://raw.githubusercontent.com/user/my-context-copilot/main/scripts/install.sh | bash
-
-# 4. Verify installation
-my-context --version
-which my-context
-# Expected: ~/.local/bin/my-context
-
-# 5. Verify existing data preserved (if upgrading from Sprint 1)
-my-context list
-# Expected: All Sprint 1 contexts visible
-```
-
-**Success Criteria**:
-- Binary runs without "Go not found" error
-- Installation completes without sudo
-- Binary added to PATH automatically
-- Existing contexts accessible after upgrade
+**Acceptance Criteria**: FR-001, FR-002, FR-003
 
 ---
 
 ## Scenario 2: Project-Based Workflow
 
-**Goal**: Organize work by project using new project filtering
+**Objective**: Verify project filtering and organization
 
 **Steps**:
-```bash
-# 1. Create contexts for ps-cli project
-my-context start "Phase 1 - Foundation" --project ps-cli
-my-context note "PLAN: Initial setup and requirements gathering"
-my-context note "WORK: Created spec and plan documents"
+1. Start contexts with project prefixes:
+   ```bash
+   my-context start "Phase 1" --project ps-cli
+   my-context note "Started Phase 1 work"
+   my-context stop
+   
+   my-context start "Phase 2" --project ps-cli
+   my-context note "Continuing with Phase 2"
+   my-context stop
+   
+   my-context start "Planning" --project garden
+   my-context stop
+   ```
 
-# 2. Switch to Phase 2
-my-context start "Phase 2 - Testing" --project ps-cli
-my-context note "PLAN: Test strategy defined"
+2. Filter by project:
+   ```bash
+   my-context list --project ps-cli
+   ```
 
-# 3. Work on different project
-my-context start "Research" --project garden
-my-context note "Looking into vegetable garden layouts"
+3. Verify case-insensitive matching:
+   ```bash
+   my-context list --project PS-CLI
+   my-context list --project Ps-Cli
+   ```
 
-# 4. Filter by project
-my-context list --project ps-cli
-# Expected: Shows only "ps-cli: Phase 1 - Foundation" and "ps-cli: Phase 2 - Testing"
+**Expected Results**:
+- Contexts created as: "ps-cli: Phase 1", "ps-cli: Phase 2", "garden: Planning"
+- `list --project ps-cli` shows only 2 ps-cli contexts
+- Case variations all return same results
+- garden context not shown in ps-cli filter
 
-my-context list --project garden
-# Expected: Shows only "garden: Research"
-
-# 5. List all contexts
-my-context list --all
-# Expected: Shows all 3 contexts
-```
-
-**Success Criteria**:
-- Contexts created with "project: phase" naming
-- Project filter shows only matching contexts (case-insensitive)
-- Contexts without colons treated as standalone projects
-- Multiple projects can coexist
+**Acceptance Criteria**: FR-004
 
 ---
 
-## Scenario 3: Export and Share Context
+## Scenario 3: Export and Share
 
-**Goal**: Export context data to markdown for sharing with team
+**Objective**: Verify markdown export functionality
 
 **Steps**:
-```bash
-# 1. Create and populate a context
-my-context start "Sprint 1 Retrospective"
-my-context note "What went well: TDD approach caught bugs early"
-my-context note "What went wrong: WSL installation issues"
-my-context file ~/projects/my-context-copilot/SPRINT-01-RETROSPECTIVE.md
-my-context touch
-my-context stop
+1. Export single context:
+   ```bash
+   my-context export "ps-cli: Phase 1"
+   ```
 
-# 2. Export to default location
-my-context export "Sprint 1 Retrospective"
-# Expected: Creates ./Sprint_1_Retrospective.md
+2. Verify output file exists: `ls ps-cli-Phase-1.md`
 
-# 3. Verify markdown content
-cat Sprint_1_Retrospective.md
-# Expected: Human-readable markdown with:
-#   - Context name as header
-#   - Start/end times and duration
-#   - All notes with timestamps
-#   - File associations
-#   - Touch event count
+3. Export to custom path:
+   ```bash
+   my-context export "ps-cli: Phase 2" --to reports/phase2.md
+   ```
 
-# 4. Export to specific location
-my-context export "Sprint 1 Retrospective" --to docs/retrospectives/sprint-1.md
-# Expected: Creates docs/retrospectives/sprint-1.md (with parent dirs)
+4. Verify overwrite prompt:
+   ```bash
+   my-context export "ps-cli: Phase 1"  # Should prompt
+   n  # Decline
+   echo $?  # Should be 2
+   ```
 
-# 5. Export all contexts
-mkdir -p exports
-my-context export --all --to exports/
-# Expected: Creates separate .md file for each context in exports/
-```
+5. Force overwrite:
+   ```bash
+   my-context export "ps-cli: Phase 1" --force
+   ```
 
-**Success Criteria**:
-- Markdown file generated with all context data
-- File renders correctly in GitHub/VS Code
-- Timestamps in local timezone
-- Duration calculated correctly
-- Parent directories created if needed
+6. Verify markdown content:
+   - Open exported file in text editor
+   - Verify headers, notes, files, timestamps present
+   - Verify timestamps are in local timezone
+
+**Expected Results**:
+- Export succeeds with clear success message
+- Markdown file is valid and human-readable
+- Custom paths create parent directories
+- Overwrite protection works (prompts user)
+- --force bypasses prompt
+- Timestamps in local timezone (not UTC)
+
+**Acceptance Criteria**: FR-005
 
 ---
 
-## Scenario 4: Context Lifecycle (Archive and Delete)
+## Scenario 4: Context Lifecycle (Archive & Delete)
 
-**Goal**: Manage completed and test contexts
+**Objective**: Verify archive and delete operations
 
 **Steps**:
-```bash
-# 1. Create several contexts
-my-context start "Test Context 1"
-my-context note "Just testing"
-my-context stop
+1. Create and complete a context:
+   ```bash
+   my-context start "Test Context"
+   my-context note "This is a test"
+   my-context stop
+   ```
 
-my-context start "Test Context 2"
-my-context note "Another test"
-my-context stop
+2. Archive completed context:
+   ```bash
+   my-context archive "Test Context"
+   ```
 
-my-context start "ps-cli: Phase 1"
-my-context note "Real work"
-my-context stop
+3. Verify hidden from default list:
+   ```bash
+   my-context list  # Should not show "Test Context"
+   my-context list --archived  # Should show "Test Context"
+   ```
 
-# 2. Archive completed work
-my-context archive "ps-cli: Phase 1"
-# Expected: "Archived context: ps-cli: Phase 1"
+4. Try to archive active context (should fail):
+   ```bash
+   my-context start "Active Context"
+   my-context archive "Active Context"  # Should error
+   my-context stop
+   ```
 
-# 3. Verify archived hidden from default list
-my-context list
-# Expected: Shows Test Context 1 and 2, NOT ps-cli: Phase 1
+5. Delete a context:
+   ```bash
+   my-context delete "Test Context"
+   y  # Confirm
+   ```
 
-# 4. View archived contexts
-my-context list --archived
-# Expected: Shows only ps-cli: Phase 1
+6. Verify context removed:
+   ```bash
+   my-context list --archived  # Should not show "Test Context"
+   ls ~/.my-context/  # Directory should not exist
+   ```
 
-# 5. Verify archived context still accessible
-my-context show "ps-cli: Phase 1"
-# Expected: Shows context details (archiving doesn't delete data)
+7. Verify transitions.log preserved:
+   ```bash
+   grep "Test Context" ~/.my-context/transitions.log  # Should still show transitions
+   ```
 
-# 6. Delete test contexts
-my-context delete "Test Context 1"
-# Expected: Confirmation prompt
-# User enters: y
-# Expected: "Deleted context: Test Context 1"
+**Expected Results**:
+- Archive marks context as archived (hidden from default list)
+- Cannot archive active context
+- Delete prompts for confirmation
+- Delete removes context directory
+- transitions.log preserves historical entries
 
-my-context delete "Test Context 2" --force
-# Expected: No prompt, immediate deletion
-
-# 7. Verify deletions
-my-context list --all
-# Expected: Shows only ps-cli: Phase 1 (archived)
-
-# 8. Attempt to delete active context (should fail)
-my-context start "Active Work"
-my-context delete "Active Work"
-# Expected: "Error: Cannot delete active context. Stop it first."
-```
-
-**Success Criteria**:
-- Archive hides context from default list
-- Archived contexts visible with --archived flag
-- Archived data remains accessible (show, export work)
-- Delete prompts for confirmation (unless --force)
-- Delete removes entire context directory
-- Cannot delete active context
-- Transitions log preserved after deletion
+**Acceptance Criteria**: FR-007, FR-008
 
 ---
 
 ## Scenario 5: List Enhancements (Large Dataset)
 
-**Goal**: Test pagination and filtering with many contexts
+**Objective**: Verify pagination and filtering with many contexts
 
-**Steps**:
+**Setup**: Create 50 contexts (scripted):
 ```bash
-# 1. Create 25 contexts (simulating real usage)
-for i in {1..25}; do
+for i in {1..50}; do
   my-context start "Context $i"
-  my-context note "Note for context $i"
   my-context stop
-  sleep 1  # Ensure unique timestamps
 done
-
-# 2. Default list (should show only 10)
-my-context list
-# Expected: Shows 10 most recent contexts
-# Expected: "Showing 10 of 25 contexts. Use --all to see all."
-
-# 3. Custom limit
-my-context list --limit 5
-# Expected: Shows 5 most recent contexts
-
-# 4. Show all contexts
-my-context list --all
-# Expected: Shows all 25 contexts
-
-# 5. Search by name
-my-context list --search "Context 1"
-# Expected: Shows Context 1, Context 10-19 (substring match)
-
-# 6. Search with limit
-my-context list --search "Context" --limit 3
-# Expected: Shows 3 most recent contexts containing "Context"
-
-# 7. Active-only filter
-my-context start "Current Work"
-my-context list --active-only
-# Expected: Shows only "Current Work"
 ```
 
-**Success Criteria**:
-- Default limit is 10
-- Truncation message displayed when more exist
-- Custom limits work correctly
-- --all shows everything
-- Search is case-insensitive substring match
-- --active-only shows single active context
-- All filters work correctly together
+**Steps**:
+1. Default list (should show 10):
+   ```bash
+   my-context list
+   ```
+   - Verify shows "Showing 10 of 50 contexts"
+
+2. Show all:
+   ```bash
+   my-context list --all
+   ```
+   - Verify shows all 50
+
+3. Custom limit:
+   ```bash
+   my-context list --limit 20
+   ```
+   - Verify shows 20 contexts
+
+4. Search:
+   ```bash
+   my-context list --search "Context 1"
+   ```
+   - Verify shows Context 1, Context 10-19 (substring match)
+
+5. Combined filters:
+   ```bash
+   my-context list --search "Context 1" --limit 5
+   ```
+   - Verify shows first 5 matches only
+
+**Expected Results**:
+- Default limit works (10 contexts)
+- Truncation message displays correct counts
+- --all overrides limit
+- --limit accepts custom values
+- --search performs case-insensitive substring matching
+- Multiple filters combine with AND logic
+
+**Acceptance Criteria**: FR-006
 
 ---
 
 ## Scenario 6: Bug Fixes Validation
 
-**Goal**: Verify Sprint 1 bugs are fixed
+**Objective**: Verify Sprint 1 bugs are fixed
 
 **Steps**:
-```bash
-# 1. Test $ character in notes (Bug #3)
-my-context start "Budget Planning"
-my-context note "Budget: $500-800 for equipment"
-my-context note "Estimated cost: $1,200 total"
-my-context show
-# Expected: Both notes display with $ symbols intact
-# Old behavior: Would show "Budget: 00-800" ($ stripped)
+1. Test $ character in notes:
+   ```bash
+   my-context start "Budget Test"
+   my-context note "Budget: $500-800"
+   my-context list --active-only
+   ```
+   - Verify note displays with $ intact
 
-# 2. Test NULL display in history (Bug #5)
-my-context start "First Context"
-my-context stop
-my-context history
-# Expected: Shows "(none)" for empty previous/next context
-# Old behavior: Would show "NULL"
+2. Test history NULL display:
+   ```bash
+   my-context history
+   ```
+   - Verify shows "(none)" instead of "NULL" for empty context fields
 
-# Example output:
-# 2025-10-05 20:00 │ START     │ (none) → First Context
-# 2025-10-05 20:05 │ STOP      │ First Context → (none)
-```
+**Expected Results**:
+- Special characters preserved in notes
+- History displays user-friendly "(none)" for empty fields
 
-**Success Criteria**:
-- Special characters ($ , ! @ # etc.) preserved in notes
-- History shows "(none)" instead of "NULL"
-- Notes display correctly in show and export commands
+**Acceptance Criteria**: FR-009
 
 ---
 
 ## Scenario 7: Cross-Platform Installation (Windows)
 
-**Goal**: Verify Windows installation works with cmd.exe and PowerShell
+**Objective**: Verify Windows installation scripts work
 
 **Steps (cmd.exe)**:
-```batch
-REM 1. Download Windows binary
-curl -O https://github.com/user/my-context-copilot/releases/download/v1.1.0/my-context-windows-amd64.exe
-
-REM 2. Run installer
-install.bat
-
-REM 3. Verify installation
-my-context --version
-where my-context
-REM Expected: C:\Users\Username\bin\my-context.exe
-
-REM 4. Test basic functionality
-my-context start "Windows Test"
-my-context list
-```
+1. Download `my-context-windows-amd64.exe`
+2. Run `install.bat`
+3. Verify PATH updated: `echo %PATH%`
+4. Test command: `my-context --version`
 
 **Steps (PowerShell)**:
-```powershell
-# 1. Download binary
-Invoke-WebRequest -Uri "https://..." -OutFile my-context.exe
+1. Run `install.ps1`
+2. Verify PATH: `$env:PATH`
+3. Test command: `my-context --version`
 
-# 2. Run installer
-.\install.ps1
+**Expected Results**:
+- Binary installed to `%USERPROFILE%\bin\`
+- PATH updated (visible in new shell session)
+- Command works from any directory
+- No admin privileges required
 
-# 3. Verify installation
-my-context --version
-Get-Command my-context
-
-# 4. Test basic functionality
-my-context start "PowerShell Test"
-my-context list
-```
-
-**Success Criteria**:
-- Binary works on Windows without WSL
-- Installation adds to user PATH (no admin required)
-- Existing contexts preserved if upgrading
-- Commands work identically to Linux/macOS
+**Acceptance Criteria**: FR-002
 
 ---
 
 ## Scenario 8: Backward Compatibility (Sprint 1 → Sprint 2)
 
-**Goal**: Verify Sprint 1 data works with Sprint 2 binary
+**Objective**: Verify Sprint 1 data works with Sprint 2 binary
 
 **Steps**:
-```bash
-# Prerequisites: Have Sprint 1 contexts in ~/.my-context/
+1. Locate Sprint 1 contexts in ~/.my-context/
+2. Install Sprint 2 binary (via install script)
+3. List contexts: `my-context list`
+4. Start old context: `my-context start "Old Context Name"`
+5. Add note to old context: `my-context note "Sprint 2 note"`
+6. Export old context: `my-context export "Old Context Name"`
 
-# 1. Check Sprint 1 contexts
-ls ~/.my-context/
-# Expected: See existing context directories
-
-# 2. Install Sprint 2 binary
-./my-context-linux-amd64 --version
-# Expected: Version 1.1.0
-
-# 3. List Sprint 1 contexts
-./my-context-linux-amd64 list
-# Expected: All Sprint 1 contexts visible and functional
-
-# 4. Show Sprint 1 context details
-./my-context-linux-amd64 show "My_First_Context"
-# Expected: Notes, files, timestamps all display correctly
-
-# 5. Try new Sprint 2 features on Sprint 1 context
-./my-context-linux-amd64 archive "My_First_Context"
-# Expected: Archive succeeds (is_archived added to meta.json)
-
-./my-context-linux-amd64 export "My_First_Context"
-# Expected: Export succeeds (reads Sprint 1 data correctly)
-
-# 6. Verify meta.json updated gracefully
-cat ~/.my-context/My_First_Context/meta.json
-# Expected: is_archived field present, other fields unchanged
-```
-
-**Success Criteria**:
-- Sprint 1 contexts load without errors
-- Notes, files, timestamps accessible
-- New features work on old contexts
-- meta.json updated non-destructively
+**Expected Results**:
+- All Sprint 1 contexts visible in Sprint 2
+- Can start, stop, add notes to Sprint 1 contexts
+- Export works on Sprint 1 contexts
 - No data loss or corruption
+- New is_archived field defaults to false for old contexts
+
+**Acceptance Criteria**: FR-011
 
 ---
 
 ## Scenario 9: JSON Output for Scripting
 
-**Goal**: Verify all commands support --json for automation
+**Objective**: Verify --json flag works across commands
 
 **Steps**:
-```bash
-# 1. Start with JSON output
-my-context start "API Test" --json | jq .
-# Expected: Valid JSON with context_name, timestamp, etc.
+1. List as JSON:
+   ```bash
+   my-context list --json | jq '.contexts | length'
+   ```
 
-# 2. List with JSON output
-my-context list --project ps-cli --json | jq '.data.contexts | length'
-# Expected: Number of ps-cli contexts
+2. Export as JSON:
+   ```bash
+   my-context export "Context" --json > context.json
+   ```
 
-# 3. Export with JSON output
-my-context export "API Test" --json | jq '.data.export_path'
-# Expected: Path to exported markdown file
+3. Start with JSON output:
+   ```bash
+   my-context start "Test" --json
+   ```
 
-# 4. Archive with JSON output
-my-context stop
-my-context archive "API Test" --json | jq '.data.now_archived'
-# Expected: true
-
-# 5. Parse JSON for automation
-CONTEXT_COUNT=$(my-context list --all --json | jq '.data.showing_count')
-echo "Total contexts: $CONTEXT_COUNT"
-```
-
-**Success Criteria**:
+**Expected Results**:
 - All commands support --json flag
-- JSON output is valid (jq parsing succeeds)
-- JSON structure documented in contracts
-- Suitable for shell scripting and CI/CD
+- Output is valid JSON (parseable by jq)
+- JSON format is consistent across commands
+- Enables scripting and automation
+
+**Acceptance Criteria**: General requirement (not explicit FR)
 
 ---
 
 ## Performance Benchmarks
 
-**Goal**: Verify performance targets are met
+**Test Environment**: Create 1000 contexts with 500 notes each
 
+**Benchmarks**:
 ```bash
-# Benchmark 1: List command with 1000 contexts
-time my-context list --all  # Target: < 1 second
+# List performance
+time my-context list --all  # Target: <1s
 
-# Benchmark 2: Export large context
-# (Create context with 500 notes and 100 files first)
-time my-context export "Large Context"  # Target: < 1 second
+# Export performance
+time my-context export "Large Context"  # Target: <1s (500 notes)
 
-# Benchmark 3: Search across 1000 contexts
-time my-context list --search "test"  # Target: < 1 second
+# Search performance
+time my-context list --search "Phase"  # Target: <1s (1000 contexts)
 ```
 
-**Success Criteria**:
-- List with 1000 contexts: <1s on HDD
-- Export with 500 notes: <1s
-- Search across 1000 contexts: <1s
+**Expected Results**:
+- List 1000 contexts: <1 second
+- Export 500 notes: <1 second
+- Search 1000 contexts: <1 second
+
+**Acceptance Criteria**: Performance goals from plan.md
 
 ---
 
@@ -431,32 +369,14 @@ time my-context list --search "test"  # Target: < 1 second
 
 ```bash
 # Remove test contexts
-for i in {1..25}; do
+for i in {1..50}; do
   my-context delete "Context $i" --force
 done
 
-my-context delete "Test Context 1" --force 2>/dev/null
-my-context delete "Test Context 2" --force 2>/dev/null
-my-context delete "Sprint 1 Retrospective" --force 2>/dev/null
-# etc.
-
-# Or nuclear option:
-# rm -rf ~/.my-context/*
-# (preserves directory structure, removes all contexts)
+my-context delete "Budget Test" --force
+my-context delete "Active Context" --force
 ```
 
 ---
 
-**End of Quickstart**
-
-These scenarios cover all Sprint 2 features and validate:
-- ✅ Multi-platform installation
-- ✅ Project filtering
-- ✅ Export command
-- ✅ List enhancements
-- ✅ Archive/delete commands
-- ✅ Bug fixes
-- ✅ Cross-platform compatibility
-- ✅ Backward compatibility
-- ✅ JSON output
-- ✅ Performance targets
+**Quickstart Complete**: All 9 scenarios ready for manual validation during implementation phase.

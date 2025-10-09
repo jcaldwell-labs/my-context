@@ -1,335 +1,121 @@
-# Contract: List Command Enhancements
+# Command Contract: list (Enhanced)
 
-**Command**: `list` (alias: `l`)  
-**Purpose**: Display contexts with filtering, pagination, and search capabilities
+**Alias**: `ls`, `l`  
+**Purpose**: Display contexts with filtering and pagination options
 
----
-
-## Signature
+## Syntax
 
 ```bash
-my-context list [--project <name>] [--limit <n>] [--search <term>] [--all] [--archived] [--active-only] [--json]
-my-context l [--project <name>] [--limit <n>] [--search <term>] [--all] [--archived] [--active-only] [--json]
+my-context list [--all] [--limit N] [--search TERM] [--project NAME] [--archived] [--active-only] [--json]
 ```
 
----
+## Flags (New in Sprint 2)
 
-## Arguments
-
-**Flags** (all optional, can be combined):
-- `--project <name>`: Filter by project name (case-insensitive)
-- `--limit <n>`: Show only N most recent contexts (default: 10)
-- `--search <term>`: Filter by context name containing term (case-insensitive)
-- `--all`: Show all contexts (overrides --limit default)
-- `--archived`: Show only archived contexts (mutually exclusive with --active-only)
-- `--active-only`: Show only active context (mutually exclusive with --archived)
-- `--json`: Output JSON format
-
----
+| Flag | Short | Type | Default | Description |
+|------|-------|------|---------|-------------|
+| --all | | boolean | false | Show all contexts (no limit) |
+| --limit | -n | int | 10 | Number of contexts to show |
+| --search | -s | string | "" | Filter by context name (case-insensitive substring) |
+| --project | -p | string | "" | Filter by project name |
+| --archived | | boolean | false | Show only archived contexts |
+| --active-only | | boolean | false | Show only currently active context |
+| --json | -j | boolean | false | Output as JSON |
 
 ## Behavior
 
-### Default Behavior (No Flags)
+### Default List (Sprint 2)
 
 **Input**: `my-context list`
 
-**Actions**:
-1. Load all non-archived contexts
-2. Sort by start_time (newest first)
-3. Limit to 10 most recent
-4. Display with status indicators
-5. Show truncation message if more exist
+**Process**:
+1. Scan ~/.my-context/ for context directories
+2. Filter out archived contexts (is_archived == true)
+3. Sort by start_time descending (most recent first)
+4. Take first 10 contexts
+5. Display with start time, duration, active indicator
 
 **Output**:
 ```
-● CurrentWork (active)
-    Started: 2025-10-05 19:30 (25m ago)
-
-  ○ ps-cli: Phase 2 (stopped)
-    Started: 2025-10-05 15:00 (4h 30m ago)
-    Duration: 3h 15m
-
-  ○ ps-cli: Phase 1 (stopped)
-    Started: 2025-10-04 10:00 (1d 9h ago)
-    Duration: 8h
-
-  ... (7 more contexts)
-
-Showing 10 of 25 contexts. Use --all to see all.
+Contexts (showing 10 of 47):
+  * ps-cli: Phase 2                2025-10-09 14:30  [Active]
+    ps-cli: Phase 1                2025-10-05 10:15  (3h 45m)
+    garden: Planning               2025-10-03 09:00  (1h 20m)
+    ...
+    
+Showing 10 of 47 contexts. Use --all to see all.
 ```
-
-**Exit Code**: 0
-
-### Project Filter
-
-**Input**: `my-context list --project ps-cli`
-
-**Actions**:
-1. Load all non-archived contexts
-2. Extract project name from each context (text before first colon)
-3. Case-insensitive match against "ps-cli"
-4. Apply default limit (10)
-5. Display filtered results
-
-**Output**:
-```
-  ○ ps-cli: Phase 2 (stopped)
-    Started: 2025-10-05 15:00 (4h 30m ago)
-    Duration: 3h 15m
-
-  ○ ps-cli: Phase 1 (stopped)
-    Started: 2025-10-04 10:00 (1d 9h ago)
-    Duration: 8h
-
-Found 2 contexts for project "ps-cli"
-```
-
-**Exit Code**: 0
-
-### Search Filter
-
-**Input**: `my-context list --search "bug fix"`
-
-**Actions**:
-1. Load all non-archived contexts
-2. Case-insensitive substring match on context names
-3. Apply default limit
-4. Display results
-
-**Output**:
-```
-  ○ Bug fix #123 (stopped)
-    Started: 2025-10-03 14:00 (2d 5h ago)
-    Duration: 2h 30m
-
-Found 1 context matching "bug fix"
-```
-
-**Exit Code**: 0 (even if no matches)
 
 ### Combined Filters
 
-**Input**: `my-context list --project ps-cli --limit 5 --search "Phase"`
+**Input**: `my-context list --project ps-cli --limit 5 --search Phase`
 
-**Actions**:
-1. Load all non-archived contexts
-2. Filter by project = "ps-cli"
-3. Filter by name contains "Phase"
-4. Limit to 5 results
-5. Display
-
-**Output**:
-```
-  ○ ps-cli: Phase 2 (stopped)
-    Started: 2025-10-05 15:00 (4h 30m ago)
-    Duration: 3h 15m
-
-  ○ ps-cli: Phase 1 (stopped)
-    Started: 2025-10-04 10:00 (1d 9h ago)
-    Duration: 8h
-
-Found 2 contexts matching filters
-```
-
-**Exit Code**: 0
-
-### Archived Contexts
-
-**Input**: `my-context list --archived`
-
-**Actions**:
-1. Load all archived contexts (is_archived = true)
-2. Sort by start_time (newest first)
-3. Apply limit (default 10)
-4. Display
+**Process**:
+1. Filter by project (case-insensitive): "ps-cli"
+2. Filter by search term (case-insensitive): "Phase"
+3. Apply both filters (AND logic)
+4. Sort and limit to 5
 
 **Output**:
 ```
-  ○ garden: Planning (archived)
-    Started: 2025-09-15 09:00 (20d ago)
-    Duration: 4d 6h
-
-  ○ old-project: Legacy Code (archived)
-    Started: 2025-08-01 10:00 (65d ago)
-    Duration: 12d 3h
-
-Found 2 archived contexts
+Contexts (showing 5 of 12 matching):
+  * ps-cli: Phase 3                2025-10-09 16:00  [Active]
+    ps-cli: Phase 2                2025-10-08 10:00  (2h 30m)
+    ps-cli: Phase 1                2025-10-05 10:15  (3h 45m)
 ```
 
-**Exit Code**: 0
+## Edge Cases
 
-### Active Only
+| Scenario | Behavior |
+|----------|----------|
+| No contexts exist | "No contexts found." (exit 0) |
+| No contexts match filters | "No contexts found for project 'name'" or "No contexts found matching 'term'" (exit 0) |
+| --archived + --active-only | Error: "Cannot combine --archived and --active-only" (exit 1) |
+| --limit with --all | --all takes precedence (show all) |
+| No active context with --active-only | "No active context" (exit 0) |
 
-**Input**: `my-context list --active-only`
+## Filter Logic
 
-**Actions**:
-1. Load only active context (status = "active")
-2. Display
+**Project Extraction**:
+- "ps-cli: Phase 1" → project = "ps-cli"
+- "Standalone" → project = "Standalone"
+- Case-insensitive matching
 
-**Output**:
+**Search Matching**:
+- Substring match in context name
+- Case-insensitive
+- Example: "Phase" matches "ps-cli: Phase 1", "Planning Phase", "phase-2"
+
+**Multiple Filters**:
+- Applied with AND logic (all conditions must match)
+- Order doesn't matter
+
+## Examples
+
+```bash
+# Default (last 10, non-archived)
+my-context list
+
+# Show all contexts
+my-context list --all
+
+# Custom limit
+my-context list --limit 20
+
+# Filter by project
+my-context list --project ps-cli
+
+# Search by name
+my-context list --search "bug fix"
+
+# Show archived contexts
+my-context list --archived
+
+# Show only active
+my-context list --active-only
+
+# Combined filters
+my-context list --project ps-cli --search Phase --limit 5
+
+# JSON output
+my-context list --json
 ```
-● CurrentWork (active)
-    Started: 2025-10-05 19:30 (30m ago)
-
-1 active context
-```
-
-**Or if no active context**:
-```
-No active context
-Run 'my-context start <name>' to create one.
-```
-
-**Exit Code**: 0
-
----
-
-## Error Handling
-
-### Invalid Limit Value
-
-**Input**: `my-context list --limit -5`
-
-**Output**:
-```
-Error: --limit must be a positive number
-Usage: my-context list [--limit <n>]
-```
-
-**Exit Code**: 1
-
-### Conflicting Flags
-
-**Input**: `my-context list --archived --active-only`
-
-**Output**:
-```
-Error: Cannot use --archived and --active-only together
-```
-
-**Exit Code**: 1
-
-### No Matches Found
-
-**Input**: `my-context list --project "nonexistent"`
-
-**Output**:
-```
-No contexts found for project "nonexistent"
-```
-
-**Exit Code**: 0 (not an error, just no results)
-
----
-
-## Display Format
-
-### Status Indicators
-- `●` = Active context (bold/colored in terminal)
-- `○` = Stopped context
-
-### Time Display
-- **Relative times**: "25m ago", "4h 30m ago", "2d 5h ago"
-- **Duration**: "3h 15m", "8h", "4d 6h"
-- **Format rules**:
-  - < 1 hour: "Xm ago"
-  - < 1 day: "Xh Ym ago"
-  - ≥ 1 day: "Xd Yh ago"
-
-### Sorting
-- **Primary**: Start time (newest first)
-- **Secondary**: N/A (unique timestamps)
-
----
-
-## JSON Output Format
-
-**Input**: `my-context list --project ps-cli --json`
-
-**Output**:
-```json
-{
-  "command": "list",
-  "timestamp": "2025-10-05T20:00:00Z",
-  "data": {
-    "contexts": [
-      {
-        "name": "ps-cli: Phase 2",
-        "start_time": "2025-10-05T15:00:00Z",
-        "end_time": "2025-10-05T18:15:00Z",
-        "status": "stopped",
-        "is_archived": false,
-        "duration_seconds": 11700
-      },
-      {
-        "name": "ps-cli: Phase 1",
-        "start_time": "2025-10-04T10:00:00Z",
-        "end_time": "2025-10-04T18:00:00Z",
-        "status": "stopped",
-        "is_archived": false,
-        "duration_seconds": 28800
-      }
-    ],
-    "filters": {
-      "project": "ps-cli",
-      "limit": 10,
-      "archived": false,
-      "active_only": false
-    },
-    "total_count": 2,
-    "showing_count": 2
-  }
-}
-```
-
----
-
-## Integration Points
-
-**Reads from**:
-- `internal/core/context.go`: ListContexts()
-- `internal/core/storage.go`: LoadAllContextMeta()
-- `internal/models/context.go`: Context struct with IsArchived field
-
-**Depends on**:
-- Project extraction logic (ExtractProjectName)
-- Time formatting utilities
-- Status display logic
-
----
-
-## Validation Rules
-
-1. `--limit` must be positive integer or "all"
-2. `--project` accepts any non-empty string
-3. `--search` accepts any non-empty string
-4. `--archived` and `--active-only` are mutually exclusive
-5. Multiple filters combine with AND logic (all must match)
-
----
-
-## Testing Checklist
-
-- [ ] Default list (10 most recent, non-archived)
-- [ ] List --all (no limit)
-- [ ] List --limit 5 (custom limit)
-- [ ] List --project <name> (filter by project)
-- [ ] List --search <term> (substring search)
-- [ ] List --archived (only archived contexts)
-- [ ] List --active-only (only active context)
-- [ ] List with no active context
-- [ ] List with combined filters (project + search + limit)
-- [ ] List with conflicting flags (archived + active-only)
-- [ ] List with invalid limit (negative, zero, non-numeric)
-- [ ] List with 0 results (empty message)
-- [ ] List with 1000+ contexts (performance)
-- [ ] List with truncation message (more than limit)
-- [ ] Verify JSON output format
-- [ ] Verify sorting (newest first)
-- [ ] Verify relative time calculations
-- [ ] Verify duration calculations
-
----
-
-**Contract Version**: 1.0  
-**Last Updated**: 2025-10-05

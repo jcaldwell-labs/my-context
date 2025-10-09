@@ -21,10 +21,10 @@
    → Output Formatting: 2 tasks [P]
    → Commands: 6 tasks [P]
    → Build & Install: 5 tasks
-   → Documentation: 3 tasks [P]
+   → Documentation: 5 tasks [P] (expanded post-analysis)
    → Bug Fixes: 2 tasks [P]
    → Integration: 3 tasks
-4. Total: 41 tasks
+4. Total: 43 tasks (41 original + 2 added for FR-010 coverage)
 ```
 
 ## Task Format: `[ID] [P?] Description`
@@ -58,7 +58,7 @@ Single project structure (from plan.md):
 
 ### Contract Tests (one per command/enhancement)
 
-- [ ] **T005** [P] Create `tests/integration/export_test.go` - Contract tests for export command:
+- [x] **T005** [P] Create `tests/integration/export_test.go` - Contract tests for export command:
   - Export single context with default path
   - Export with --to custom path
   - Export --all flag (multiple contexts)
@@ -66,7 +66,7 @@ Single project structure (from plan.md):
   - Verify markdown format and content
   - Verify JSON output with --json flag
 
-- [ ] **T006** [P] Create `tests/integration/archive_test.go` - Contract tests for archive command:
+- [x] **T006** [P] Create `tests/integration/archive_test.go` - Contract tests for archive command:
   - Archive stopped context (success)
   - Archive active context (error)
   - Archive non-existent context (error)
@@ -74,15 +74,15 @@ Single project structure (from plan.md):
   - Verify archived context hidden from default list
   - Verify --archived flag shows archived contexts
 
-- [ ] **T007** [P] Create `tests/integration/delete_test.go` - Contract tests for delete command:
+- [x] **T007** [P] Create `tests/integration/delete_test.go` - Contract tests for delete command:
   - Delete with confirmation prompt (accept)
   - Delete with confirmation prompt (cancel)
   - Delete with --force flag (no prompt)
   - Delete active context (error)
-  - Verify directory removal
-  - Verify transitions.log preserved
+  - Verify directory removal (context directory deleted from ~/.my-context/)
+  - Verify transitions.log preserved (per FR-008.7): create context, transition to another, delete first context, verify transitions.log still contains original transition entries
 
-- [ ] **T008** [P] Create `tests/integration/list_enhanced_test.go` - Contract tests for list enhancements:
+- [x] **T008** [P] Create `tests/integration/list_enhanced_test.go` - Contract tests for list enhancements:
   - Default list (10 most recent)
   - List --all (no limit)
   - List --limit <n> (custom limit)
@@ -91,27 +91,27 @@ Single project structure (from plan.md):
   - List --active-only (only active)
   - Combined filters (project + search + limit)
 
-- [ ] **T009** [P] Create `tests/integration/project_filter_test.go` - Contract tests for project filtering:
+- [x] **T009** [P] Create `tests/integration/project_filter_test.go` - Contract tests for project filtering:
   - List --project <name> (filter by project)
   - Start --project <name> (create with project prefix)
   - Project extraction logic (multiple colons, no colon, whitespace)
-  - Case-insensitive matching
+  - Case-insensitive matching (per FR-004.5): test "PS-CLI" matches "ps-cli: Phase 1" and "Ps-Cli: Phase 2"
 
-- [ ] **T010** [P] Create `tests/integration/bug_fixes_test.go` - Contract tests for Sprint 1 bug fixes:
+- [x] **T010** [P] Create `tests/integration/bug_fixes_test.go` - Contract tests for Sprint 1 bug fixes:
   - Note with $ character (verify preserved)
   - History command (verify "(none)" instead of "NULL")
   - Special characters in notes (!, @, #, etc.)
 
 ### Unit Tests
 
-- [ ] **T011** [P] Create `tests/unit/project_parser_test.go` - Unit tests for ExtractProjectName function:
+- [x] **T011** [P] Create `tests/unit/project_parser_test.go` - Unit tests for ExtractProjectName function:
   - Text before first colon
   - No colon (full name)
   - Multiple colons
   - Whitespace trimming
   - Empty string handling
 
-- [ ] **T012** [P] Create `tests/integration/backward_compat_test.go` - Integration test for Sprint 1 → Sprint 2 compatibility:
+- [x] **T012** [P] Create `tests/integration/backward_compat_test.go` - Integration test for Sprint 1 → Sprint 2 compatibility:
   - Load Sprint 1 meta.json (without is_archived)
   - Verify Sprint 1 contexts work with Sprint 2 code
   - Verify new features work on old contexts
@@ -148,10 +148,13 @@ Single project structure (from plan.md):
 
 - [ ] **T021** [P] Create `internal/commands/export.go` - Implement export command with alias 'e':
   - Accept context name argument
-  - Support --to <path> flag
-  - Support --all flag
+  - Support --to <path> flag (default: ./<context-name>.md)
+  - Support --all flag (export all contexts to separate files)
+  - Support --force flag to skip overwrite confirmation (per FR-005.8)
+  - Implement overwrite confirmation prompt if output file exists (per FR-005.7): "File exists. Overwrite? (y/N)"
+  - Exit code 2 if user declines overwrite
   - Call core.ExportContext
-  - Handle errors (context not found, file write errors)
+  - Handle errors (context not found, file write errors, user cancellation)
 
 - [ ] **T022** [P] Create `internal/commands/archive.go` - Implement archive command with alias 'a':
   - Accept context name argument
@@ -161,10 +164,14 @@ Single project structure (from plan.md):
 
 - [ ] **T023** [P] Create `internal/commands/delete.go` - Implement delete command with alias 'd':
   - Accept context name argument
-  - Support --force flag
-  - Implement confirmation prompt (unless --force)
-  - Call core.DeleteContext
+  - Support --force flag to skip confirmation (per FR-008.4)
+  - Implement confirmation prompt (per FR-008.3): "Delete context '<name>' permanently? This cannot be undone. (y/N)"
+  - Read user input from stdin, accept 'y' or 'yes' (case-insensitive) to proceed
+  - Exit code 1 if user cancels (enters anything other than yes)
+  - Prevent deletion if context is active (per FR-008.6): "Cannot delete active context. Stop it first with: my-context stop"
+  - Call core.DeleteContext after confirmation
   - Handle errors (not found, active context, user cancellation)
+  - Display success message: "Context '<name>' deleted"
 
 - [ ] **T024** [P] Modify `internal/commands/list.go` - Add flags to list command:
   - --project <name> flag
@@ -198,26 +205,35 @@ Single project structure (from plan.md):
   - Verify installation successful
   - Preserve ~/.my-context/ data during upgrade
 
-- [ ] **T028** Create `scripts/install.bat` - Windows cmd.exe installer:
-  - Detect existing installation
-  - Install to %USERPROFILE%\bin\ (create if needed)
-  - Add to user PATH via setx command
-  - Verify installation
-  - Preserve ~/.my-context/ data
+- [ ] **T028** Create `scripts/install.bat` - Windows cmd.exe installer (per FR-002.2, FR-002.4, FR-002.5):
+  - Detect existing installation (check if %USERPROFILE%\bin\my-context.exe exists)
+  - If exists, prompt: "Existing installation found. Upgrade? (y/N)" or skip if declined
+  - Backup old binary to my-context.exe.bak before upgrade
+  - Install to %USERPROFILE%\bin\ (create directory if needed with mkdir)
+  - Add to user PATH via setx command (only if not already in PATH)
+  - Verify installation by running my-context --version
+  - Preserve ~/.my-context/ data directory during upgrade (never delete user data)
+  - Display success message with version info
 
-- [ ] **T029** Create `scripts/install.ps1` - Windows PowerShell installer:
-  - Detect existing installation
-  - Install to $env:USERPROFILE\bin\ (create if needed)
-  - Add to user PATH via [Environment]::SetEnvironmentVariable
-  - Verify installation
-  - Preserve ~/.my-context/ data
+- [ ] **T029** Create `scripts/install.ps1` - Windows PowerShell installer (per FR-002.3, FR-002.4, FR-002.5):
+  - Detect existing installation (Test-Path for $env:USERPROFILE\bin\my-context.exe)
+  - If exists, prompt: "Existing installation found. Upgrade? (y/N)" or skip if declined
+  - Backup old binary to my-context.exe.bak before upgrade
+  - Install to $env:USERPROFILE\bin\ (create with New-Item if needed)
+  - Add to user PATH via [Environment]::SetEnvironmentVariable('Path', ..., 'User') (only if not already in PATH)
+  - Verify installation by running my-context --version
+  - Preserve ~/.my-context/ data directory during upgrade (never delete user data)
+  - Display success message with version info
 
-- [ ] **T030** Create `scripts/curl-install.sh` - One-liner curl installer:
-  - Detect platform (Linux, macOS, Windows/WSL via uname)
-  - Download appropriate binary from GitHub releases
-  - Verify SHA256 checksum
-  - Make executable
-  - Call install.sh with downloaded binary
+- [ ] **T030** Create `scripts/curl-install.sh` - One-liner curl installer (per FR-003.1-003.4):
+  - Detect platform (Linux, macOS, Windows/WSL via uname -s and uname -m)
+  - Determine correct binary name (my-context-linux-amd64, my-context-darwin-arm64, etc.)
+  - Download appropriate binary from GitHub releases (latest or specified version)
+  - Download corresponding .sha256 checksum file
+  - Verify SHA256 checksum matches (fail installation if mismatch per FR-003.3)
+  - Make executable with chmod +x (per FR-003.4)
+  - Delegate to install.sh for PATH configuration (satisfies FR-003.4 "add to PATH")
+  - Display installation success with version info
 
 - [x] **T031** Update `scripts/build.sh` (if exists) or create wrapper - Add reference to build-all.sh for local multi-platform builds, document GOOS/GOARCH usage
 
@@ -225,16 +241,30 @@ Single project structure (from plan.md):
 
 ## Phase 3.5: Documentation & Polish
 
-- [ ] **T032** [P] Update `README.md` - Add sections:
-  - "Building from Source" with platform-specific instructions
-  - "Installation" section with curl one-liner and script options
-  - Document new commands (export, archive, delete)
-  - Document new flags (--project, --limit, --search, etc.)
-  - Add troubleshooting link
+- [ ] **T032** [P] Update `README.md` - Add sections per FR-010.1-10.2:
+  - "Building from Source" with platform-specific build commands (Go 1.21+, CGO_ENABLED=0)
+  - "Installation" section with curl one-liner and script options (install.sh, install.bat, install.ps1)
+  - Document new commands (export, archive, delete) with examples
+  - Document new flags (--project, --limit, --search, --archived, --active-only, --all, --force)
+  - Troubleshooting section for WSL users (link to TROUBLESHOOTING.md)
+  - Validate completion against FR-010.1 and FR-010.2 requirements
+
+- [ ] **T032a** [P] Validate `docs/TROUBLESHOOTING.md` content - Verify it includes per FR-010.3:
+  - WSL-specific issues (path resolution, binary permissions)
+  - Windows PATH configuration problems (cmd.exe vs PowerShell)
+  - macOS Gatekeeper warnings ("unidentified developer")
+  - Permission errors during installation
+  - Common "command not found" scenarios with solutions
+
+- [ ] **T032b** [P] Review installation script comments - Verify inline documentation per FR-010.4:
+  - scripts/install.sh: Comment each step (detection, backup, PATH modification)
+  - scripts/install.bat: Comment Windows-specific logic (setx usage, directory creation)
+  - scripts/install.ps1: Comment PowerShell-specific patterns (Environment variables)
+  - scripts/curl-install.sh: Comment platform detection and checksum verification
 
 - [ ] **T033** [P] Update `cmd/my-context/main.go` - Add help text for all new commands and flags, ensure --help displays usage examples
 
-- [ ] **T034** [P] Create `.github/ISSUE_TEMPLATE/` - Add bug report and feature request templates (optional but good practice for Sprint 2 maturity)
+- [ ] **T034** [P] Create `.github/ISSUE_TEMPLATE/` - Add bug report and feature request templates for Sprint 2 maturity
 
 ---
 
@@ -268,14 +298,14 @@ Single project structure (from plan.md):
   - macOS 13+ (Intel and ARM if available)
   - Verify basic commands work identically
 
-- [ ] **T041** Final constitution compliance check - Review all changes against 6 principles:
-  - I. Unix Philosophy ✓
-  - II. Cross-Platform Compatibility ✓
-  - III. Stateful Context Management ✓
-  - IV. Minimal Surface Area ✓ (11 commands justified)
-  - V. Data Portability ✓
-  - VI. User-Driven Design ✓
-  - Document any principle tensions in retrospective
+- [ ] **T041** Final design principles review - Review all changes against core design principles:
+  - Unix Philosophy (text I/O, composability) ✓
+  - Cross-Platform Compatibility (Windows, WSL, macOS) ✓
+  - Stateful Context Management (one active context) ✓
+  - Minimal Surface Area (11 total commands - 3 added this sprint) ✓
+  - Data Portability (plain text JSON, markdown exports) ✓
+  - User-Driven Design (features from Sprint 1 retrospective) ✓
+  - Document any principle tensions or trade-offs in retrospective
 
 ---
 
@@ -390,11 +420,11 @@ T035-T041 (Integration & validation)
 
 ---
 
-**Constitution Alignment**:
-All tasks designed to maintain compliance with 6 core principles. Sprint 2 adds 3 commands (total 11) which is justified by distinct lifecycle operations (share via export, complete via archive, remove via delete). All features respond to validated user requests from Sprint 1 retrospective.
+**Design Principles Alignment**:
+All tasks designed to maintain compliance with core design principles. Sprint 2 adds 3 commands (total 11) which is justified by distinct lifecycle operations (share via export, complete via archive, remove via delete). All features respond to validated user requests from Sprint 1 retrospective.
 
 ---
 
 *Tasks generated: 2025-10-05*  
-*Based on: plan.md, research.md, data-model.md, contracts/, quickstart.md*  
-*Constitution version: 1.1.0*
+*Updated: 2025-10-09 (post-analysis remediation)*  
+*Based on: plan.md, research.md, data-model.md, contracts/, quickstart.md*

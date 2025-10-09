@@ -1,356 +1,325 @@
 # Data Model: Installation & Usability Improvements
 
 **Feature**: 002-installation-improvements-and  
-**Date**: 2025-10-05  
-**Status**: Complete
+**Date**: 2025-10-09  
+**Phase**: Phase 1 (Design & Contracts)
+
+## Overview
+
+This document defines the data structures and their relationships for Sprint 2 features. Most structures extend existing Sprint 1 models with backward-compatible additions.
 
 ---
 
-## Entity Changes
+## Entity 1: Context (Modified from Sprint 1)
 
-### 1. Context (Modified)
+**Purpose**: Represents a work context with enhanced lifecycle management
 
-**Purpose**: Represents a work session with associated notes, files, and activity tracking.
+**Storage**: `~/.my-context/<context-name>/meta.json`
 
-**Storage**: `~/.my-context/{context_name}/meta.json`
-
-**Schema**:
+**Structure**:
 ```json
 {
-  "name": "string (required)",
-  "start_time": "RFC3339 timestamp (required)",
-  "end_time": "RFC3339 timestamp (optional, null if active)",
-  "status": "string enum: active|stopped (required)",
-  "subdirectory_path": "string (required)",
-  "is_archived": "boolean (optional, defaults to false)"
+  "name": "ps-cli: Phase 1 - Foundation",
+  "start_time": "2025-10-05T14:30:00Z",
+  "end_time": null,
+  "is_archived": false
 }
 ```
 
-**New Field**:
-- `is_archived`: Boolean flag indicating context is archived (hidden from default list view)
-  - Default: `false`
-  - Optional for backward compatibility with Sprint 1 data
-  - Does not affect data accessibility (files remain in place)
+**Fields**:
+| Field | Type | Required | Description | Validation |
+|-------|------|----------|-------------|------------|
+| name | string | ✅ | Context name, may include project prefix | Non-empty, unique |
+| start_time | RFC3339 timestamp | ✅ | When context was started | Valid ISO8601 format |
+| end_time | RFC3339 timestamp or null | ❌ | When context was stopped, null if active | Must be after start_time if set |
+| is_archived | boolean | ❌ | Whether context is archived (hidden from default list) | Defaults to false if omitted |
 
-**Validation Rules**:
-- `name`: Non-empty string, max 200 characters
-- `start_time`: Must be valid RFC3339 timestamp
-- `end_time`: Must be after `start_time` if present
-- `status`: Must be "active" or "stopped"
-- `is_archived`: Cannot be true if status is "active"
+**Relationships**:
+- 1 Context → Many Notes (in notes.log file)
+- 1 Context → Many File Associations (in files.log)
+- 1 Context → Many Touch Events (in touches.log)
 
 **State Transitions**:
 ```
-Created (active, is_archived=false)
-  ↓ stop command
-Stopped (stopped, is_archived=false)
-  ↓ archive command
-Archived (stopped, is_archived=true)
-  ↓ delete command
-Deleted (removed from filesystem)
+Created (end_time=null, is_archived=false)
+    ↓ stop
+Stopped (end_time set, is_archived=false)
+    ↓ archive
+Archived (end_time set, is_archived=true)
+    ↓ delete
+Deleted (directory removed)
 ```
+
+**Constraints**:
+- Cannot archive active context (end_time must be set)
+- Cannot delete active context (must stop first)
+- Archive status persists across application restarts
+
+**Backward Compatibility**:
+- Sprint 1 contexts without `is_archived` field default to false
+- Missing field handled via Go's `json:"is_archived,omitempty"` tag
 
 ---
 
-## 2. Project Metadata (Derived)
+## Entity 2: ProjectMetadata (New)
 
-**Purpose**: Logical grouping of contexts by project name, extracted from context naming convention.
+**Purpose**: Extracted project information for filtering and grouping
 
-**Storage**: Not persisted (computed on-demand from context names)
+**Storage**: Ephemeral (derived at runtime, not persisted)
 
-**Schema**:
+**Structure**:
 ```go
 type ProjectMetadata struct {
-    Name            string   // Extracted project name
-    ContextNames    []string // Contexts belonging to this project
-    ActiveCount     int      // Number of active contexts
-    ArchivedCount   int      // Number of archived contexts
+    ProjectName   string   // Extracted from context name
+    ContextNames  []string // All contexts matching this project
+    ContextCount  int      // Number of contexts in project
 }
 ```
 
 **Extraction Logic**:
 ```go
-// ExtractProjectName parses "project: phase - description" format
-// Returns text before first colon, or full name if no colon
-func ExtractProjectName(contextName string) string {
-    parts := strings.SplitN(contextName, ":", 2)
-    return strings.TrimSpace(parts[0])
-}
-```
-
-**Examples**:
-- `"ps-cli: Phase 1 - Foundation"` → `"ps-cli"`
-- `"garden: Planning"` → `"garden"`
-- `"Standalone Context"` → `"Standalone Context"`
-- `"project: sub: detail"` → `"project"` (only first colon)
-
-**Filtering Algorithm**:
-```go
-func FilterByProject(contexts []Context, projectName string) []Context {
-    filtered := []Context{}
-    for _, ctx := range contexts {
-        if strings.EqualFold(ExtractProjectName(ctx.Name), projectName) {
-            filtered = append(filtered, ctx)
-        }
-    }
-    return filtered
-}
-```
-
----
-
-## 3. Export Document (Output Format)
-
-**Purpose**: Human-readable markdown representation of context data for sharing and archival.
-
-**Storage**: User-specified path (default: `{context_name}.md` in current directory)
-
-**Format**:
-```markdown
-# Context: {context_name}
-
-**Started**: {start_time in local timezone}
-**Ended**: {end_time in local timezone or "Active"}
-**Duration**: {human_readable duration or "Active"}
-**Status**: {active | stopped | archived}
-
-## Notes ({count})
-
-{if count > 0:}
-- `{HH:MM}` {note_text}
-- `{HH:MM}` {note_text}
-...
-{else:}
-(No notes)
-
-## Associated Files ({count})
-
-{if count > 0:}
-- {file_path}
-  Added: {timestamp}
-...
-{else:}
-(No files)
-
-## Activity
-
-- {touch_count} touch events
-{if touch_count > 0:}
-- Last activity: {most_recent_touch_timestamp}
-{else:}
-- No recorded activity
-
----
-*Exported: {export_timestamp} by my-context v{version}*
-```
-
-**Data Sources**:
-- Context metadata: `meta.json`
-- Notes: `notes.log` (pipe-delimited: `timestamp|text`)
-- Files: `files.log` (pipe-delimited: `timestamp|path`)
-- Touch events: `touch.log` (one timestamp per line)
-
-**Processing Rules**:
-1. Timestamps converted to local timezone for readability
-2. Duration calculated from start/end times (format: "2h 15m" or "3d 4h")
-3. Notes displayed in chronological order
-4. Files displayed with relative paths if under user home directory
-5. Touch events counted, most recent timestamp extracted
-
----
-
-## 4. Binary Artifact (Build Output)
-
-**Purpose**: Platform-specific executable binaries for distribution.
-
-**Storage**: GitHub Releases (artifacts) and local `bin/` directory during builds
-
-**Naming Convention**:
-```
-my-context-{os}-{arch}[.exe]
-
-Examples:
-- my-context-linux-amd64
-- my-context-windows-amd64.exe
-- my-context-darwin-amd64
-- my-context-darwin-arm64
-```
-
-**Metadata**:
-```yaml
-Platform: linux | windows | darwin
-Architecture: amd64 | arm64
-Version: {semantic version, e.g., 1.1.0}
-BuildTime: {RFC3339 timestamp}
-GitCommit: {short SHA, e.g., a1b2c3d}
-GoVersion: {e.g., go1.21.5}
-Checksum: {SHA256 hash}
-```
-
-**Embedded Version Info**:
-```go
-// Set at build time with ldflags
-var (
-    Version   = "dev"
-    BuildTime = "unknown"
-    GitCommit = "unknown"
-)
-```
-
-**Build Command**:
-```bash
-go build -ldflags "\
-  -X main.Version=1.1.0 \
-  -X main.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
-  -X main.GitCommit=$(git rev-parse --short HEAD)" \
-  -o my-context-{os}-{arch} ./cmd/my-context/
-```
-
----
-
-## 5. Installation Script Metadata
-
-**Purpose**: Track installation state for upgrade detection.
-
-**Storage**: `~/.my-context/.install-info` (optional metadata file)
-
-**Schema**:
-```json
-{
-  "version": "1.1.0",
-  "installed_at": "2025-10-05T19:30:00Z",
-  "binary_path": "/home/user/.local/bin/my-context",
-  "install_method": "curl-install | install.sh | manual"
-}
+// "ps-cli: Phase 1" → project="ps-cli"
+// "garden: Planning" → project="garden"  
+// "Standalone Context" → project="Standalone Context"
 ```
 
 **Usage**:
-- Installation scripts check for this file to detect upgrades
-- Provides rollback information if upgrade fails
-- Enables telemetry/analytics (future consideration)
-
-**Optional**: Sprint 2 may create this file but not require it. Absence indicates fresh install.
-
----
-
-## Relationships
-
-```
-Context 1:1 → meta.json (storage)
-Context 1:N → Note (via notes.log)
-Context 1:N → FileAssociation (via files.log)
-Context 1:N → TouchEvent (via touch.log)
-Context 1:1 → ProjectMetadata (derived, not stored)
-Context 1:1 → ExportDocument (generated on demand)
-
-ProjectMetadata 1:N → Context (logical grouping)
-
-BinaryArtifact 1:N → Platform (one binary per platform)
-BinaryArtifact N:1 → Version (all platforms share version)
-```
-
----
-
-## Data Migration Strategy
-
-### Sprint 1 → Sprint 2
-
-**Goal**: Zero downtime, zero data loss, zero user intervention required.
-
-**Changes**:
-1. Add optional `is_archived` field to `meta.json`
-2. No changes to `notes.log`, `files.log`, `touch.log` formats
-3. No changes to `state.json` or `transitions.log` formats
-
-**Compatibility Strategy**:
-- Use Go's `omitempty` JSON tag for `is_archived` field
-- On read: Missing field defaults to `false` (Go zero value)
-- On write: Field included if `true`, omitted if `false` (space optimization)
+- Filter list results: `my-context list --project ps-cli`
+- Start with project prefix: `my-context start "Phase 3" --project ps-cli`
 
 **Validation**:
-```go
-// Test: Load Sprint 1 meta.json without is_archived field
-input := `{"name":"Test","start_time":"2025-10-04T12:00:00Z","status":"active","subdirectory_path":"..."}`
-var ctx Context
-json.Unmarshal([]byte(input), &ctx)
-assert.False(ctx.IsArchived) // Defaults to false
+- Project name is case-insensitive (`strings.EqualFold`)
+- Empty project names not allowed (minimum 1 character)
+- Project names trimmed of leading/trailing whitespace
 
-// Test: Write Sprint 2 meta.json with is_archived=false
-ctx.IsArchived = false
-output, _ := json.MarshalIndent(ctx, "", "  ")
-assert.NotContains(string(output), "is_archived") // Omitted
+---
 
-// Test: Write Sprint 2 meta.json with is_archived=true
-ctx.IsArchived = true
-output, _ := json.MarshalIndent(ctx, "", "  ")
-assert.Contains(string(output), `"is_archived": true`) // Included
+## Entity 3: ExportDocument (New)
+
+**Purpose**: Markdown representation of a context for sharing and archival
+
+**Storage**: User-specified file path or default `./<context-name>.md`
+
+**Structure**:
+```markdown
+# Context: [Context Name]
+
+**Started**: [Human-readable timestamp with timezone]
+**Ended**: [Timestamp or "Currently Active"]
+**Duration**: [Human-readable duration, e.g., "2h 15m"]
+
+**Exported**: [Export timestamp]
+
+---
+
+## Notes
+
+- [Local time] Note content
+- [Local time] Note content
+
+Total: N notes
+
+---
+
+## Files
+
+- [Local time] /absolute/path/to/file
+
+Total: N files
+
+---
+
+## Activity
+
+- [Local time] Touch event
+
+Total: N touches
+
+---
+
+*Exported from my-context v2.0.0*
 ```
 
-**Rollback Plan**:
-If user downgrades to Sprint 1 binary:
-- Sprint 1 code ignores unknown JSON fields (standard Go behavior)
-- Archived contexts appear as normal stopped contexts (is_archived ignored)
-- No data corruption, just loss of archive functionality
+**Generation Logic**:
+1. Read meta.json for context metadata
+2. Parse notes.log, files.log, touches.log
+3. Convert UTC timestamps to local timezone
+4. Format duration as human-readable string
+5. Generate markdown sections
+6. Write atomically to avoid partial files
+
+**Formatting Rules**:
+- Timestamps in local timezone (user-friendly)
+- Durations: "Xh Ym" format, "Active" if no end_time
+- Notes/Files/Activity sorted chronologically
+- Empty sections show "(none)" instead of omitting
+
+**Output Options**:
+- `--to <path>`: Custom output path (creates parent directories)
+- Default: `./<sanitized-context-name>.md`
+- `--force`: Overwrite existing files without confirmation
+
+---
+
+## Entity 4: BinaryArtifact (New)
+
+**Purpose**: Describes a platform-specific pre-built binary
+
+**Storage**: GitHub Releases, referenced by installation scripts
+
+**Structure**:
+```json
+{
+  "platform": "linux-amd64",
+  "filename": "my-context-linux-amd64",
+  "version": "v2.0.0",
+  "download_url": "https://github.com/.../releases/download/v2.0.0/my-context-linux-amd64",
+  "checksum_url": "https://github.com/.../releases/download/v2.0.0/my-context-linux-amd64.sha256",
+  "size_bytes": 8388608
+}
+```
+
+**Supported Platforms**:
+| Platform | GOOS | GOARCH | Filename |
+|----------|------|--------|----------|
+| Windows 64-bit | windows | amd64 | my-context-windows-amd64.exe |
+| Linux 64-bit | linux | amd64 | my-context-linux-amd64 |
+| macOS Intel | darwin | amd64 | my-context-darwin-amd64 |
+| macOS ARM (M1/M2) | darwin | arm64 | my-context-darwin-arm64 |
+
+**Checksum Format**:
+```
+SHA256(my-context-linux-amd64)= 4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d...
+```
+
+**Validation**:
+- Installation scripts must verify SHA256 before executing
+- Mismatch results in installation failure with clear error message
+
+---
+
+## Entity 5: InstallationMetadata (New)
+
+**Purpose**: Tracks where binary is installed for upgrade detection
+
+**Storage**: `~/.my-context/.install-metadata` (hidden file)
+
+**Structure**:
+```json
+{
+  "version": "v2.0.0",
+  "binary_path": "/home/user/.local/bin/my-context",
+  "installed_at": "2025-10-09T19:00:00Z",
+  "install_method": "curl-install.sh"
+}
+```
+
+**Fields**:
+| Field | Type | Description |
+|-------|------|-------------|
+| version | string | Semantic version of installed binary |
+| binary_path | string | Absolute path where binary is installed |
+| installed_at | RFC3339 | When installation occurred |
+| install_method | string | Script used (install.sh, install.bat, install.ps1, curl-install.sh, manual) |
+
+**Usage**:
+- Installation scripts check this file to detect upgrades
+- Future version: `my-context upgrade` command can use this metadata
+- Preserved during upgrades
+
+**Optional**: This metadata file is optional for Sprint 2 (stretch goal). Core installation works without it.
+
+---
+
+## Data Relationships
+
+```
+Context
+  ├─ Notes (1:N)
+  ├─ Files (1:N)
+  └─ Touch Events (1:N)
+
+ProjectMetadata (derived)
+  └─ Contexts (1:N)
+
+ExportDocument
+  └─ Context (1:1) - represents single context export
+
+BinaryArtifact
+  └─ Platform (1:1) - one binary per platform
+
+InstallationMetadata
+  └─ Binary (1:1) - tracks one installation
+```
+
+---
+
+## File System Structure
+
+```
+~/.my-context/
+├── context-name-1/
+│   ├── meta.json              # Context entity (is_archived added)
+│   ├── notes.log              # Newline-delimited notes
+│   ├── files.log              # Newline-delimited file paths
+│   └── touches.log            # Newline-delimited touch timestamps
+├── context-name-2/
+│   └── ...
+├── transitions.log            # Context switch history (preserved on delete)
+└── .install-metadata          # Optional: Installation tracking
+
+Exported Files:
+./context-name-1.md            # ExportDocument (user-specified location)
+```
+
+---
+
+## Migration Strategy
+
+**Sprint 1 → Sprint 2**:
+- ✅ No migration required
+- ✅ Existing meta.json files work without changes (is_archived defaults to false)
+- ✅ Installation preserves entire ~/.my-context/ directory
+- ✅ Backward compatibility tested in T012
 
 ---
 
 ## Performance Considerations
 
-### List Command with 1000+ Contexts
-
-**Challenge**: Loading and sorting 1000 meta.json files may be slow.
-
-**Optimization Strategy**:
-1. **Lazy loading**: Only load meta.json for contexts in result set (after filtering)
-2. **Caching**: Store modified times, only reload changed files (future Sprint)
-3. **Pagination**: Default limit of 10 reduces I/O by 99% for large datasets
-
-**Benchmark Target**: <1 second for `my-context list` with 1000 contexts on HDD.
-
-**Implementation**:
-```go
-// Phase 1: List all context directories (fast, no I/O)
-dirs := listContextDirectories() // O(1000) directory reads
-
-// Phase 2: Load only meta.json for stat info (name, start time, status)
-contexts := loadLightweightMetadata(dirs) // O(1000) small file reads
-
-// Phase 3: Sort by start time (in-memory)
-sort.Slice(contexts, ...) // O(n log n)
-
-// Phase 4: Apply filters and limit
-filtered := applyFilters(contexts, filters) // O(n)
-limited := filtered[:limit] // O(1)
-
-// Phase 5: Load full details only for displayed contexts (if needed)
-// For list view, lightweight metadata is sufficient
-```
-
-### Export Command Performance
-
-**Challenge**: Reading and formatting multiple log files for large contexts.
+| Operation | Data Access Pattern | Expected Performance |
+|-----------|---------------------|---------------------|
+| List 1000 contexts | Read 1000 meta.json files | <1s (sequential reads, ~1ms per file) |
+| Export 500 notes | Read 1 meta.json + 3 log files | <1s (mostly string formatting) |
+| Archive context | Update 1 meta.json file | <50ms (single write) |
+| Filter by project | Read all meta.json, filter in memory | <1s (1000 contexts × 1ms) |
+| Search by name | Read all meta.json, substring match | <1s (in-memory string operations) |
 
 **Optimization**:
-- Stream log files line-by-line (don't load entire file into memory)
-- Use buffered I/O for markdown output
-- Format timestamps lazily (only when writing to output)
-
-**Benchmark Target**: <1 second for context with 500 notes + 100 files.
+- Context list caching not needed (1s is acceptable for CLI tool)
+- Log files read once per export (streaming not required for <500 entries)
+- JSON parsing is fast enough for small documents (meta.json ~200 bytes)
 
 ---
 
-## Summary
+## Validation Rules
 
-**Modified Entities**: 1 (Context - added is_archived field)  
-**New Derived Entities**: 2 (ProjectMetadata, ExportDocument)  
-**New Artifact Entities**: 2 (BinaryArtifact, InstallationMetadata)
+**Context Name**:
+- ✅ Non-empty
+- ✅ Unique within ~/.my-context/
+- ✅ Valid directory name (no `/`, `\`, null bytes)
+- ⚠️  Case-sensitive on Unix, case-insensitive on Windows (use exact match to avoid confusion)
 
-**Total Fields Added**: 1 (is_archived)  
-**Total Schema Breakages**: 0 (backward compatible)
+**Timestamps**:
+- ✅ RFC3339 format (ISO8601 with timezone)
+- ✅ end_time must be after start_time if both set
+- ✅ Parse failures result in clear error messages
 
-**Data Migration Required**: No (graceful degradation)  
-**Performance Impact**: Minimal (lazy loading, pagination)
+**Project Names**:
+- ✅ Extracted before first colon
+- ✅ Trimmed of whitespace
+- ✅ Case-insensitive matching
+- ✅ Contexts without colons use full name as project
 
 ---
 
-*Data model complete. Ready for contract generation.*
+**Data Model Complete**: All entities defined with fields, relationships, validation rules, and performance targets. Ready for contract generation.

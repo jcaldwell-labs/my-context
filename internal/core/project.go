@@ -4,42 +4,75 @@ import (
 	"strings"
 )
 
-// ExtractProjectName extracts the project name from a context name
-// Contexts following "project: phase - description" convention return the text before the first colon
-// Contexts without colons return the full name as the project name
+// ExtractProjectName extracts the project name from a context name.
+// If the context name contains a colon, returns the text before the first colon (trimmed).
+// If no colon, returns the full context name (trimmed).
+//
+// Examples:
+//   "ps-cli: Phase 1" -> "ps-cli"
+//   "garden: Planning" -> "garden"
+//   "StandaloneContext" -> "StandaloneContext"
+//   "project: Phase 1: Subphase A" -> "project" (only first colon used)
 func ExtractProjectName(contextName string) string {
-	// Trim leading/trailing whitespace
-	contextName = strings.TrimSpace(contextName)
-
-	// If no colon, the entire name is the project
-	if !strings.Contains(contextName, ":") {
-		return contextName
-	}
-
-	// Extract text before first colon
+	// Split on first colon only
 	parts := strings.SplitN(contextName, ":", 2)
-	projectName := strings.TrimSpace(parts[0])
-
-	return projectName
+	
+	if len(parts) > 1 {
+		// Has colon - return text before it, trimmed
+		return strings.TrimSpace(parts[0])
+	}
+	
+	// No colon - full name is project name, trimmed
+	return strings.TrimSpace(contextName)
 }
 
-// FilterContextsByProject filters a list of context names by project name (case-insensitive)
-func FilterContextsByProject(contextNames []string, projectFilter string) []string {
-	if projectFilter == "" {
+// FilterByProject filters a list of context names by project (case-insensitive)
+func FilterByProject(contextNames []string, projectName string) []string {
+	if projectName == "" {
 		return contextNames
 	}
 
-	projectFilter = strings.ToLower(strings.TrimSpace(projectFilter))
 	var filtered []string
+	projectLower := strings.ToLower(strings.TrimSpace(projectName))
 
 	for _, name := range contextNames {
-		projectName := ExtractProjectName(name)
+		contextProject := ExtractProjectName(name)
+		contextProjectLower := strings.ToLower(contextProject)
 
-		// Case-insensitive comparison
-		if strings.ToLower(projectName) == projectFilter {
+		if contextProjectLower == projectLower {
 			filtered = append(filtered, name)
 		}
 	}
 
 	return filtered
+}
+
+// ProjectMetadata represents extracted project information
+type ProjectMetadata struct {
+	ProjectName   string
+	ContextNames  []string
+	ContextCount  int
+}
+
+// ExtractProjectMetadata analyzes a list of contexts and groups them by project
+func ExtractProjectMetadata(contextNames []string) map[string]*ProjectMetadata {
+	projects := make(map[string]*ProjectMetadata)
+
+	for _, name := range contextNames {
+		projectName := ExtractProjectName(name)
+		projectKey := strings.ToLower(projectName) // Case-insensitive grouping
+
+		if meta, exists := projects[projectKey]; exists {
+			meta.ContextNames = append(meta.ContextNames, name)
+			meta.ContextCount++
+		} else {
+			projects[projectKey] = &ProjectMetadata{
+				ProjectName:  projectName, // Keep original casing
+				ContextNames: []string{name},
+				ContextCount: 1,
+			}
+		}
+	}
+
+	return projects
 }

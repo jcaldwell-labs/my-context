@@ -1,0 +1,149 @@
+# Project-Specific Cursor Rules: my-context-copilot
+
+## Context Management Integration
+
+This project uses **my-context** for tracking development lifecycle phases. The AI assistant should automatically integrate with my-context during speckit command execution.
+
+### Workflow Integration Rules
+
+1. **Before starting any speckit command** (specify, plan, tasks, implement):
+   - Check if a context is active with `my-context show`
+   - If no context is active or context is for a different feature, prompt to start/switch context
+
+2. **During speckit command execution**:
+   - Record key decisions as notes (12-20 notes per phase typical, flexible based on complexity)
+   - Associate relevant files using `my-context touch <file>` when:
+     - Creating new spec/plan/task documents
+     - Modifying constitution or templates
+     - Generating test files
+     - Updating documentation
+   
+3. **Note-taking guidelines**:
+   - Record decisions that deviate from templates
+   - Document clarifications received from user
+   - Track blocking issues or unknowns
+   - Log phase transitions (e.g., "Phase 0 research complete")
+   - Typical range: 12-20 notes per context, but adjust based on complexity
+   - For complex patterns or full extrapolations, exceed guideline as needed
+
+4. **File association pattern**:
+   - Use `touch` when files are created or significantly modified
+   - Prioritize spec artifacts: spec.md, plan.md, tasks.md, research.md, data-model.md, contracts/*
+   - Include test files when test-driven development is applied
+   - Track documentation updates (README, TROUBLESHOOTING, etc.)
+
+### Context Chunking Strategy
+
+Each context should represent a logical lifecycle phase:
+- **"002-installation-improvements: Specification"** - /specify command work
+- **"002-installation-improvements: Planning"** - /plan command work
+- **"002-installation-improvements: Task Breakdown"** - /tasks command work
+- **"002-installation-improvements: Implementation Phase N"** - Actual coding work
+
+When a phase completes or reaches 20+ notes without special reason:
+1. Add summary note: "Phase complete: [outcome]"
+2. Stop current context: `my-context stop`
+3. Start new context for next phase: `my-context start "002-installation-improvements: [next-phase]"`
+
+### Automatic my-context Actions
+
+The AI should execute these patterns without explicit instruction:
+
+**Pattern 1: Phase Start**
+```bash
+my-context start "002-installation-improvements: [Phase Name]"
+my-context note "Starting [speckit-command]: [brief-objective]"
+```
+
+**Pattern 2: Decision Recording**
+```bash
+my-context note "[Decision]: [what-was-decided] - Rationale: [why]"
+```
+
+**Pattern 3: File Association**
+```bash
+my-context touch path/to/file.md
+my-context note "Created/Updated [file]: [purpose]"
+```
+
+**Pattern 4: Phase Completion**
+```bash
+my-context note "Phase complete: [outcome-summary]"
+my-context stop
+```
+
+**Pattern 5: Issue/Blocker**
+```bash
+my-context note "[BLOCKER]: [description] - Needs: [resolution-path]"
+```
+
+### Integration with Speckit Commands
+
+When executing `/speckit.X` commands, wrap with my-context:
+
+**Before command**:
+- Verify active context or start appropriate one
+- Note: "Executing /speckit.[command]"
+
+**During command**:
+- Touch all created/modified files
+- Note key decisions from Execution Flow
+- Note any NEEDS CLARIFICATION resolutions
+
+**After command**:
+- Touch final artifacts
+- Note: "Completed /speckit.[command]: [output-summary]"
+- Suggest stopping context if phase complete
+
+### Example Workflow
+
+```bash
+# User requests: /speckit.plan
+
+# AI automatically does:
+my-context show  # Check current context
+# If none: my-context start "002-installation-improvements: Planning"
+
+my-context note "Executing /speckit.plan for Sprint 2 features"
+
+# ... perform plan command work ...
+
+my-context touch specs/002-installation-improvements-and/plan.md
+my-context note "Decision: Using Go 1.21+ with static linking (CGO_ENABLED=0)"
+my-context touch specs/002-installation-improvements-and/research.md
+my-context note "Research complete: 7 key decisions documented"
+my-context touch specs/002-installation-improvements-and/data-model.md
+my-context note "Data model defined: 5 entities with backward compatibility"
+
+my-context note "Phase complete: Planning artifacts ready for task generation"
+# Suggest: "Context ready to stop. Start new context for /tasks phase?"
+```
+
+## Speckit Constitution Awareness
+
+- Project constitution is at: `.specify/memory/constitution.md`
+- Currently a TEMPLATE (not filled out)
+- When constitution checks are referenced in commands, acknowledge template state
+- Focus on design principles documented in spec artifacts
+
+## Project Context
+
+- **Language**: Go 1.21+
+- **CLI Framework**: Cobra (existing)
+- **Testing**: Go's built-in testing + table-driven tests
+- **Build**: Multi-platform (Windows, Linux, macOS x86/ARM)
+- **Data Storage**: JSON files in ~/.my-context/
+- **Current Sprint**: Sprint 2 (Installation improvements + user-requested features)
+
+## Code Style Preferences
+
+- Use Go idioms and standard library patterns
+- Table-driven tests for comprehensive coverage
+- Clear error messages with actionable guidance
+- Comments for public APIs and complex logic
+- Keep functions focused (Unix philosophy)
+
+---
+
+*This file enables seamless integration between Cursor's AI workflows and my-context lifecycle tracking.*
+

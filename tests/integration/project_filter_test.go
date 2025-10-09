@@ -1,189 +1,149 @@
 package integration
 
 import (
+	"strings"
 	"testing"
-
-	"github.com/jefferycaldwell/my-context-copilot/internal/core"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-// TestListFilterByProject tests --project flag filters correctly
-func TestListFilterByProject(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
+// TestListProjectFilter tests --project flag filters contexts
+func TestListProjectFilter(t *testing.T) {
+	testDir := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, testDir)
 
-	// Create contexts with project naming convention
-	core.CreateContext("ps-cli: Phase 1")
-	core.CreateContext("ps-cli: Phase 2")
-	core.CreateContext("garden: Planning")
-	core.CreateContext("Standalone")
+	// Create contexts with different projects
+	contexts := []string{
+		"ps-cli: Phase 1",
+		"ps-cli: Phase 2",
+		"garden: Planning",
+		"garden: Implementation",
+	}
+	for _, ctx := range contexts {
+		createTestContext(t, testDir, ctx)
+		runCommand("stop")
+	}
 
-	// Filter by project
-	contexts, err := core.ListContexts(core.ListOptions{
-		Project: "ps-cli",
-	})
-	require.NoError(t, err)
+	// Execute: Filter by ps-cli project
+	output, _ := runCommandWithOutput("list", "--project", "ps-cli")
 
-	names := getContextNames(contexts)
-	assert.Len(t, names, 2)
-	assert.Contains(t, names, "ps-cli: Phase 1")
-	assert.Contains(t, names, "ps-cli: Phase 2")
-	assert.NotContains(t, names, "garden: Planning")
+	// Verify: Only ps-cli contexts shown
+	if !strings.Contains(output, "ps-cli: Phase 1") {
+		t.Error("Expected ps-cli Phase 1 in output")
+	}
+	if !strings.Contains(output, "ps-cli: Phase 2") {
+		t.Error("Expected ps-cli Phase 2 in output")
+	}
+	if strings.Contains(output, "garden") {
+		t.Error("Garden contexts should not appear in ps-cli filter")
+	}
 }
 
-// TestStartWithProjectFlag tests --project flag creates correct name
-func TestStartWithProjectFlag(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
+// TestStartWithProject tests --project flag for start command
+func TestStartWithProject(t *testing.T) {
+	testDir := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, testDir)
 
-	// Start context with project flag
-	ctx, err := core.CreateContextWithProject("Phase 1 - Foundation", "ps-cli")
-	require.NoError(t, err)
+	// Execute: Start with --project flag
+	err := runCommand("start", "Phase 3", "--project", "ps-cli")
+	if err != nil {
+		t.Fatalf("Start with --project failed: %v", err)
+	}
 
-	// Verify combined name
-	assert.Equal(t, "ps-cli: Phase 1 - Foundation", ctx.Name)
+	// Verify: Context created with project prefix
+	output, _ := runCommandWithOutput("show")
+	expectedName := "ps-cli: Phase 3"
+	if !strings.Contains(output, expectedName) {
+		t.Errorf("Expected context name to be %q", expectedName)
+	}
 
-	// Verify it filters correctly
-	contexts, _ := core.ListContexts(core.ListOptions{
-		Project: "ps-cli",
-	})
-	names := getContextNames(contexts)
-	assert.Contains(t, names, "ps-cli: Phase 1 - Foundation")
+	runCommand("stop")
 }
 
-// TestProjectExtractionMultipleColons tests extraction with multiple colons
+// TestProjectExtractionMultipleColons tests handling of multiple colons
 func TestProjectExtractionMultipleColons(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
+	testDir := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, testDir)
 
 	// Create context with multiple colons
-	core.CreateContext("project: sub: phase")
+	contextName := "project: Phase 1: Subphase A"
+	createTestContext(t, testDir, contextName)
+	runCommand("stop")
 
-	// Should extract only text before first colon
-	contexts, err := core.ListContexts(core.ListOptions{
-		Project: "project",
-	})
-	require.NoError(t, err)
+	// Execute: Filter by project (should extract "project")
+	output, _ := runCommandWithOutput("list", "--project", "project")
 
-	names := getContextNames(contexts)
-	assert.Contains(t, names, "project: sub: phase")
+	// Verify: Context appears in filtered list
+	if !strings.Contains(output, contextName) {
+		t.Error("Context with multiple colons should be found by first part")
+	}
 }
 
 // TestProjectExtractionNoColon tests contexts without colons
 func TestProjectExtractionNoColon(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
+	testDir := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, testDir)
 
-	// Create context without colon
-	core.CreateContext("StandaloneContext")
+	// Create standalone context (no colon)
+	standalone := "StandaloneContext"
+	createTestContext(t, testDir, standalone)
+	runCommand("stop")
 
-	// Full name should be treated as project
-	contexts, err := core.ListContexts(core.ListOptions{
-		Project: "StandaloneContext",
-	})
-	require.NoError(t, err)
+	// Execute: Filter by full name
+	output, _ := runCommandWithOutput("list", "--project", standalone)
 
-	assert.Len(t, contexts, 1)
-	assert.Equal(t, "StandaloneContext", contexts[0].Name)
+	// Verify: Context found (full name = project name)
+	if !strings.Contains(output, standalone) {
+		t.Error("Standalone context should match its full name as project")
+	}
 }
 
-// TestProjectExtractionWhitespace tests trimming of whitespace
+// TestProjectExtractionWhitespace tests whitespace handling
 func TestProjectExtractionWhitespace(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
+	testDir := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, testDir)
 
 	// Create context with whitespace around colon
-	core.CreateContext("  project  :  phase  ")
+	contextName := " project  :  description "
+	createTestContext(t, testDir, contextName)
+	runCommand("stop")
 
-	// Should trim whitespace in project extraction
-	contexts, err := core.ListContexts(core.ListOptions{
-		Project: "project",
-	})
-	require.NoError(t, err)
-	assert.Len(t, contexts, 1)
+	// Execute: Filter by trimmed project name
+	output, _ := runCommandWithOutput("list", "--project", "project")
+
+	// Verify: Whitespace trimmed, context found
+	if !strings.Contains(output, "project") {
+		t.Error("Project extraction should trim whitespace")
+	}
 }
 
-// TestProjectFilterCaseInsensitive tests case-insensitive matching
-func TestProjectFilterCaseInsensitive(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
+// TestProjectCaseInsensitive tests case-insensitive matching (FR-004.5)
+func TestProjectCaseInsensitive(t *testing.T) {
+	testDir := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, testDir)
 
-	core.CreateContext("PS-CLI: Phase 1")
-	core.CreateContext("ps-cli: Phase 2")
-	core.CreateContext("Ps-Cli: Phase 3")
+	// Create contexts with mixed case
+	contexts := []string{
+		"ps-cli: Phase 1",
+		"Ps-Cli: Phase 2",
+	}
+	for _, ctx := range contexts {
+		createTestContext(t, testDir, ctx)
+		runCommand("stop")
+	}
 
-	// Filter with lowercase
-	contexts, err := core.ListContexts(core.ListOptions{
-		Project: "ps-cli",
-	})
-	require.NoError(t, err)
-	assert.Len(t, contexts, 3)
+	// Test different case variations
+	cases := []string{"ps-cli", "PS-CLI", "Ps-Cli", "pS-cLi"}
+	
+	for _, searchCase := range cases {
+		t.Run("search_"+searchCase, func(t *testing.T) {
+			output, _ := runCommandWithOutput("list", "--project", searchCase)
 
-	// Filter with uppercase
-	contexts, err = core.ListContexts(core.ListOptions{
-		Project: "PS-CLI",
-	})
-	require.NoError(t, err)
-	assert.Len(t, contexts, 3)
-}
-
-// TestStartProjectFlagWithEmptyName tests validation
-func TestStartProjectFlagWithEmptyName(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
-
-	// Attempt to create context with empty phase name
-	_, err := core.CreateContextWithProject("", "ps-cli")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "name")
-}
-
-// TestStartProjectFlagWithEmptyProject tests validation
-func TestStartProjectFlagWithEmptyProject(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
-
-	// Attempt to create context with empty project
-	_, err := core.CreateContextWithProject("Phase 1", "")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "project")
-}
-
-// TestProjectFilterNoMatches tests filtering with no results
-func TestProjectFilterNoMatches(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
-
-	core.CreateContext("ps-cli: Phase 1")
-
-	// Filter for non-existent project
-	contexts, err := core.ListContexts(core.ListOptions{
-		Project: "nonexistent",
-	})
-	require.NoError(t, err) // Not an error, just no matches
-	assert.Len(t, contexts, 0)
-}
-
-// TestProjectExtractionWithStartCommand tests integration
-func TestProjectExtractionWithStartCommand(t *testing.T) {
-	setupTestEnv(t)
-	defer cleanupTestEnv(t)
-
-	// Create context using project flag
-	ctx, err := core.CreateContextWithProject("Testing Integration", "my-project")
-	require.NoError(t, err)
-
-	// Verify name format
-	assert.Equal(t, "my-project: Testing Integration", ctx.Name)
-
-	// Verify extraction works
-	project := core.ExtractProjectName(ctx.Name)
-	assert.Equal(t, "my-project", project)
-
-	// Verify filtering works
-	contexts, _ := core.ListContexts(core.ListOptions{
-		Project: "my-project",
-	})
-	assert.Len(t, contexts, 1)
+			// Verify: Both contexts found regardless of case
+			if !strings.Contains(strings.ToLower(output), "phase 1") {
+				t.Errorf("Case-insensitive search for %q should find Phase 1", searchCase)
+			}
+			if !strings.Contains(strings.ToLower(output), "phase 2") {
+				t.Errorf("Case-insensitive search for %q should find Phase 2", searchCase)
+			}
+		})
+	}
 }

@@ -1,330 +1,306 @@
 # Research: Installation & Usability Improvements
 
 **Feature**: 002-installation-improvements-and  
-**Date**: 2025-10-05  
-**Status**: Complete
+**Date**: 2025-10-09  
+**Phase**: Phase 0 (Outline & Research)
+
+## Overview
+
+This document captures research findings and technical decisions for Sprint 2 multi-platform distribution and CLI enhancements. All decisions respond to Sprint 1 retrospective feedback and user requests.
 
 ---
 
-## 1. Multi-Platform Go Builds
+## Decision 1: Static Binary Build Strategy
 
-### Decision: Use CGO_ENABLED=0 for Static Linking
-**Rationale**: Static binaries eliminate runtime dependencies, ensuring the tool runs on clean systems without requiring libc or other libraries.
+**Context**: Users reported needing to build from source on WSL, creating installation friction.
 
-**Command Pattern**:
-```bash
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o my-context-linux ./cmd/my-context/
-CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o my-context.exe ./cmd/my-context/
-CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o my-context-darwin-amd64 ./cmd/my-context/
-CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o my-context-darwin-arm64 ./cmd/my-context/
-```
+**Decision**: Use Go's native cross-compilation with CGO_ENABLED=0 for static binaries
 
-### Decision: GitHub Actions for Automated Builds
-**Rationale**: GitHub Actions provides free CI/CD for open source, supports matrix builds for multiple platforms, and integrates directly with GitHub Releases.
+**Rationale**:
+- Go 1.5+ includes native cross-compilation for all major platforms
+- CGO_ENABLED=0 produces statically-linked binaries with zero runtime dependencies
+- Static binaries eliminate common installation issues (missing libc versions, dynamic linking errors)
+- Binary sizes remain small (<10MB) due to Go's efficient compilation
 
 **Alternatives Considered**:
-- Makefile: Good for local builds, but requires Make installed on Windows
-- Shell scripts only: Portable but no CI/CD integration
-- **Selected**: GitHub Actions + shell scripts for local dev
+- Docker-based builds: Rejected - adds complexity and requires Docker installation
+- CGo with cross-compilation: Rejected - requires platform-specific toolchains
+- Separate compilation per platform: Rejected - manual process, error-prone
 
-**Implementation Notes**:
-- Use `actions/checkout@v3` and `actions/setup-go@v4`
-- Matrix strategy for platforms: `[linux, windows, darwin] x [amd64, arm64]` (exclude windows/arm64)
-- Generate SHA256 checksums with `sha256sum` (Linux) or `shasum -a 256` (macOS)
-- Upload artifacts to GitHub Releases with `actions/upload-artifact@v3`
-
-### Decision: Skip macOS Signing for Sprint 2
-**Rationale**: Code signing requires Apple Developer certificate ($99/year) and notarization adds complexity. Users can bypass Gatekeeper with "right-click > Open" workflow.
-
-**Future Consideration**: Add signing in Sprint 3+ if adoption grows on macOS.
-
----
-
-## 2. Installation Patterns for CLI Tools
-
-### Decision: User-Specific Installation (No sudo Required)
-**Rationale**: Avoids permission issues, works in corporate environments with restricted sudo, aligns with modern CLI tool practices (rustup, cargo, npm global).
-
-**Installation Locations**:
-- **Linux/macOS/WSL**: `~/.local/bin/my-context` (added to PATH in shell rc files)
-- **Windows**: `%USERPROFILE%\bin\my-context.exe` (added to user PATH via registry)
-
-**Alternatives Considered**:
-- System-wide install (/usr/local/bin): Requires sudo, fails in restricted environments
-- Current directory only: User must manually manage PATH
-- **Selected**: User-specific with automatic PATH modification
-
-### Decision: Backup-and-Replace Upgrade Strategy
-**Rationale**: Prevents data loss if upgrade fails mid-operation. Old binary preserved as `.backup` until new one confirmed working.
-
-**Upgrade Flow**:
-1. Detect existing installation (`which my-context`)
-2. Test new binary (`./my-context-new --version`)
-3. Backup old binary (`mv my-context my-context.backup`)
-4. Install new binary (`mv my-context-new my-context`)
-5. Verify (`my-context --version`)
-6. Remove backup if successful
-
-### Decision: Shell-Specific PATH Modification
-**Rationale**: Different shells use different rc files. Detection ensures PATH persists across sessions.
-
-**Shell Detection Logic**:
+**Implementation**:
 ```bash
-if [ -n "$BASH_VERSION" ]; then
-    RC_FILE="$HOME/.bashrc"
-elif [ -n "$ZSH_VERSION" ]; then
-    RC_FILE="$HOME/.zshrc"
-else
-    RC_FILE="$HOME/.profile"  # Fallback
-fi
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o my-context-linux-amd64
+GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o my-context-windows-amd64.exe
+GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o my-context-darwin-amd64
+GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o my-context-darwin-arm64
 ```
 
-**Windows PATH Modification**:
-- PowerShell: `[Environment]::SetEnvironmentVariable("Path", $newPath, "User")`
-- cmd.exe: `setx PATH "%PATH%;%USERPROFILE%\bin"`
+**References**:
+- Go cross-compilation: https://go.dev/doc/install/source#environment
+- Static linking benefits: Common practice in Go CLI tools (kubectl, docker CLI, gh)
 
 ---
 
-## 3. Project Name Parsing Strategy
+## Decision 2: User-Level Installation (No Sudo)
 
-### Decision: Extract Text Before First Colon, Trim Whitespace
-**Rationale**: Matches observed user pattern ("project: phase - description"). Simple, predictable, no ambiguity.
+**Context**: Requiring sudo/admin for installation creates enterprise environment blockers.
 
-**Parsing Logic**:
+**Decision**: Install binaries to user-specific directories without elevated privileges
+
+**Rationale**:
+- `~/.local/bin/` (Unix/macOS) and `%USERPROFILE%\bin\` (Windows) are standard user paths
+- Users can modify their own PATH without admin rights
+- Aligns with modern security practices (principle of least privilege)
+- Works in restricted corporate environments
+
+**Alternatives Considered**:
+- System-wide install (`/usr/local/bin`, `C:\Program Files`): Rejected - requires sudo/admin
+- Homebrew/Chocolatey exclusive: Rejected - not universally available, especially on WSL
+- Manual PATH instructions only: Rejected - poor UX, error-prone
+
+**Implementation**:
+- Unix: `~/.local/bin/` with automatic `.bashrc`/`.zshrc` PATH addition
+- Windows: `%USERPROFILE%\bin\` with `setx PATH` (cmd) or `[Environment]::SetEnvironmentVariable` (PowerShell)
+- Detect existing installations and offer upgrade path
+
+---
+
+## Decision 3: Project Name Extraction Pattern
+
+**Context**: Users naturally organize contexts by project (e.g., "ps-cli: Phase 1", "ps-cli: Phase 2")
+
+**Decision**: Parse project name as text before first colon, case-insensitive matching
+
+**Rationale**:
+- Colon separator is clear visual boundary
+- Users already using this pattern (observed in Sprint 1 usage logs)
+- Simple string operation (`strings.SplitN(name, ":", 2)[0]`)
+- Case-insensitive matching prevents "PS-CLI" vs "ps-cli" confusion
+
+**Alternatives Considered**:
+- Structured metadata fields: Rejected - requires explicit project setting, breaks existing contexts
+- Regex patterns: Rejected - overkill for simple parsing, harder to debug
+- Prefix-based (underscore, dash): Rejected - colon is more readable and already in use
+
+**Implementation**:
 ```go
 func ExtractProjectName(contextName string) string {
     parts := strings.SplitN(contextName, ":", 2)
-    return strings.TrimSpace(parts[0])
+    if len(parts) > 1 {
+        return strings.TrimSpace(parts[0])
+    }
+    return contextName // No colon = full name is project
 }
 ```
 
 **Edge Cases**:
-- Multiple colons: `"project: sub: phase"` → project = "project"
-- No colon: `"standalone"` → project = "standalone" (full name)
-- Leading/trailing spaces: `" project : phase "` → project = "project" (trimmed)
-- Unicode: `"проект: фаза"` → Supported (Go strings are UTF-8)
-
-### Decision: Case-Insensitive Filtering
-**Rationale**: User convenience. Typing `--project PS-CLI` should match `"ps-cli: Phase 1"`.
-
-**Implementation**: `strings.EqualFold(projectName, extractedProject)`
-
-**Alternatives Considered**:
-- Case-sensitive exact match: Too strict, poor UX
-- Fuzzy matching: Too complex, unexpected results
-- **Selected**: Case-insensitive exact match
+- Multiple colons: Use only first as delimiter
+- No colon: Treat entire name as project
+- Leading/trailing whitespace: Trim automatically
 
 ---
 
-## 4. Markdown Export Format
+## Decision 4: Archive vs Delete Implementation
 
-### Decision: Human-Readable Structure with Headers and Lists
-**Rationale**: Markdown should be readable without rendering. Headers provide clear sections, lists are scannable.
+**Context**: Users need both "hide completed work" (archive) and "remove test contexts" (delete)
 
-**Format Template**:
+**Decision**: Archive as metadata flag (is_archived:true in meta.json), Delete as physical removal
+
+**Rationale**:
+- Archive preserves data for future reference while hiding from default views
+- Delete provides true cleanup for mistaken/test contexts
+- JSON metadata change is backward compatible (field is optional with omitempty tag)
+- Physical deletion respects user's explicit intent (with confirmation prompt)
+
+**Alternatives Considered**:
+- Archive as directory move (.archive/ subdirectory): Rejected - complicates path resolution, breaks existing references
+- Soft delete with deleted flag: Rejected - no use case for recovering "deleted" contexts
+- Single "remove" command with --permanent flag: Rejected - easy to lose data accidentally
+
+**Implementation**:
+- Archive: Add `is_archived: true` to meta.json, filter in ListContexts
+- Delete: Remove entire context directory, preserve transitions.log history
+- Both require confirmation, both prevent operation on active context
+
+---
+
+## Decision 5: Export Format (Markdown)
+
+**Context**: Users want to share context summaries with team members
+
+**Decision**: Generate markdown files with hierarchical structure (headers, lists, timestamps)
+
+**Rationale**:
+- Markdown is human-readable in any text editor
+- Renders nicely in GitHub, GitLab, Slack, Notion, etc.
+- Portable format (no special viewers required)
+- Easy to grep/search with standard tools
+
+**Alternatives Considered**:
+- JSON export: Rejected - not human-friendly for sharing
+- HTML export: Rejected - requires browser, harder to diff/version
+- Plain text: Rejected - loses structure, harder to scan
+
+**Format**:
 ```markdown
-# Context: {name}
+# Context: [Name]
 
-**Started**: {ISO 8601 timestamp}
-**Ended**: {ISO 8601 timestamp or "Active"}
-**Duration**: {human-readable: "2h 15m" or "Active"}
-**Status**: {active | stopped | archived}
+**Started**: [Timestamp]
+**Ended**: [Timestamp or "Active"]
+**Duration**: [Human-readable duration]
 
-## Notes ({count})
+## Notes
 
-- `{HH:MM}` {note_text}
-- `{HH:MM}` {note_text}
+- [Timestamp] Note content
+- [Timestamp] Note content
 
-## Associated Files ({count})
+## Files
 
-- {file_path}
-  Added: {timestamp}
+- [Timestamp] /path/to/file
 
 ## Activity
 
-- {touch_count} touch events
-- Last activity: {most recent touch timestamp}
-
----
-*Exported: {export_timestamp}*
+- [Timestamp] Touch event
 ```
 
-### Decision: Include All Metadata
-**Rationale**: Export should be self-contained. Timestamps enable reconstruction, duration shows productivity, status indicates completion.
+---
+
+## Decision 6: List Default Limit (10 contexts)
+
+**Context**: Users with 50+ contexts reported overwhelming list output
+
+**Decision**: Show last 10 contexts by default, add --all flag for complete list
+
+**Rationale**:
+- 10 contexts fit on single screen without scrolling
+- Most users work on 3-5 active contexts at a time
+- --all flag provides escape hatch for full access
+- --limit <n> allows custom thresholds
 
 **Alternatives Considered**:
-- Content-only (no timestamps): Loses context, can't verify when work happened
-- Separate metadata file: More complex, harder to share
-- **Selected**: Single markdown file with embedded metadata
-
-### Decision: Overwrite Prompt (No Automatic Timestamp Suffix)
-**Rationale**: Explicit user control prevents accidental data loss. Automatic timestamp suffixes create file clutter and make export paths unpredictable.
+- Pagination: Rejected - adds complexity, Unix tools don't paginate by default
+- Show all with scroll prompt: Rejected - breaks piping to grep/awk
+- Configuration file setting: Rejected - violates zero-config principle
 
 **Implementation**:
-- If target file exists, prompt: `File exists: {path}. Overwrite? (y/N):`
-- User accepts (y): Overwrite file
-- User declines (n/Enter): Cancel export, exit code 2
-- Future consideration: Add `--force` flag to skip prompt (Sprint 3+)
+- Sort contexts by start_time descending (most recent first)
+- Display message: "Showing 10 of 50 contexts. Use --all to see all."
+- --limit flag overrides default
+
+---
+
+## Decision 7: Backward Compatibility Strategy
+
+**Context**: Sprint 1 users have existing contexts in ~/.my-context/ that must continue working
+
+**Decision**: Additive JSON fields with omitempty tags, no schema migrations required
+
+**Rationale**:
+- Adding `is_archived` field with `omitempty` means old contexts without the field are treated as not archived
+- Go's JSON unmarshaling handles missing fields gracefully (zero value = false for bools)
+- No need for schema version numbers or migration scripts
+- Installation scripts explicitly preserve ~/.my-context/ during upgrades
 
 **Alternatives Considered**:
-- Automatic timestamp suffix: Creates unpredictable filenames, harder to script
-- Always overwrite: Too dangerous, no user control
-- **Selected**: Explicit confirmation prompt
-### Decision: Markdown Compatibility with GitHub/VS Code/Obsidian
-**Rationale**: These are the three most popular markdown viewers/editors. Test format renders correctly in all three.
+- Schema versioning with migrations: Rejected - overkill for adding one optional field
+- Separate storage for Sprint 2 data: Rejected - fragments user data, complicates queries
+- Rebuild contexts on upgrade: Rejected - risky, could lose user data
 
-**Compatibility Notes**:
-- Use standard markdown (no extensions)
-- Inline code for timestamps (`` `HH:MM` ``) renders as monospace
-- Tables avoided (not needed for this data structure)
-- Bold for field names (`**Started**:`) is universally supported
+**Compatibility Testing**:
+- Load Sprint 1 meta.json files (without is_archived field)
+- Verify all existing commands work unchanged
+- Verify new features work on old contexts
 
 ---
 
-## 5. Archive vs Delete Semantics
+## Decision 8: GitHub Actions for Release Builds
 
-### Decision: Archive as Metadata Flag (Not Directory Move)
-**Rationale**: Simpler implementation, less I/O, easier to unarchive in future Sprint. Moving directories risks breaking absolute paths in other systems.
+**Context**: Manual multi-platform builds are error-prone and time-consuming
 
-**Implementation**:
-- Add `"is_archived": true` to `meta.json`
-- Default list view filters out archived contexts
-- `--archived` flag shows only archived contexts
-- Archive status does not affect data accessibility (files remain in place)
+**Decision**: Use GitHub Actions workflow for automated release builds on git tag push
+
+**Rationale**:
+- GitHub-hosted runners support all target platforms
+- Automatic binary uploads to GitHub Releases
+- SHA256 checksum generation for security verification
+- Triggered by semantic version tags (v2.0.0, v2.1.0, etc.)
 
 **Alternatives Considered**:
-- Move to `~/.my-context/archived/` subdirectory: More visible separation, but complicates path handling
-- Soft delete (is_deleted flag): Requires separate "purge" command, adds complexity
-- **Selected**: Metadata flag for simplicity and flexibility
+- GoReleaser: Considered - adds dependency, may be overkill for simple builds
+- Manual builds with scripts: Current state - error-prone, no audit trail
+- Travis CI / Circle CI: Rejected - GitHub Actions is free for public repos, integrated
 
-### Decision: Prevent Archiving Active Context
-**Rationale**: Archiving implies completion. Active context is by definition incomplete.
-
-**Error Message**: `"Cannot archive active context. Run 'my-context stop' first."`
-
-### Decision: Delete Requires Confirmation (Unless --force)
-**Rationale**: Deletion is irreversible. Confirmation prevents accidents. --force flag supports scripting.
-
-**Confirmation Flow**:
-```
-$ my-context delete "Test Context"
-⚠️  This will permanently delete context "Test Context" and all associated data.
-Continue? (y/N): _
-```
-
-### Decision: Preserve Transitions Log on Delete
-**Rationale**: Historical record should remain intact. Transitions log documents when context was created/stopped, which has audit value even after context deleted.
-
-**Implementation**: Delete operation removes `~/.my-context/{context_dir}/` but does NOT modify `~/.my-context/transitions.log`. Deleted context name remains visible in history output.
+**Workflow Triggers**:
+- Push tags matching `v*.*.*` pattern
+- Build all 4 platform binaries in parallel
+- Generate and upload SHA256 checksums
+- Create GitHub Release with binaries and changelog
 
 ---
 
-## 6. List Pagination Approaches
+## Decision 9: Installation Script Language Choices
 
-### Decision: Limit-Based Pagination (Not Cursor-Based)
-**Rationale**: CLI tools favor simplicity over scalability. Limit/offset is intuitive, cursor-based is overkill for <10,000 contexts.
+**Context**: Different platforms have different default shells
 
-**Default Behavior**: Show last 10 contexts (newest first)
+**Decision**: 
+- install.sh: POSIX-compliant shell script (bash/zsh/sh compatible)
+- install.bat: Windows batch file for cmd.exe
+- install.ps1: PowerShell script for modern Windows
+- curl-install.sh: Bash script for one-liner installation
 
-**Implementation**:
-```go
-func ListContexts(limit int, showAll bool) []Context {
-    contexts := loadAllContexts()
-    sortByStartTime(contexts, descending=true)
-    if !showAll && len(contexts) > limit {
-        return contexts[:limit]
-    }
-    return contexts
-}
-```
-
-### Decision: Newest First Sorting
-**Rationale**: Users care most about recent work. Newest-first matches `git log` and other CLI tools.
+**Rationale**:
+- POSIX shell works on Linux, macOS, WSL, Git Bash
+- Batch files work on all Windows versions (legacy support)
+- PowerShell is modern Windows standard but not ubiquitous
+- Providing all three maximizes compatibility
 
 **Alternatives Considered**:
-- Oldest first: Logical for historical review, but poor UX for active work
-- Alphabetical: Doesn't reflect temporal workflow
-- **Selected**: Newest first (most recent = most relevant)
-
-### Decision: Display Message When Results Truncated
-**Rationale**: Users should know more contexts exist.
-
-**Message Format**: `Showing 10 of 50 contexts. Use --all to see all.`
-
-**Implementation**: Count total contexts before filtering, compare to displayed count.
+- PowerShell-only for Windows: Rejected - not available on all corporate Windows installs
+- Python installer: Rejected - requires Python installation, defeats purpose
+- Go-based installer: Rejected - requires Go installation or pre-built binary (chicken-egg problem)
 
 ---
 
-## 7. Backward Compatibility Testing
+## Open Questions
 
-### Decision: Graceful Degradation for Missing Fields
-**Rationale**: Sprint 1 contexts lack `is_archived` field. Reading old meta.json should not error.
-
-**Implementation Strategy**:
-```go
-type Context struct {
-    Name      string    `json:"name"`
-    StartTime time.Time `json:"start_time"`
-    Status    string    `json:"status"`
-    IsArchived bool     `json:"is_archived,omitempty"` // omitempty = optional
-}
-
-// On read, missing field defaults to false (Go zero value)
-```
-
-### Decision: No Migration Script Required
-**Rationale**: Optional field with sensible default (false) means old data works immediately with new code.
-
-**Validation**: Add integration test that loads Sprint 1 meta.json (without is_archived) and verifies it works.
-
-### Decision: Semantic Versioning for Data Format
-**Rationale**: If future Sprint requires breaking data changes, version field in meta.json enables migration detection.
-
-**Future Consideration**: Add `"version": "1.0"` to meta.json in Sprint 3+. Sprint 2 focuses on additive changes only.
-
-**Test Strategy**:
-1. Create contexts with Sprint 1 binary
-2. Upgrade to Sprint 2 binary
-3. Verify all Sprint 1 contexts remain accessible
-4. Add new Sprint 2 features (archive, export)
-5. Verify Sprint 2 data works with Sprint 2 binary
+None. All technical decisions finalized based on spec requirements and Sprint 1 retrospective findings.
 
 ---
 
-## Summary of Key Decisions
+## Performance Targets
 
-| Area | Decision | Rationale |
-|------|----------|-----------|
-| **Builds** | Static binaries via CGO_ENABLED=0 | No runtime dependencies |
-| **CI/CD** | GitHub Actions with matrix builds | Free, integrated, multi-platform |
-| **Install Location** | ~/.local/bin (user-specific) | No sudo, works everywhere |
-| **Upgrade** | Backup-and-replace | Safe, reversible |
-| **Project Parsing** | Text before first colon, case-insensitive | Matches user pattern |
-| **Export Format** | Markdown with metadata | Readable, portable, standard |
-| **Archive** | Metadata flag in meta.json | Simple, reversible |
-| **Delete** | Confirmation required (--force skips) | Prevent accidents |
-| **Pagination** | Limit-based, newest first | Simple, matches user expectations |
-| **Backward Compat** | Optional fields with zero-value defaults | No migration needed |
+Based on expected usage patterns:
 
----
+| Operation | Target | Rationale |
+|-----------|--------|-----------|
+| List 1000 contexts | <1s | Linear scan of JSON files, Go's file I/O is fast |
+| Export 500 notes | <1s | Read + format + write, mostly I/O bound |
+| Search 1000 contexts | <1s | Grep-like substring matching in memory |
+| Start context | <50ms | Create directory + write JSON |
+| Archive context | <50ms | Update single JSON field |
 
-## Risk Assessment
-
-**Low Risk**:
-- Multi-platform builds (well-documented Go feature)
-- Project name parsing (simple string operation)
-- Markdown export (standard format)
-
-**Medium Risk**:
-- PATH modification across shells (many edge cases, needs thorough testing)
-- Windows installation (cmd.exe vs PowerShell differences)
-- Backward compatibility (needs comprehensive integration tests)
-
-**Mitigation**:
-- Comprehensive installation tests on real VMs (Windows 10, Ubuntu 22.04, macOS 13)
-- Test matrix: {cmd, PowerShell, bash, zsh} x {fresh install, upgrade from Sprint 1}
-- Document manual installation steps in TROUBLESHOOTING.md for edge cases
+**Testing Strategy**: Create synthetic datasets (1000 contexts, 500 notes each) for performance validation in T038.
 
 ---
 
-*Research complete. Ready for Phase 1 (Design & Contracts).*
+## Security Considerations
+
+1. **Checksum Verification**: SHA256 checksums for downloaded binaries protect against tampering
+2. **User-Level Install**: No sudo required eliminates privilege escalation risks
+3. **Confirmation Prompts**: Delete command requires explicit confirmation to prevent accidents
+4. **Path Injection**: Installation scripts validate paths before modifying shell rc files
+5. **Data Preservation**: Explicit guarantees that upgrades preserve ~/.my-context/ data
+
+---
+
+## References
+
+- Sprint 1 Retrospective: `../../../SPRINT-01-RETROSPECTIVE.md`
+- Go Cross-Compilation: https://go.dev/doc/install/source#environment
+- Semantic Versioning: https://semver.org/
+- GitHub Actions: https://docs.github.com/en/actions
+- Windows PATH Management: https://docs.microsoft.com/en-us/windows/win32/procthread/environment-variables
+
+---
+
+**Research Complete**: All NEEDS CLARIFICATION items resolved. Ready for Phase 1 (Design & Contracts).

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/models"
@@ -520,4 +521,67 @@ func LoadContext(contextName string) (*models.Context, error) {
 // GetHomeDir returns the context home directory (for tests)
 func GetHomeDir() string {
 	return GetContextHome()
+}
+
+// ContextFilter defines filtering options for listing contexts
+type ContextFilter struct {
+	Project      string // Filter by project name (case-insensitive)
+	Search       string // Filter by substring in name (case-insensitive)
+	Limit        int    // Limit number of results (0 = no limit)
+	Archived     bool   // Show only archived contexts
+	ActiveOnly   bool   // Show only active context
+	ShowArchived bool   // Include archived in results (default: exclude)
+}
+
+// ListContextsFiltered returns contexts matching the filter criteria
+func ListContextsFiltered(filter ContextFilter) ([]*models.Context, error) {
+	// Get all contexts
+	allContexts, err := ListContexts()
+	if err != nil {
+		return nil, err
+	}
+
+	var filtered []*models.Context
+
+	// Apply filters
+	for _, ctx := range allContexts {
+		// Skip archived contexts unless explicitly requested
+		if ctx.IsArchived && !filter.ShowArchived && !filter.Archived {
+			continue
+		}
+
+		// If --archived flag, show ONLY archived
+		if filter.Archived && !ctx.IsArchived {
+			continue
+		}
+
+		// If --active-only, show ONLY active
+		if filter.ActiveOnly && !ctx.IsActive() {
+			continue
+		}
+
+		// Project filter (case-insensitive)
+		if filter.Project != "" {
+			projectName := ExtractProjectName(ctx.Name)
+			if !strings.EqualFold(projectName, filter.Project) {
+				continue
+			}
+		}
+
+		// Search filter (case-insensitive substring)
+		if filter.Search != "" {
+			if !strings.Contains(strings.ToLower(ctx.Name), strings.ToLower(filter.Search)) {
+				continue
+			}
+		}
+
+		filtered = append(filtered, ctx)
+	}
+
+	// Apply limit
+	if filter.Limit > 0 && len(filtered) > filter.Limit {
+		filtered = filtered[:filter.Limit]
+	}
+
+	return filtered, nil
 }
