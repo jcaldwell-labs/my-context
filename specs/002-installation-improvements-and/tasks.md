@@ -256,21 +256,21 @@ Single project structure (from plan.md):
   - Permission errors during installation
   - Common "command not found" scenarios with solutions
 
-- [ ] **T032b** [P] Review installation script comments - Verify inline documentation per FR-010.4:
+- [x] **T032b** [P] Review installation script comments - Verify inline documentation per FR-010.4:
   - scripts/install.sh: Comment each step (detection, backup, PATH modification)
   - scripts/install.bat: Comment Windows-specific logic (setx usage, directory creation)
   - scripts/install.ps1: Comment PowerShell-specific patterns (Environment variables)
   - scripts/curl-install.sh: Comment platform detection and checksum verification
 
-- [ ] **T033** [P] Update `cmd/my-context/main.go` - Add help text for all new commands and flags, ensure --help displays usage examples
+- [x] **T033** [P] Update `cmd/my-context/main.go` - Add help text for all new commands and flags, ensure --help displays usage examples
 
-- [ ] **T034** [P] Create `.github/ISSUE_TEMPLATE/` - Add bug report and feature request templates for Sprint 2 maturity
+- [x] **T034** [P] Create `.github/ISSUE_TEMPLATE/` - Add bug report and feature request templates for Sprint 2 maturity
 
 ---
 
 ## Phase 3.6: Integration & Validation
 
-- [ ] **T035** Run all integration tests on Linux - Execute `go test ./tests/integration/... -v` and verify all tests pass, fix any failures
+- [x] **T035** Run all integration tests on Linux - Execute `go test ./tests/integration/... -v` and verify all tests pass, fix any failures
 
 - [ ] **T036** Run all integration tests on Windows (git-bash) - Execute tests in Windows environment, verify path handling, fix platform-specific issues
 

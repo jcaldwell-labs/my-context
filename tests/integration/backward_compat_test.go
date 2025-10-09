@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -174,6 +175,3 @@ func TestBackwardCompatibilityWithDataPreservation(t *testing.T) {
 		t.Error("Notes content should be unchanged after Sprint 2 processing")
 	}
 }
-
-// Helper import
-import "strings"

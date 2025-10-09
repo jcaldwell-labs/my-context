@@ -15,23 +15,54 @@ A cross-platform CLI tool for managing developer work contexts with notes, file 
 
 ## Installation
 
-### From Source
+### Quick Install (Recommended)
+
+**One-liner install** (Linux, macOS, WSL):
+```bash
+curl -sSL https://raw.githubusercontent.com/USER/REPO/main/scripts/curl-install.sh | bash
+```
+
+### Pre-built Binaries
+
+Download binaries from the [releases page](releases):
+
+- **Windows**: `my-context-windows-amd64.exe`
+- **Linux**: `my-context-linux-amd64`
+- **macOS Intel**: `my-context-darwin-amd64`
+- **macOS ARM (M1/M2)**: `my-context-darwin-arm64`
+
+**Installation scripts**:
+- Linux/macOS/WSL: `./scripts/install.sh`
+- Windows (cmd.exe): `scripts\install.bat`
+- Windows (PowerShell): `.\scripts\install.ps1`
+
+### Building from Source
+
+**Requirements**: Go 1.21 or later
 
 ```bash
 # Clone the repository
 git clone <repo-url>
 cd my-context-copilot
 
-# Build
-go build -o my-context.exe ./cmd/my-context/
+# Build for current platform
+go build -o my-context ./cmd/my-context/
 
-# Install (optional)
+# Or build all platforms
+./scripts/build-all.sh
+
+# Install to ~/.local/bin (Unix) or %USERPROFILE%\bin (Windows)
 ./scripts/install.sh
 ```
 
-### Pre-built Binaries
+**Build options**:
+- Single platform: `go build -o my-context ./cmd/my-context/`
+- All platforms: `./scripts/build-all.sh` (outputs to `bin/`)
+- Static linking: Binaries are statically linked (CGO_ENABLED=0) with zero runtime dependencies
 
-Download pre-built binaries from the [releases page](releases) for your platform.
+### Troubleshooting
+
+For installation issues, see [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
 ## Quick Start
 
@@ -77,6 +108,19 @@ my-context s "Quick patch"
 
 **Duplicate Names**: If a context with the same name exists, a suffix (_2, _3, etc.) is automatically appended.
 
+### `start <name>` - Enhanced (Sprint 2)
+
+**New: `--project` flag**
+```bash
+# Create context with project prefix
+my-context start "Phase 1" --project ps-cli
+# Creates: "ps-cli: Phase 1"
+
+# Quickly group related contexts
+my-context start "Planning" --project garden
+my-context start "Implementation" --project garden
+```
+
 ### `stop` (alias: `p`)
 Stop the currently active context without starting a new one.
 
@@ -121,7 +165,95 @@ Output includes:
 - Associated files
 - Touch event count
 
-### `list` (alias: `l`)
+### `list` (alias: `l`) - Enhanced (Sprint 2)
+
+**New filtering options**:
+```bash
+# Default: show 10 most recent
+my-context list
+
+# Show all contexts
+my-context list --all
+
+# Custom limit
+my-context list --limit 5
+
+# Filter by project (case-insensitive)
+my-context list --project ps-cli
+
+# Search by substring
+my-context list --search "Phase"
+
+# Show only archived contexts
+my-context list --archived
+
+# Show only active context
+my-context list --active-only
+
+# Combine filters
+my-context list --project garden --limit 3
+```
+
+### `export <name>` (alias: `e`) - New in Sprint 2
+
+Export context data to markdown or JSON for sharing and documentation.
+
+```bash
+# Export single context (creates {name}.md)
+my-context export "ps-cli: Phase 1"
+
+# Export to custom path
+my-context export "Phase 1" --to reports/phase-1.md
+
+# Export all contexts
+my-context export --all --to exports/
+
+# Export as JSON
+my-context export "Phase 1" --json --to data.json
+```
+
+**Export format** (Markdown):
+- Context metadata (start/end times, duration)
+- All notes with timestamps
+- File associations
+- Touch activity
+- Archive status
+
+### `archive <name>` - New in Sprint 2
+
+Mark a context as archived. Archived contexts are hidden from default `list` output but preserved.
+
+```bash
+# Archive a stopped context
+my-context archive "old-project: Phase 1"
+
+# View archived contexts
+my-context list --archived
+```
+
+**Requirements**:
+- Context must be stopped (cannot archive active context)
+- Data is preserved (only metadata flag changed)
+
+### `delete <name>` - New in Sprint 2
+
+Permanently delete a context directory.
+
+```bash
+# Delete with confirmation prompt
+my-context delete "old-context"
+
+# Skip confirmation
+my-context delete "old-context" --force
+```
+
+**Safety features**:
+- Cannot delete active context
+- Confirmation prompt (unless `--force`)
+- Exit code 2 on user cancellation
+- `transitions.log` is preserved (historical transitions remain)
+
+### `list` (legacy alias)
 List all contexts (active and stopped) with their status.
 
 ```bash

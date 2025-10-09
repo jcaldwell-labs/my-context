@@ -232,3 +232,88 @@ func CreateParentDirs(filePath string) error {
 	dir := filepath.Dir(filePath)
 	return os.MkdirAll(dir, 0755)
 }
+
+// WriteMarkdown writes markdown content to a file atomically
+func WriteMarkdown(path string, content string) error {
+	// Create parent directories if they don't exist
+	parentDir := filepath.Dir(path)
+	if err := os.MkdirAll(parentDir, 0755); err != nil {
+		return err
+	}
+
+	// Write atomically: temp file + rename
+	tempPath := path + ".tmp"
+	if err := os.WriteFile(tempPath, []byte(content), 0644); err != nil {
+		return err
+	}
+
+	return os.Rename(tempPath, path)
+}
+
+// ReadNotes parses notes.log and returns structured data
+func ReadNotes(contextDir string) ([]struct{ Timestamp string; Content string }, error) {
+	notesPath := filepath.Join(contextDir, "notes.log")
+	lines, err := ReadLog(notesPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var notes []struct{ Timestamp string; Content string }
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "|", 2)
+		if len(parts) == 2 {
+			notes = append(notes, struct{ Timestamp string; Content string }{
+				Timestamp: parts[0],
+				Content:   parts[1],
+			})
+		}
+	}
+	return notes, nil
+}
+
+// ReadFiles parses files.log and returns structured data
+func ReadFiles(contextDir string) ([]struct{ Timestamp string; Path string }, error) {
+	filesPath := filepath.Join(contextDir, "files.log")
+	lines, err := ReadLog(filesPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var files []struct{ Timestamp string; Path string }
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "|", 2)
+		if len(parts) == 2 {
+			files = append(files, struct{ Timestamp string; Path string }{
+				Timestamp: parts[0],
+				Path:      parts[1],
+			})
+		}
+	}
+	return files, nil
+}
+
+// ReadTouches parses touches.log and returns structured data
+func ReadTouches(contextDir string) ([]struct{ Timestamp string }, error) {
+	touchesPath := filepath.Join(contextDir, "touches.log")
+	lines, err := ReadLog(touchesPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var touches []struct{ Timestamp string }
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		touches = append(touches, struct{ Timestamp string }{
+			Timestamp: strings.TrimSpace(line),
+		})
+	}
+	return touches, nil
+}

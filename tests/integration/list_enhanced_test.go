@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -173,6 +174,3 @@ func TestListCombinedFilters(t *testing.T) {
 		t.Errorf("Expected at most 3 contexts, got %d", contextLines)
 	}
 }
-
-// Helper (minimal implementation for fmt)
-import "fmt"
