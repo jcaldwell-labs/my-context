@@ -12,7 +12,9 @@
       "Bash(cat:*)",
       "Bash(git diff:*)",
       "Bash(./my-context.exe list)",
-      "Bash(./my-context.exe --version)"
+      "Bash(./my-context.exe --version)",
+      "Read(//home/be-dev-agent/projects/deb-sanity/**)",
+      "Read(//mnt/c/Users/**)"
     ],
     "deny": [],
     "ask": []
