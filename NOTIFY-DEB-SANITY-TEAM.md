@@ -52,6 +52,10 @@ Note added...
 $ my-context resume --last
 ✅ Resumed: deb-sanity: 007-github__implementation
 
+# ⭐ SHORTCUT: Use 'r' alias for even faster access
+$ my-context r --last              # Single letter!
+$ my-context r "007-*"             # Pattern matching
+
 # Pattern matching
 $ my-context resume "007-*"
 Multiple matches:

@@ -36,10 +36,23 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 			}
 
 			// Check for duplicate context name (smart resume)
-			if !startForce {
-				existingContext, err := core.FindContextByName(contextName)
-				if err == nil && existingContext.Status == "stopped" {
-					// Context exists and is stopped - prompt for resume
+			existingContext, err := core.FindContextByName(contextName)
+			if err == nil && existingContext.Status == "stopped" {
+				if startForce {
+					// Force flag - skip resume option but still prompt for new name
+					fmt.Printf("⚠️  Context \"%s\" exists (stopped) but --force specified\n", contextName)
+					newName, err := promptNewName(contextName)
+					if err != nil {
+						if *jsonOutput {
+							jsonStr, _ := output.FormatJSONError("start", 3, err.Error())
+							fmt.Print(jsonStr)
+							return nil
+						}
+						return err
+					}
+					contextName = newName
+				} else {
+					// Normal flow - prompt for resume
 					resume, err := promptResume(existingContext)
 					if err != nil {
 						if *jsonOutput {
