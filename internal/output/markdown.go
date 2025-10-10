@@ -8,9 +8,11 @@ import (
 	"github.com/jefferycaldwell/my-context-copilot/internal/models"
 )
 
-// FormatExport generates markdown export for a context
-func FormatExport(ctx *models.Context, notes []Note, files []File, touches []Touch, exportTime time.Time) string {
+// FormatExportMarkdown generates markdown export for a context
+func FormatExportMarkdown(ctx *models.Context, notes []models.Note, files []models.FileAssociation, touchCount int) string {
 	var sb strings.Builder
+
+	exportTime := time.Now()
 
 	// Header
 	sb.WriteString(fmt.Sprintf("# Context: %s\n\n", ctx.Name))
@@ -39,7 +41,7 @@ func FormatExport(ctx *models.Context, notes []Note, files []File, touches []Tou
 		sb.WriteString("(none)\n\n")
 	} else {
 		for _, note := range notes {
-			sb.WriteString(fmt.Sprintf("- **%s** %s\n", formatLocalTime(note.Timestamp), note.Content))
+			sb.WriteString(fmt.Sprintf("- **%s** %s\n", formatLocalTime(note.Timestamp), note.TextContent))
 		}
 		sb.WriteString(fmt.Sprintf("\nTotal: %d notes\n\n", len(notes)))
 	}
@@ -52,7 +54,7 @@ func FormatExport(ctx *models.Context, notes []Note, files []File, touches []Tou
 		sb.WriteString("(none)\n\n")
 	} else {
 		for _, file := range files {
-			sb.WriteString(fmt.Sprintf("- **%s** %s\n", formatLocalTime(file.Timestamp), file.Path))
+			sb.WriteString(fmt.Sprintf("- **%s** %s\n", formatLocalTime(file.Timestamp), file.FilePath))
 		}
 		sb.WriteString(fmt.Sprintf("\nTotal: %d files\n\n", len(files)))
 	}
@@ -61,13 +63,10 @@ func FormatExport(ctx *models.Context, notes []Note, files []File, touches []Tou
 
 	// Activity section
 	sb.WriteString("## Activity\n\n")
-	if len(touches) == 0 {
+	if touchCount == 0 {
 		sb.WriteString("(none)\n\n")
 	} else {
-		for _, touch := range touches {
-			sb.WriteString(fmt.Sprintf("- **%s** Touch\n", formatLocalTime(touch.Timestamp)))
-		}
-		sb.WriteString(fmt.Sprintf("\nTotal: %d touches\n\n", len(touches)))
+		sb.WriteString(fmt.Sprintf("Total: %d touches\n\n", touchCount))
 	}
 
 	sb.WriteString("---\n\n")
@@ -97,80 +96,4 @@ func formatDuration(d time.Duration) string {
 		return fmt.Sprintf("%dh %dm", hours, minutes)
 	}
 	return fmt.Sprintf("%dm", minutes)
-}
-
-// Note represents a timestamped note entry
-type Note struct {
-	Timestamp time.Time
-	Content   string
-}
-
-// File represents a file association
-type File struct {
-	Timestamp time.Time
-	Path      string
-}
-
-// Touch represents a touch event
-type Touch struct {
-	Timestamp time.Time
-}
-
-// FormatExportJSON generates JSON export for a context
-func FormatExportJSON(ctx *models.Context, notes []Note, files []File, touches []Touch, exportTime time.Time) map[string]interface{} {
-	export := map[string]interface{}{
-		"context": map[string]interface{}{
-			"name":             ctx.Name,
-			"start_time":       ctx.StartTime.Format(time.RFC3339),
-			"duration_seconds": int(ctx.Duration().Seconds()),
-			"is_archived":      ctx.IsArchived,
-		},
-		"notes":  formatNotesJSON(notes),
-		"files":  formatFilesJSON(files),
-		"touches": formatTouchesJSON(touches),
-		"export_metadata": map[string]interface{}{
-			"exported_at": exportTime.Format(time.RFC3339),
-			"version":     "v2.0.0",
-		},
-	}
-
-	if ctx.EndTime != nil {
-		export["context"].(map[string]interface{})["end_time"] = ctx.EndTime.Format(time.RFC3339)
-	} else {
-		export["context"].(map[string]interface{})["end_time"] = nil
-	}
-
-	return export
-}
-
-func formatNotesJSON(notes []Note) []map[string]interface{} {
-	result := make([]map[string]interface{}, len(notes))
-	for i, note := range notes {
-		result[i] = map[string]interface{}{
-			"timestamp": note.Timestamp.Format(time.RFC3339),
-			"content":   note.Content,
-		}
-	}
-	return result
-}
-
-func formatFilesJSON(files []File) []map[string]interface{} {
-	result := make([]map[string]interface{}, len(files))
-	for i, file := range files {
-		result[i] = map[string]interface{}{
-			"timestamp": file.Timestamp.Format(time.RFC3339),
-			"path":      file.Path,
-		}
-	}
-	return result
-}
-
-func formatTouchesJSON(touches []Touch) []map[string]interface{} {
-	result := make([]map[string]interface{}, len(touches))
-	for i, touch := range touches {
-		result[i] = map[string]interface{}{
-			"timestamp": touch.Timestamp.Format(time.RFC3339),
-		}
-	}
-	return result
 }

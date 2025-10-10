@@ -28,6 +28,11 @@ func ExtractProjectName(contextName string) string {
 
 // FilterByProject filters a list of context names by project (case-insensitive)
 func FilterByProject(contextNames []string, projectName string) []string {
+	return FilterContextsByProject(contextNames, projectName)
+}
+
+// FilterContextsByProject filters a list of context names by project (case-insensitive)
+func FilterContextsByProject(contextNames []string, projectName string) []string {
 	if projectName == "" {
 		return contextNames
 	}
