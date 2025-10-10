@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
@@ -34,7 +35,7 @@ func NewTouchCmd(jsonOutput *bool) *cobra.Command {
 					fmt.Print(jsonStr)
 					return nil
 				}
-				return fmt.Errorf(errMsg)
+				return errors.New(errMsg)
 			}
 
 			// Add the touch
