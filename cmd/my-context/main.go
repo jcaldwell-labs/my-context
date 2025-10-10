@@ -13,7 +13,7 @@ var (
 	jsonOutput bool
 
 	// Version information - set via ldflags during build
-	Version   = "2.0.0-dev+debian"
+	Version   = "1.0.0"
 	BuildTime = "unknown"
 	GitCommit = "unknown"
 )
