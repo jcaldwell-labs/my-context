@@ -87,26 +87,53 @@ Created context: "new-api: Initial setup"
 
 ---
 
-#### 2. **Environment Snapshot in Context Notes**
-**Concept**: Capture deb-sanity environment data when starting a context.
+#### 2. **Environment Snapshot in Context Notes** ⚠️ REVISED
+**Concept**: Capture environment data when starting a context (via shared data).
 
 ```bash
-# Enhanced my-context start
-$ my-context start "Bug Fix #123" --capture-env
+# No flag needed - automatic if data available
+$ my-context start "Bug Fix #123"
 
+# If ~/.dev-tools-data/environment.json exists:
 # Auto-creates notes:
 - [timestamp] Environment: WSL 2 / Debian trixie
 - [timestamp] Tools available: go (1.21), node (18.x), docker (running)
 - [timestamp] Project: /home/user/projects/api-service
 - [timestamp] Active worktree: feature/bug-123
+
+# If file doesn't exist: proceeds normally (no error)
 ```
 
-**Implementation**:
-- Add `--capture-env` flag to my-context start
-- Call `deb-sanity --tools --services` internally
-- Parse and add as initial notes
+**Implementation** (Revised - No Direct Dependency):
+```go
+// On context start
+func CreateContext(name string) {
+    // ... normal context creation ...
+    
+    // Try to read shared environment data (OPTIONAL)
+    envData, err := readEnvironmentData()  // reads ~/.dev-tools-data/environment.json
+    if err == nil {
+        // Add environment as initial notes
+        addNote(fmt.Sprintf("Environment: %s", envData.OS))
+        addNote(fmt.Sprintf("Tools: %s", strings.Join(envData.Tools, ", ")))
+    }
+    // If error: silently continue (no warning, no failure)
+}
+```
+
+**Shared Data Contract** (written by deb-sanity):
+```json
+{
+  "updated_at": "2025-10-10T20:30:00Z",
+  "os": "WSL 2 / Debian trixie",
+  "tools": ["go:1.21", "docker:24.0", "node:18.x"],
+  "services": [{"name": "mysql", "status": "running"}],
+  "active_worktree": "feature/bug-123"
+}
+```
 
 **Value**: Context includes complete environment state for reproducibility
+**Risk Mitigation**: No runtime dependency - works with or without deb-sanity
 
 ---
 
@@ -418,21 +445,300 @@ $ my-context export "API Work" --include-environment
 
 ---
 
-## Risk Assessment
+## Risk Assessment & Mitigation
 
-| Risk | Severity | Mitigation |
-|------|----------|------------|
-| **Tight coupling** | Medium | Use shared data files, not direct calls |
-| **Performance overhead** | Low | Cache deb-sanity data, async updates |
-| **Data conflicts** | Low | Use file locking, append-only logs |
-| **Backward compatibility** | Medium | Make integration opt-in with flags |
-| **Complexity creep** | Medium | Keep integrations optional, well-documented |
+| Risk | Severity | Mitigation Strategy |
+|------|----------|---------------------|
+| **Tight coupling** | **HIGH** | ⚠️ **CRITICAL**: Use shared data files ONLY. Never call deb-sanity commands directly from my-context |
+| **Surface area growth** | **MEDIUM** | Use smart defaults, not flags. Auto-detect instead of --auto-project |
+| **Performance overhead** | Low | Cache shared data, read-only access, async updates |
+| **Data conflicts** | Low | File locking (flock), append-only logs, atomic writes |
+| **Backward compatibility** | Medium | Schema versioning ("schema_version": 2), optional fields with `omitempty` |
+| **Cross-platform gaps** | **MEDIUM** | Graceful degradation on Windows, test without deb-sanity |
+| **Error handling** | Medium | Fail silently if shared data unavailable, log warnings only |
+
+### Design Principles for Integration
+
+1. **Loose Coupling via Shared Data** (not direct calls)
+   ```bash
+   # ❌ BAD: Direct dependency
+   my-context calls deb-sanity --tools
+   
+   # ✅ GOOD: Shared data
+   deb-sanity --scan → writes ~/.dev-tools-data/environment.json
+   my-context reads environment.json (if exists)
+   ```
+
+2. **Smart Defaults over Flags** (Constitution: Minimal Surface Area)
+   ```bash
+   # ❌ BAD: Too many flags
+   --capture-env, --auto-project, --include-environment
+   
+   # ✅ GOOD: Intelligent behavior
+   cd /path/to/project && my-context start "Work"
+   # Auto-detects project from pwd (no flag)
+   # Auto-includes environment.json if exists (no flag)
+   ```
+
+3. **Graceful Degradation** (works without deb-sanity)
+   ```bash
+   # If ~/.dev-tools-data/ doesn't exist:
+   $ my-context start "Work"
+   Context started: "Work"  # No warnings, just works
+   
+   # If environment.json exists:
+   $ my-context start "Work"
+   Context started: "Work"
+   Environment captured: WSL/Debian, 5 tools detected
+   ```
+
+---
+
+## Cross-Platform Compatibility
+
+### Windows Support Strategy
+
+**Current State**:
+- **my-context**: ✅ Full Windows support (cmd.exe, PowerShell, Git Bash)
+- **deb-sanity**: ❓ Primarily WSL/Linux focused
+
+**Integration Behavior on Windows**:
+
+```powershell
+# Windows PowerShell (without deb-sanity)
+PS> my-context start "Work"
+Context started: "Work"
+# No environment capture (no error, silent skip)
+
+# Windows with WSL + deb-sanity
+PS> my-context start "Work"
+# Could read \\wsl$\debian\home\user\.dev-tools-data\environment.json
+# Requires path translation logic
+```
+
+**Implementation Requirements**:
+1. **Platform detection** in my-context:
+   ```go
+   func tryReadEnvironmentData() (*EnvData, error) {
+       if runtime.GOOS == "windows" {
+           // Try WSL path: \\wsl$\<distro>\home\<user>\.dev-tools-data\
+           // If not found: return nil (silent skip)
+       }
+       // Unix: ~/.dev-tools-data/environment.json
+   }
+   ```
+
+2. **Graceful degradation**:
+   - Windows native (no WSL): integration disabled, no warnings
+   - Windows + WSL: try to read via WSL path, fail silently if unavailable
+   - Linux/macOS: full integration available
+
+---
+
+## Error Handling Specification
+
+### Failure Modes & Responses
+
+| Scenario | my-context Behavior | User Experience |
+|----------|---------------------|-----------------|
+| deb-sanity not installed | ✅ Works normally | No warnings, no errors |
+| ~/.dev-tools-data/ missing | ✅ Works normally | Silent skip of integration features |
+| environment.json corrupted | ✅ Works normally | Logs warning to stderr, continues |
+| Shared data stale (>24h old) | ⚠️ Use data anyway | Note shows "(stale data)" in export |
+| File lock timeout (>1s) | ✅ Skip read | Fails silently, no blocking |
+
+### Error Logging (Not User-Facing)
+
+```go
+// Log to ~/.my-context/integration.log (optional debug file)
+if err != nil {
+    logIntegrationError("Failed to read environment data: %v", err)
+    // Continue execution - do NOT surface error to user
+}
+```
+
+**Philosophy**: Integration features are **enhancements**, not requirements. Any failure should be invisible to users.
+
+---
+
+## Testing Strategy
+
+### Unit Tests (No External Dependencies)
+
+```go
+// Test with mock shared data
+func TestEnvironmentCapture_WithSharedData(t *testing.T) {
+    // Create fake ~/.dev-tools-data/environment.json
+    tmpDir := t.TempDir()
+    writeJSON(tmpDir+"/environment.json", mockEnvData)
+    
+    ctx := CreateContext("Test")
+    
+    // Verify environment notes added
+    assert.Contains(ctx.Notes, "Environment: WSL 2")
+}
+
+func TestEnvironmentCapture_WithoutSharedData(t *testing.T) {
+    // No shared data file
+    ctx := CreateContext("Test")
+    
+    // Verify context still created successfully
+    assert.NotNil(ctx)
+    assert.Equal("Test", ctx.Name)
+}
+```
+
+### Integration Tests (Decoupled)
+
+```bash
+#!/bin/bash
+# test-integration.sh (no deb-sanity dependency)
+
+# Test 1: Standalone (no shared data)
+my-context start "Test1"
+my-context stop
+assert_success "Standalone mode works"
+
+# Test 2: With shared data
+mkdir -p ~/.dev-tools-data
+echo '{"os":"Linux","tools":["go"]}' > ~/.dev-tools-data/environment.json
+my-context start "Test2"
+my-context show | grep "Environment: Linux"
+assert_success "Integration mode works"
+
+# Test 3: With corrupt data
+echo 'invalid json' > ~/.dev-tools-data/environment.json
+my-context start "Test3"
+assert_success "Graceful degradation works"
+```
+
+**Key Principle**: Tests should **never** require deb-sanity to be installed or running.
+
+---
+
+## User Stories & Success Metrics
+
+### User Story 1: Reproducible Environment
+**As a** developer debugging production issues  
+**I want** my-context to capture my local environment automatically  
+**So that** I can reproduce the exact toolchain later
+
+**Acceptance Criteria**:
+- Context exports show OS, tool versions, services
+- No manual flag required (`--capture-env` removed)
+- Works without deb-sanity (graceful degradation)
+
+**Success Metric**: 80% of exported contexts include environment data (when deb-sanity available)
+
+---
+
+### User Story 2: Project-Aware Contexts
+**As a** developer working on 5+ projects simultaneously  
+**I want** my-context to auto-detect the current project  
+**So that** I don't manually type project names repeatedly
+
+**Acceptance Criteria**:
+```bash
+cd /home/user/projects/api-service
+my-context start "Bug fix"
+# Auto-creates: "api-service: Bug fix"
+
+my-context list --here
+# Shows only contexts for api-service
+```
+
+**Success Metric**: 50% reduction in manual project name entry
+
+---
+
+### User Story 3: Context Discovery
+**As a** developer returning to an old project after months  
+**I want** to find relevant contexts by project path  
+**So that** I can review my previous work and decisions
+
+**Acceptance Criteria**:
+```bash
+cd /old/project/path
+my-context list --here
+# Shows 12 historical contexts for this project
+
+my-context export --all --here --to project-history.md
+# Creates documentation of all work done here
+```
+
+**Success Metric**: 90% of developers use `--here` filter within first month
+
+---
+
+## Rollback & Escape Hatches
+
+### Disabling Integration Features
+
+**Environment Variable** (global disable):
+```bash
+export MY_CONTEXT_DISABLE_INTEGRATION=1
+my-context start "Work"
+# Skips all shared data reads, even if available
+```
+
+**Per-Context Disable**:
+```bash
+my-context start "Work" --no-integration
+# One-time disable for this context
+```
+
+**Configuration File** (~/.my-context/config.json):
+```json
+{
+  "integration": {
+    "enabled": false,
+    "features": {
+      "environment_capture": false,
+      "auto_project": true
+    }
+  }
+}
+```
+
+### Migration Path (Rollback to v2.0)
+
+If integration causes issues:
+```bash
+# Downgrade to Sprint 2 version
+cd ~/.my-context/
+mv config.json config.json.backup
+# Reinstall v2.0 binary
+# Data remains compatible (new fields ignored)
+```
+
+**Backward Compatibility Guarantee**:
+- Sprint 2 binary can read Sprint 3+ data (extra fields ignored)
+- Sprint 3+ binary can read Sprint 2 data (missing fields = defaults)
+- No migration required
+
+---
+
+## Revised Feature Flag Summary
+
+### Removed Flags (Use Smart Defaults)
+- ~~`--capture-env`~~ → Automatic if environment.json exists
+- ~~`--auto-project`~~ → Always enabled (infer from pwd)
+- ~~`--include-environment`~~ → Automatic in exports if data present
+
+### New Flags (Minimal Addition)
+- `--path <dir>` (explicit project path)
+- `--here` (filter by current directory)
+- `--no-integration` (opt-out escape hatch)
+
+**Net Change**: +3 flags (down from +9 in original proposal)
+
+**Constitution Compliance**: ✅ Maintains minimal surface area
 
 ---
 
 ## Conclusion
 
-**Verdict**: **Strong synergy with low risk**
+**Verdict**: **Strong synergy with controlled risk**
 
 ### Key Strengths
 1. ✅ **Complementary**, not competitive
@@ -440,19 +746,59 @@ $ my-context export "API Work" --include-environment
 3. ✅ **Clear integration points** identified
 4. ✅ **Both use similar patterns** (plain text, JSON, Unix philosophy)
 
-### Recommended Actions
-1. **Immediate**: Implement FR-MC-002 (project path association) in Sprint 3
-2. **Short-term**: Add environment snapshot on context start (Integration #2)
-3. **Medium-term**: Create shared data specification
-4. **Long-term**: Build unified project/context dashboard
+### Recommended Actions (Revised Based on Review)
 
-### Expected Benefits
-- **15-25% efficiency gain** from automated workflows
-- **Better documentation** with environment-aware exports
-- **Enhanced analytics** from cross-tool data
-- **Ecosystem foundation** for future dev tools
+**Sprint 3 (Immediate - Foundation)**:
+1. ✅ **FR-MC-002**: Project path association (`--path`, `--here`)
+   - Implementation: Add `project_path` to meta.json
+   - Auto-detect from `pwd` (no flag required)
+   - Filter: `my-context list --here`
+   - **Risk**: Low, no external dependencies
+
+2. 📝 **Shared Data Spec**: Document `~/.dev-tools-data/` contract
+   - JSON schema definition
+   - File locking rules
+   - Versioning strategy
+   - **Don't implement yet** - just specification
+
+**Sprint 4 (Quick Wins)**:
+3. ⚡ **Environment Capture**: Read shared data (if available)
+   - Read `~/.dev-tools-data/environment.json`
+   - Add as initial notes
+   - Graceful degradation (no deb-sanity required)
+   - **Risk**: Low, loose coupling via shared files
+
+4. 🎯 **Smart Defaults**: Auto-project detection
+   - Infer project from `pwd` automatically
+   - No new flags required
+   - **Risk**: None, pure enhancement
+
+**Sprint 5+ (Hold for Feedback)**:
+- Worktree sync (requires deb-sanity changes)
+- Unified time tracking (complex reconciliation)
+- Auto-context creation (tight coupling risk)
+
+### Expected Benefits (Quantified)
+- **50% reduction** in manual project name entry (User Story 2)
+- **80% adoption** of environment capture (when deb-sanity present)
+- **90% usage** of `--here` filter within first month
+- **Zero breakage** for users without deb-sanity (graceful degradation)
+
+### Constitution Compliance (Final Check)
+| Principle | Status | Notes |
+|-----------|--------|-------|
+| Unix Philosophy | ✅ Pass | Loose coupling via shared files |
+| Cross-Platform | ✅ Pass | Windows graceful degradation added |
+| Stateful Context | ✅ Pass | No core model changes |
+| Minimal Surface | ✅ Pass | +3 flags (was +9, reduced) |
+| Data Portability | ✅ Pass | JSON, plain text, greppable |
+| User-Driven | ✅ Pass | Based on observed workflows |
 
 ---
 
-**Next Steps**: Review with maintainers of both tools, prioritize Phase 1 features.
+**Next Steps**: 
+1. Implement FR-MC-002 in Sprint 3
+2. Test without deb-sanity (ensure graceful degradation)
+3. Coordinate shared data spec with deb-sanity maintainer
+4. Collect user feedback before Sprint 5 features
 
