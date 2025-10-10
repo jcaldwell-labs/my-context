@@ -117,18 +117,18 @@ git clone https://github.com/jcaldwell1066/my-context.git my-context-v2
 cd my-context-v2
 git checkout 004-implement-5-lifecycle
 
-# Build
-go build -ldflags "-X main.Version=$(git rev-parse --short HEAD) \
+# Build with proper version info
+go build -ldflags "-X main.Version=2.0.0-dev+004-lifecycle \
   -X main.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
-  -X main.GitCommit=$(git rev-parse HEAD)" \
+  -X main.GitCommit=$(git rev-parse --short HEAD)" \
   -o my-context cmd/my-context/main.go
 
 # Install
 cp my-context ~/.local/bin/my-context
 
-# Verify
+# Verify version shows dev build info
 my-context --version
-# Should show: my-context version 4c50251...
+# Should show: my-context version 2.0.0-dev+004-lifecycle (build: 2025-10-10..., commit: be60865)
 ```
 
 ### Option 2: Wait for Merge to Main (After Your Validation)
