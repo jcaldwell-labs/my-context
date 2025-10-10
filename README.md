@@ -1,4 +1,4 @@
-# My-Context-Copilot
+# My-Context
 
 A cross-platform CLI tool for managing developer work contexts with notes, file associations, and timestamps.
 
@@ -19,12 +19,13 @@ A cross-platform CLI tool for managing developer work contexts with notes, file 
 
 **One-liner install** (Linux, macOS, WSL):
 ```bash
-curl -sSL https://raw.githubusercontent.com/USER/REPO/main/scripts/curl-install.sh | bash
+# Coming soon - check releases page for now
+# curl -sSL https://raw.githubusercontent.com/YOUR-USERNAME/my-context/main/scripts/curl-install.sh | bash
 ```
 
 ### Pre-built Binaries
 
-Download binaries from the [releases page](releases):
+Download binaries from the [releases page](https://github.com/YOUR-USERNAME/my-context/releases):
 
 - **Windows**: `my-context-windows-amd64.exe`
 - **Linux**: `my-context-linux-amd64`
@@ -42,8 +43,8 @@ Download binaries from the [releases page](releases):
 
 ```bash
 # Clone the repository
-git clone <repo-url>
-cd my-context-copilot
+git clone https://github.com/YOUR-USERNAME/my-context.git
+cd my-context
 
 # Build for current platform
 go build -o my-context ./cmd/my-context/
@@ -62,7 +63,7 @@ go build -o my-context ./cmd/my-context/
 
 ### Troubleshooting
 
-For installation issues, see [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+If you encounter installation issues, please open an issue on GitHub.
 
 ## Quick Start
 
@@ -374,11 +375,9 @@ alias cs='my-context show'
 
 ## Development
 
-See [IMPLEMENTATION.md](IMPLEMENTATION.md) for implementation details and [HERE.md](HERE.md) for development shortcuts.
-
 ### Build
 ```bash
-go build -o my-context.exe ./cmd/my-context/
+go build -o my-context ./cmd/my-context/
 ```
 
 ### Test
@@ -400,6 +399,9 @@ go test ./...
 
 ## Contributing
 
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+Key principles:
 1. Follow the Unix philosophy: Do one thing well
 2. Keep it simple: No unnecessary complexity
 3. Test first: TDD approach required
@@ -407,11 +409,4 @@ go test ./...
 
 ## License
 
-[Add your license here]
-
-## See Also
-
-- [SETUP.md](SETUP.md) - Installation and setup guide
-- [IMPLEMENTATION.md](IMPLEMENTATION.md) - Implementation roadmap
-- [HERE.md](HERE.md) - Development scratchpad
-- [specs/](specs/) - Feature specifications
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
