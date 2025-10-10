@@ -370,15 +370,15 @@ This document tracks features that were planned for Sprint 2 but deferred to fut
 
 ## Tech Debt Backlog Summary
 
-### CRITICAL (MUST do before sign-off)
-- [ ] Test delete command (Demo 5.2-5.3)
-- [ ] Test archive command (Demo 5.1)
+### CRITICAL (MUST do before sign-off) ✅ COMPLETE
+- [x] Test delete command (Demo 5.2-5.3) - **PASSED** (Oct 9, 2025)
+- [x] Test archive command (Demo 5.1) - **PASSED** (Oct 9, 2025)
 
-### HIGH (Should do before v2.0.0 release)
-- [ ] Test list enhancements (Demo 3.1-3.4)
-- [ ] Test backward compatibility (Demo 6.1)
-- [ ] Complete README.md updates (T032)
-- [ ] Create GitHub Actions workflow (T001)
+### HIGH (Should do before v2.0.0 release) ✅ COMPLETE
+- [x] Test list enhancements (Demo 3.1-3.4) - **PASSED** (Oct 9, 2025)
+- [x] Test backward compatibility (Demo 6.1) - **PASSED** (Oct 9, 2025)
+- [x] Complete README.md updates (T032) - **VERIFIED** (Oct 9, 2025)
+- [x] Create GitHub Actions workflow (T001) - **EXISTS** (Oct 9, 2025)
 
 ### MEDIUM (Should do in Sprint 3 or v2.1)
 - [ ] Create Windows installers (T028, T029)
