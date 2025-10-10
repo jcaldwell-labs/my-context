@@ -1,1 +1,5 @@
 bin/
+
+# Session documentation
+GITHUB-SETUP-*.md
+MY-CONTEXT-*.md
