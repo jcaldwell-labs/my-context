@@ -14,6 +14,17 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 1. Run `.specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` from repo root and parse FEATURE_DIR and AVAILABLE_DOCS list. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
+1.5. **Start implementation session tracking** (if my-context available):
+   - Extract project and feature name from FEATURE_DIR (e.g., `/path/to/specs/004-implement-5-lifecycle/` → `my-context: 004-lifecycle__implementation`)
+   - Run: `my-context start "{project}: {feature}__implementation"` (or resume if exists)
+   - Track tasks file: `my-context file "{FEATURE_DIR}/tasks.md"`
+   - Track spec file: `my-context file "{FEATURE_DIR}/spec.md"`
+   - Add initial note: `my-context note "Starting implementation phase for {feature}. Total: {N} tasks across {M} phases."`
+   - **Context size target: 50 notes per phase** (if exceeds, stop and start new phase context)
+   - **Note after each phase**: `my-context note "Phase {N} complete: {summary of what was built}"`
+   - **File tracking**: Add `my-context file "{path}"` for each new source file created
+   - **Stop at end**: `my-context stop` when all implementation complete
+
 2. **Check checklists status** (if FEATURE_DIR/checklists/ exists):
    - Scan all checklist files in the checklists/ directory
    - For each checklist, count:
