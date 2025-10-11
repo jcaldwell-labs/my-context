@@ -1,7 +1,10 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"strconv"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
@@ -43,7 +46,14 @@ func NewNoteCmd(jsonOutput *bool) *cobra.Command {
 					fmt.Print(jsonStr)
 					return nil
 				}
-				return fmt.Errorf(errMsg)
+				return errors.New(errMsg)
+			}
+
+			// Check note count thresholds and show warnings (before adding note)
+			contextName := state.GetActiveContextName()
+			currentCount, err := core.GetNoteCount(contextName)
+			if err == nil { // Continue even if we can't get count
+				ShowNoteWarning(currentCount)
 			}
 
 			// Add the note
@@ -78,5 +88,37 @@ func NewNoteCmd(jsonOutput *bool) *cobra.Command {
 	}
 
 	return cmd
+}
+
+// GetEnvInt reads an integer environment variable with a default value
+func GetEnvInt(key string, defaultVal int) int {
+	if val := os.Getenv(key); val != "" {
+		if i, err := strconv.Atoi(val); err == nil {
+			return i
+		}
+	}
+	return defaultVal
+}
+
+// ShowNoteWarning displays warnings when note count reaches thresholds
+func ShowNoteWarning(currentCount int) {
+	// Read threshold environment variables
+	warnAt1 := GetEnvInt("MC_WARN_AT", 50)
+	warnAt2 := GetEnvInt("MC_WARN_AT_2", 100)
+	warnAt3 := GetEnvInt("MC_WARN_AT_3", 200)
+
+	newCount := currentCount + 1 // Count after adding this note
+
+	// Display appropriate warning based on new count
+	if newCount == warnAt1 {
+		fmt.Printf("⚠️  Context now has %d notes. Consider stopping and starting a new context for better organization.\n", newCount)
+	} else if newCount == warnAt2 {
+		fmt.Printf("⚠️  Context now has %d notes and is getting large. Consider chunking your work into smaller contexts.\n", newCount)
+	} else if newCount >= warnAt3 {
+		// Periodic warnings every 25 notes after threshold 3
+		if (newCount-warnAt3)%25 == 0 {
+			fmt.Printf("⚠️  Context now has %d notes. This context is quite large - consider stopping and creating a new one.\n", newCount)
+		}
+	}
 }
 

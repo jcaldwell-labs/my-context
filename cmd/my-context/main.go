@@ -38,6 +38,7 @@ func init() {
 	// Add all subcommands
 	rootCmd.AddCommand(commands.NewStartCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewStopCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewResumeCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewNoteCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewFileCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewTouchCmd(&jsonOutput))
