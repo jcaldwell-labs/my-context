@@ -32,6 +32,9 @@ This `dev` branch contains the complete development environment including:
 - 📁 **File Associations**: Link relevant files to contexts for easy reference
 - 🔄 **Automatic Transitions**: Previous context stops automatically when starting a new one
 - 📊 **History Tracking**: Full audit trail of all context switches
+- 🚨 **Signal Coordination**: Event-driven coordination between team members and processes
+- 👀 **Context Watching**: Monitor contexts for changes and execute commands automatically
+- 🏷️ **Context Metadata**: Enhanced context organization with created-by, parent, and labels
 - 💾 **Plain Text Storage**: All data stored as human-readable text files
 - 🌐 **Cross-Platform**: Works on Windows, Linux, and macOS
 - 🔧 **Unix Philosophy**: Composable commands with text I/O

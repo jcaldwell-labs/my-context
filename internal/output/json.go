@@ -23,7 +23,7 @@ type JSONError struct {
 
 // ContextData represents context data for JSON output
 type ContextData struct {
-	Context *models.Context            `json:"context"`
+	Context interface{}                `json:"context"` // Can be *models.Context or *pkgmodels.ContextWithMetadata
 	Notes   []*models.Note             `json:"notes,omitempty"`
 	Files   []*models.FileAssociation  `json:"files,omitempty"`
 	Touches []*models.TouchEvent       `json:"touches,omitempty"`

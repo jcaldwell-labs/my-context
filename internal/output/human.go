@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/models"
+	pkgmodels "github.com/jefferycaldwell/my-context-copilot/pkg/models"
 )
 
 // getTimestampFormat returns the timestamp format based on MC_TIMESTAMP_FORMAT env var
@@ -28,17 +29,60 @@ func getTimestampFormat() string {
 }
 
 // FormatContext formats a context with all its data for human-readable output
-func FormatContext(ctx *models.Context, notes []*models.Note, files []*models.FileAssociation, touches []*models.TouchEvent) string {
+func FormatContext(ctx interface{}, notes []*models.Note, files []*models.FileAssociation, touches []*models.TouchEvent) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("Context: %s\n", ctx.Name))
-	sb.WriteString(fmt.Sprintf("Status: %s\n", ctx.Status))
+	// Handle different context types
+	var name, status string
+	var startTime time.Time
+	var duration time.Duration
+	var hasMetadata bool
+	var metadata interface{}
+
+	// Try to cast to ContextWithMetadata first
+	if ctxWithMeta, ok := ctx.(*pkgmodels.ContextWithMetadata); ok {
+		name = ctxWithMeta.Name
+		status = ctxWithMeta.Status
+		startTime = ctxWithMeta.StartTime
+		duration = ctxWithMeta.Duration()
+		hasMetadata = true
+		metadata = ctxWithMeta.Metadata
+	} else if ctxBasic, ok := ctx.(*models.Context); ok {
+		// Fallback to basic context
+		name = ctxBasic.Name
+		status = ctxBasic.Status
+		startTime = ctxBasic.StartTime
+		duration = ctxBasic.Duration()
+		hasMetadata = false
+	} else {
+		// Unknown type, use reflection as last resort
+		sb.WriteString("Error: Unknown context type\n")
+		return sb.String()
+	}
+
+	sb.WriteString(fmt.Sprintf("Context: %s\n", name))
+	sb.WriteString(fmt.Sprintf("Status: %s\n", status))
 
 	// Format start time with relative time
-	duration := ctx.Duration()
 	sb.WriteString(fmt.Sprintf("Started: %s (%s ago)\n",
-		ctx.StartTime.Format("2006-01-02 15:04:05"),
+		startTime.Format("2006-01-02 15:04:05"),
 		FormatDuration(duration)))
+
+	// Display metadata if available
+	if hasMetadata {
+		if meta, ok := metadata.(pkgmodels.ContextMetadata); ok && (meta.CreatedBy != "" || meta.Parent != "" || len(meta.Labels) > 0) {
+			sb.WriteString("\nMetadata:\n")
+			if meta.CreatedBy != "" {
+				sb.WriteString(fmt.Sprintf("  Created by: %s\n", meta.CreatedBy))
+			}
+			if meta.Parent != "" {
+				sb.WriteString(fmt.Sprintf("  Parent: %s\n", meta.Parent))
+			}
+			if len(meta.Labels) > 0 {
+				sb.WriteString(fmt.Sprintf("  Labels: %s\n", strings.Join(meta.Labels, ", ")))
+			}
+		}
+	}
 
 	// Notes section
 	sb.WriteString(fmt.Sprintf("\nNotes (%d):\n", len(notes)))

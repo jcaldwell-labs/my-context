@@ -41,7 +41,7 @@ func NewShowCmd(jsonOutput *bool) *cobra.Command {
 
 			// Get context details
 			contextName := state.GetActiveContextName()
-			context, notes, files, touches, err := core.GetContext(contextName)
+			context, notes, files, touches, err := core.GetContextWithMetadata(contextName)
 			if err != nil {
 				if *jsonOutput {
 					jsonStr, _ := output.FormatJSONError("show", 2, err.Error())
