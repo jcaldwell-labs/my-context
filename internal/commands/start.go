@@ -11,10 +11,14 @@ import (
 	"github.com/jefferycaldwell/my-context-copilot/internal/models"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var startProject string
 var startForce bool
+var startCreatedBy string
+var startParent string
+var startLabels string
 
 func NewStartCmd(jsonOutput *bool) *cobra.Command {
 	cmd := &cobra.Command{
@@ -39,18 +43,25 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 			existingContext, err := core.FindContextByName(contextName)
 			if err == nil && existingContext.Status == "stopped" {
 				if startForce {
-					// Force flag - skip resume option but still prompt for new name
-					fmt.Printf("⚠️  Context \"%s\" exists (stopped) but --force specified\n", contextName)
-					newName, err := promptNewName(contextName)
-					if err != nil {
-						if *jsonOutput {
-							jsonStr, _ := output.FormatJSONError("start", 3, err.Error())
-							fmt.Print(jsonStr)
-							return nil
+					// Force flag - check if interactive mode
+					isInteractive := term.IsTerminal(int(os.Stdin.Fd()))
+
+					if isInteractive {
+						// Interactive mode - prompt for new name
+						fmt.Printf("⚠️  Context \"%s\" exists (stopped) but --force specified\n", contextName)
+						newName, err := promptNewName(contextName)
+						if err != nil {
+							if *jsonOutput {
+								jsonStr, _ := output.FormatJSONError("start", 3, err.Error())
+								fmt.Print(jsonStr)
+								return nil
+							}
+							return err
 						}
-						return err
+						contextName = newName
 					}
-					contextName = newName
+					// Non-interactive mode - skip prompt, let CreateContext auto-suffix with _2
+					// This preserves script compatibility while interactive users get better UX
 				} else {
 					// Normal flow - prompt for resume
 					resume, err := promptResume(existingContext)
@@ -82,8 +93,14 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 				}
 			}
 
+			// Parse labels
+			var labels []string
+			if startLabels != "" {
+				labels = strings.Split(strings.ReplaceAll(startLabels, " ", ""), ",")
+			}
+
 			// Create the context
-			context, previousContext, err := core.CreateContext(contextName)
+			context, previousContext, err := core.CreateContextWithMetadata(contextName, startCreatedBy, startParent, labels)
 			if err != nil {
 				if *jsonOutput {
 					jsonStr, _ := output.FormatJSONError("start", 2, err.Error())
@@ -128,6 +145,9 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 
 	cmd.Flags().StringVar(&startProject, "project", "", "Project name prefix (creates \"project: name\" format)")
 	cmd.Flags().BoolVar(&startForce, "force", false, "Force creation of new context without resume prompt")
+	cmd.Flags().StringVar(&startCreatedBy, "created-by", "", "User who created this context")
+	cmd.Flags().StringVar(&startParent, "parent", "", "Parent context name for hierarchy")
+	cmd.Flags().StringVar(&startLabels, "labels", "", "Comma-separated labels for categorization")
 
 	return cmd
 }
