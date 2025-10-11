@@ -49,7 +49,7 @@ The tool enforces single-active-context semantics:
 **Rationale**: Mental model simplicity. Developers already juggle enough state (git branches, terminal tabs, IDE windows). One active context eliminates decision paralysis and accidental cross-contamination.
 
 ### IV. Minimal Surface Area
-Command count MUST remain ≤12 total commands:
+Command count MUST remain ≤14 total commands:
 - Each command has a single-letter alias (e.g., `start`/`s`, `note`/`n`)
 - Defaults are sensible (no required flags for 90% use cases)
 - Zero configuration files required (conventions over configuration)
@@ -57,7 +57,9 @@ Command count MUST remain ≤12 total commands:
 
 **Rationale**: Cognitive load is the enemy of adoption. A tool that requires consulting docs for basic operations will be abandoned. Muscle memory forms around ~10 commands; beyond that, users resort to cheat sheets.
 
-**Current Command Count**: 11/12 (start, stop, note, file, touch, show, list, export, archive, delete, history)
+**Amendment (v2.2.0 - Iteration 006)**: Limit increased from 12→14 to accommodate distributed journal coordination capabilities (signal, watch, resume). Justified by: (1) Proven user need (final-completion handoff required manual coordination), (2) Core capability (not optional feature), (3) Still minimal (14 commands manageable).
+
+**Current Command Count**: 13/14 (start, stop, resume, note, file, touch, show, list, export, archive, delete, history, signal, watch)
 
 ### V. Data Portability
 All data MUST be stored as human-readable plain text:
