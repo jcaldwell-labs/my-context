@@ -43,13 +43,16 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 			existingContext, err := core.FindContextByName(contextName)
 			if err == nil && existingContext.Status == "stopped" {
 				if startForce {
-					// Force flag - check if interactive mode
+					// Force flag - never prompt, auto-resolve duplicates
+					// Let CreateContext handle auto-suffixing (_2, _3, etc.)
+					// This makes --force truly script-friendly by bypassing ALL prompts
+				} else {
+					// Normal flow - check if interactive
 					isInteractive := term.IsTerminal(int(os.Stdin.Fd()))
 
 					if isInteractive {
-						// Interactive mode - prompt for new name
-						fmt.Printf("⚠️  Context \"%s\" exists (stopped) but --force specified\n", contextName)
-						newName, err := promptNewName(contextName)
+						// Interactive mode - prompt for resume
+						resume, err := promptResume(existingContext)
 						if err != nil {
 							if *jsonOutput {
 								jsonStr, _ := output.FormatJSONError("start", 3, err.Error())
@@ -58,37 +61,27 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 							}
 							return err
 						}
-						contextName = newName
-					}
-					// Non-interactive mode - skip prompt, let CreateContext auto-suffix with _2
-					// This preserves script compatibility while interactive users get better UX
-				} else {
-					// Normal flow - prompt for resume
-					resume, err := promptResume(existingContext)
-					if err != nil {
-						if *jsonOutput {
-							jsonStr, _ := output.FormatJSONError("start", 3, err.Error())
-							fmt.Print(jsonStr)
-							return nil
-						}
-						return err
-					}
 
-					if resume {
-						// Resume the existing context
-						return resumeExistingContext(existingContext, jsonOutput)
-					} else {
-						// User declined resume - prompt for new name
-						newName, err := promptNewName(contextName)
-						if err != nil {
-							if *jsonOutput {
-								jsonStr, _ := output.FormatJSONError("start", 3, err.Error())
-								fmt.Print(jsonStr)
-								return nil
+						if resume {
+							// Resume the existing context
+							return resumeExistingContext(existingContext, jsonOutput)
+						} else {
+							// User declined resume - prompt for new name
+							newName, err := promptNewName(contextName)
+							if err != nil {
+								if *jsonOutput {
+									jsonStr, _ := output.FormatJSONError("start", 3, err.Error())
+									fmt.Print(jsonStr)
+									return nil
+								}
+								return err
 							}
-							return err
+							contextName = newName
 						}
-						contextName = newName
+					} else {
+						// Non-interactive mode - auto-resume if duplicate
+						// Preserves script behavior: duplicate name resumes existing context
+						return resumeExistingContext(existingContext, jsonOutput)
 					}
 				}
 			}
