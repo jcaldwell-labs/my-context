@@ -13,14 +13,14 @@ import (
 func getTimestampFormat() string {
 	format := os.Getenv("MC_TIMESTAMP_FORMAT")
 	switch format {
-	case "short", "":
-		return "15:04" // HH:MM (default)
+	case "short":
+		return "15:04" // HH:MM
 	case "medium":
 		return "15:04:05" // HH:MM:SS
 	case "long":
 		return "2006-01-02 15:04:05" // Full datetime
-	case "iso":
-		return time.RFC3339 // ISO8601 with timezone
+	case "iso", "":
+		return time.RFC3339 // ISO8601 with timezone (default)
 	default:
 		// Allow custom Go time format strings
 		return format
