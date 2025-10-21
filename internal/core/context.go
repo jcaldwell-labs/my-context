@@ -8,12 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jefferycaldwell/my-context-copilot/internal/models"
+	intmodels "github.com/jefferycaldwell/my-context-copilot/internal/models"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
+	pkgmodels "github.com/jefferycaldwell/my-context-copilot/pkg/models"
 )
 
-// CreateContext creates a new context, handling duplicate names and previous active context
-func CreateContext(name string) (*models.Context, string, error) {
+// CreateContextWithMetadata creates a new context with metadata, handling duplicate names and previous active context
+func CreateContextWithMetadata(name string, createdBy string, parent string, labels []string) (*pkgmodels.ContextWithMetadata, string, error) {
 	if err := EnsureContextHome(); err != nil {
 		return nil, "", err
 	}
@@ -39,7 +40,7 @@ func CreateContext(name string) (*models.Context, string, error) {
 	}
 
 	var previousContext string
-	var transitionType models.TransitionType
+	var transitionType intmodels.TransitionType
 
 	// Stop previous context if active
 	if state.HasActiveContext() {
@@ -47,14 +48,112 @@ func CreateContext(name string) (*models.Context, string, error) {
 		if err := stopContextInternal(previousContext); err != nil {
 			return nil, "", fmt.Errorf("failed to stop previous context: %w", err)
 		}
-		transitionType = models.TransitionSwitch
+		transitionType = intmodels.TransitionSwitch
 	} else {
-		transitionType = models.TransitionStart
+		transitionType = intmodels.TransitionStart
+	}
+
+	// Create new context with metadata
+	context := pkgmodels.NewContextWithMetadata(displayName, createdBy, parent, labels)
+
+	// Override the subdirectory path
+	context.SubdirectoryPath = GetContextDir(finalDirName)
+
+	// Create context directory
+	if err := CreateDir(context.SubdirectoryPath); err != nil {
+		return nil, "", err
+	}
+
+	// Write meta.json
+	if err := WriteJSON(GetMetaJSONPath(displayName), context); err != nil {
+		return nil, "", fmt.Errorf("failed to write context metadata: %w", err)
+	}
+
+	// Create empty logs
+	now := time.Now()
+	if err := AppendLog(GetNotesLogPath(displayName), fmt.Sprintf("[%s] Context started", now.Format(time.RFC3339))); err != nil {
+		return nil, "", fmt.Errorf("failed to initialize notes log: %w", err)
+	}
+
+	if err := AppendLog(GetFilesLogPath(displayName), fmt.Sprintf("[%s] Context started", now.Format(time.RFC3339))); err != nil {
+		return nil, "", fmt.Errorf("failed to initialize files log: %w", err)
+	}
+
+	if err := AppendLog(GetTouchLogPath(displayName), fmt.Sprintf("[%s] Context started", now.Format(time.RFC3339))); err != nil {
+		return nil, "", fmt.Errorf("failed to initialize touches log: %w", err)
+	}
+
+	// Update state
+	newState := &intmodels.AppState{
+		ActiveContext: &displayName,
+		LastUpdated:   now,
+	}
+
+	if err := WriteJSON(GetStateFilePath(), newState); err != nil {
+		return nil, "", fmt.Errorf("failed to update state: %w", err)
+	}
+
+	// Log transition
+	transition := &intmodels.ContextTransition{
+		Timestamp:      now,
+		NewContext:     &displayName,
+		TransitionType: transitionType,
+	}
+
+	if transitionType == intmodels.TransitionSwitch {
+		transition.PreviousContext = &previousContext
+	}
+
+	if err := AppendLog(GetTransitionsLogPath(), transition.ToLogLine()); err != nil {
+		return nil, "", fmt.Errorf("failed to log transition: %w", err)
+	}
+
+	return context, previousContext, nil
+}
+
+// CreateContext creates a new context, handling duplicate names and previous active context
+func CreateContext(name string) (*intmodels.Context, string, error) {
+	if err := EnsureContextHome(); err != nil {
+		return nil, "", err
+	}
+
+	// Sanitize the name for directory use
+	sanitizedName := SanitizeContextName(name)
+
+	// Resolve duplicate directory name
+	finalDirName := resolveDuplicateName(sanitizedName)
+
+	// Preserve original name for display, append suffix if duplicate
+	displayName := name
+	if finalDirName != sanitizedName {
+		// If duplicate detected (e.g., sanitizedName_2), append to display name
+		suffix := finalDirName[len(sanitizedName):]
+		displayName = name + suffix
+	}
+
+	// Get current active context (if any)
+	state, err := GetActiveContext()
+	if err != nil {
+		return nil, "", err
+	}
+
+	var previousContext string
+	var transitionType intmodels.TransitionType
+
+	// Stop previous context if active
+	if state.HasActiveContext() {
+		previousContext = state.GetActiveContextName()
+		if err := stopContextInternal(previousContext); err != nil {
+			return nil, "", fmt.Errorf("failed to stop previous context: %w", err)
+		}
+		transitionType = intmodels.TransitionSwitch
+	} else {
+		transitionType = intmodels.TransitionStart
 	}
 
 	// Create new context
 	now := time.Now()
-	context := &models.Context{
+	context := &intmodels.Context{
 		Name:             displayName,
 		StartTime:        now,
 		EndTime:          nil,
@@ -89,12 +188,12 @@ func CreateContext(name string) (*models.Context, string, error) {
 	}
 
 	// Log transition (use display name)
-	transition := &models.ContextTransition{
+	transition := &intmodels.ContextTransition{
 		Timestamp:      now,
 		NewContext:     &displayName,
 		TransitionType: transitionType,
 	}
-	if transitionType == models.TransitionSwitch {
+	if transitionType == intmodels.TransitionSwitch {
 		transition.PreviousContext = &previousContext
 	}
 
@@ -123,7 +222,7 @@ func resolveDuplicateName(name string) string {
 }
 
 // StopContext stops the currently active context
-func StopContext() (*models.Context, error) {
+func StopContext() (*intmodels.Context, error) {
 	state, err := GetActiveContext()
 	if err != nil {
 		return nil, err
@@ -139,7 +238,7 @@ func StopContext() (*models.Context, error) {
 	}
 
 	// Read the stopped context
-	var context models.Context
+	var context intmodels.Context
 	if err := ReadJSON(GetMetaJSONPath(contextName), &context); err != nil {
 		return nil, err
 	}
@@ -151,11 +250,11 @@ func StopContext() (*models.Context, error) {
 
 	// Log transition
 	now := time.Now()
-	transition := &models.ContextTransition{
+	transition := &intmodels.ContextTransition{
 		Timestamp:       now,
 		PreviousContext: &contextName,
 		NewContext:      nil,
-		TransitionType:  models.TransitionStop,
+		TransitionType:  intmodels.TransitionStop,
 	}
 
 	if err := AppendLog(GetTransitionsLogPath(), transition.ToLogLine()); err != nil {
@@ -168,7 +267,7 @@ func StopContext() (*models.Context, error) {
 // stopContextInternal stops a context without clearing state (used internally)
 func stopContextInternal(contextName string) error {
 	// Read current context
-	var context models.Context
+	var context intmodels.Context
 	if err := ReadJSON(GetMetaJSONPath(contextName), &context); err != nil {
 		return err
 	}
@@ -183,7 +282,7 @@ func stopContextInternal(contextName string) error {
 }
 
 // AddNote adds a note to the active context
-func AddNote(text string) (*models.Note, error) {
+func AddNote(text string) (*intmodels.Note, error) {
 	state, err := GetActiveContext()
 	if err != nil {
 		return nil, err
@@ -193,7 +292,7 @@ func AddNote(text string) (*models.Note, error) {
 		return nil, fmt.Errorf("no active context")
 	}
 
-	note := &models.Note{
+	note := &intmodels.Note{
 		Timestamp:   time.Now(),
 		TextContent: text,
 	}
@@ -213,7 +312,7 @@ func AddNote(text string) (*models.Note, error) {
 }
 
 // AddFile associates a file with the active context
-func AddFile(filePath string) (*models.FileAssociation, error) {
+func AddFile(filePath string) (*intmodels.FileAssociation, error) {
 	state, err := GetActiveContext()
 	if err != nil {
 		return nil, err
@@ -229,7 +328,7 @@ func AddFile(filePath string) (*models.FileAssociation, error) {
 		return nil, err
 	}
 
-	file := &models.FileAssociation{
+	file := &intmodels.FileAssociation{
 		Timestamp: time.Now(),
 		FilePath:  normalizedPath,
 	}
@@ -245,7 +344,7 @@ func AddFile(filePath string) (*models.FileAssociation, error) {
 }
 
 // AddTouch records a touch event in the active context
-func AddTouch() (*models.TouchEvent, error) {
+func AddTouch() (*intmodels.TouchEvent, error) {
 	state, err := GetActiveContext()
 	if err != nil {
 		return nil, err
@@ -255,7 +354,7 @@ func AddTouch() (*models.TouchEvent, error) {
 		return nil, fmt.Errorf("no active context")
 	}
 
-	touch := &models.TouchEvent{
+	touch := &intmodels.TouchEvent{
 		Timestamp: time.Now(),
 	}
 
@@ -269,10 +368,87 @@ func AddTouch() (*models.TouchEvent, error) {
 	return touch, nil
 }
 
-// GetContext reads a context with all its associated data
-func GetContext(contextName string) (*models.Context, []*models.Note, []*models.FileAssociation, []*models.TouchEvent, error) {
+// GetContextWithMetadata reads a context with metadata and all associated data
+func GetContextWithMetadata(contextName string) (*pkgmodels.ContextWithMetadata, []*intmodels.Note, []*intmodels.FileAssociation, []*intmodels.TouchEvent, error) {
 	// Read meta.json
-	var context models.Context
+	var context pkgmodels.ContextWithMetadata
+	if err := ReadJSON(GetMetaJSONPath(contextName), &context); err != nil {
+		// If reading as extended context fails, try reading as old context and convert
+		var oldContext intmodels.Context
+		if err := ReadJSON(GetMetaJSONPath(contextName), &oldContext); err != nil {
+			return nil, nil, nil, nil, err
+		}
+		// Convert old context to extended context with empty metadata
+		context = pkgmodels.ContextWithMetadata{
+			Name:             oldContext.Name,
+			StartTime:        oldContext.StartTime,
+			EndTime:          oldContext.EndTime,
+			Status:           oldContext.Status,
+			SubdirectoryPath: oldContext.SubdirectoryPath,
+			IsArchived:       oldContext.IsArchived,
+			Metadata:         pkgmodels.ContextMetadata{}, // Empty metadata
+		}
+	}
+
+	// Read notes, files, touches (same as GetContext)
+	notesLines, err := ReadLog(GetNotesLogPath(contextName))
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	var notes []*intmodels.Note
+	for _, line := range notesLines {
+		if line == "" {
+			continue
+		}
+		note, err := intmodels.ParseNoteLogLine(line)
+		if err != nil {
+			continue // Skip invalid lines
+		}
+		notes = append(notes, note)
+	}
+
+	filesLines, err := ReadLog(GetFilesLogPath(contextName))
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	var files []*intmodels.FileAssociation
+	for _, line := range filesLines {
+		if line == "" {
+			continue
+		}
+		file, err := intmodels.ParseFileLogLine(line)
+		if err != nil {
+			continue // Skip invalid lines
+		}
+		files = append(files, file)
+	}
+
+	touchesLines, err := ReadLog(GetTouchLogPath(contextName))
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	var touches []*intmodels.TouchEvent
+	for _, line := range touchesLines {
+		if line == "" {
+			continue
+		}
+		touch, err := intmodels.ParseTouchLogLine(line)
+		if err != nil {
+			continue // Skip invalid lines
+		}
+		touches = append(touches, touch)
+	}
+
+	return &context, notes, files, touches, nil
+}
+
+// GetContext reads a context with all its associated data
+func GetContext(contextName string) (*intmodels.Context, []*intmodels.Note, []*intmodels.FileAssociation, []*intmodels.TouchEvent, error) {
+	// Read meta.json
+	var context intmodels.Context
 	if err := ReadJSON(GetMetaJSONPath(contextName), &context); err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -283,12 +459,12 @@ func GetContext(contextName string) (*models.Context, []*models.Note, []*models.
 		return nil, nil, nil, nil, err
 	}
 
-	var notes []*models.Note
+	var notes []*intmodels.Note
 	for _, line := range notesLines {
 		if line == "" {
 			continue
 		}
-		note, err := models.ParseNoteLogLine(line)
+		note, err := intmodels.ParseNoteLogLine(line)
 		if err != nil {
 			continue // Skip invalid lines
 		}
@@ -301,12 +477,12 @@ func GetContext(contextName string) (*models.Context, []*models.Note, []*models.
 		return nil, nil, nil, nil, err
 	}
 
-	var files []*models.FileAssociation
+	var files []*intmodels.FileAssociation
 	for _, line := range filesLines {
 		if line == "" {
 			continue
 		}
-		file, err := models.ParseFileLogLine(line)
+		file, err := intmodels.ParseFileLogLine(line)
 		if err != nil {
 			continue // Skip invalid lines
 		}
@@ -319,12 +495,12 @@ func GetContext(contextName string) (*models.Context, []*models.Note, []*models.
 		return nil, nil, nil, nil, err
 	}
 
-	var touches []*models.TouchEvent
+	var touches []*intmodels.TouchEvent
 	for _, line := range touchesLines {
 		if line == "" {
 			continue
 		}
-		touch, err := models.ParseTouchLogLine(line)
+		touch, err := intmodels.ParseTouchLogLine(line)
 		if err != nil {
 			continue // Skip invalid lines
 		}
@@ -335,15 +511,15 @@ func GetContext(contextName string) (*models.Context, []*models.Note, []*models.
 }
 
 // ListContexts returns all contexts sorted by start time (most recent first)
-func ListContexts() ([]*models.Context, error) {
+func ListContexts() ([]*intmodels.Context, error) {
 	dirs, err := ListContextDirs()
 	if err != nil {
 		return nil, err
 	}
 
-	var contexts []*models.Context
+	var contexts []*intmodels.Context
 	for _, dir := range dirs {
-		var context models.Context
+		var context intmodels.Context
 		if err := ReadJSON(GetMetaJSONPath(dir), &context); err != nil {
 			continue // Skip contexts with invalid meta.json
 		}
@@ -359,18 +535,18 @@ func ListContexts() ([]*models.Context, error) {
 }
 
 // GetTransitions returns all context transitions
-func GetTransitions() ([]*models.ContextTransition, error) {
+func GetTransitions() ([]*intmodels.ContextTransition, error) {
 	lines, err := ReadLog(GetTransitionsLogPath())
 	if err != nil {
 		return nil, err
 	}
 
-	var transitions []*models.ContextTransition
+	var transitions []*intmodels.ContextTransition
 	for _, line := range lines {
 		if line == "" {
 			continue
 		}
-		transition, err := models.ParseTransitionLogLine(line)
+		transition, err := intmodels.ParseTransitionLogLine(line)
 		if err != nil {
 			continue // Skip invalid lines
 		}
@@ -389,12 +565,12 @@ func ExportContext(contextName string, outputPath string) (string, error) {
 	}
 
 	// Convert to model types for export
-	var noteModels []models.Note
+	var noteModels []intmodels.Note
 	for _, n := range notes {
 		noteModels = append(noteModels, *n)
 	}
 
-	var fileModels []models.FileAssociation
+	var fileModels []intmodels.FileAssociation
 	for _, f := range files {
 		fileModels = append(fileModels, *f)
 	}
@@ -451,7 +627,7 @@ func ExportAllContexts(outputDir string) ([]string, error) {
 // ArchiveContext marks a context as archived
 func ArchiveContext(contextName string) error {
 	// Load context
-	var ctx models.Context
+	var ctx intmodels.Context
 	metaPath := GetMetaJSONPath(contextName)
 	if err := ReadJSON(metaPath, &ctx); err != nil {
 		return fmt.Errorf("context %q not found", contextName)
@@ -481,7 +657,7 @@ func ArchiveContext(contextName string) error {
 // DeleteContext permanently removes a context and all its data
 func DeleteContext(contextName string, force bool, confirmed bool) error {
 	// Load context
-	var ctx models.Context
+	var ctx intmodels.Context
 	metaPath := GetMetaJSONPath(contextName)
 	if err := ReadJSON(metaPath, &ctx); err != nil {
 		return fmt.Errorf("context %q not found", contextName)
@@ -510,8 +686,8 @@ func DeleteContext(contextName string, force bool, confirmed bool) error {
 }
 
 // LoadContext reads a context by name (Sprint 2: for backward compatibility testing)
-func LoadContext(contextName string) (*models.Context, error) {
-	var ctx models.Context
+func LoadContext(contextName string) (*intmodels.Context, error) {
+	var ctx intmodels.Context
 	if err := ReadJSON(GetMetaJSONPath(contextName), &ctx); err != nil {
 		return nil, fmt.Errorf("context %q not found", contextName)
 	}
@@ -534,14 +710,14 @@ type ContextFilter struct {
 }
 
 // ListContextsFiltered returns contexts matching the filter criteria
-func ListContextsFiltered(filter ContextFilter) ([]*models.Context, error) {
+func ListContextsFiltered(filter ContextFilter) ([]*intmodels.Context, error) {
 	// Get all contexts
 	allContexts, err := ListContexts()
 	if err != nil {
 		return nil, err
 	}
 
-	var filtered []*models.Context
+	var filtered []*intmodels.Context
 
 	// Apply filters
 	for _, ctx := range allContexts {

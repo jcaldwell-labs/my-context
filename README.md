@@ -1,6 +1,29 @@
 # My-Context
 
+> **🔧 DEVELOPMENT BRANCH**
+> This is the **development reference branch** showing the full development process and internal tooling.
+> **Looking for the clean public version?** → See [main branch](https://github.com/jcaldwell1066/my-context/tree/main)
+
 A cross-platform CLI tool for managing developer work contexts with notes, file associations, and timestamps.
+
+## About This Branch
+
+This `dev` branch contains the complete development environment including:
+
+- **Spec Kit Workflow** (`.specify/`) - Feature specification and planning tools
+- **SDLC Documentation** (`SDLC.md`, `IMPLEMENTATION.md`) - Development process
+- **Feature Specifications** (`specs/`) - Complete spec-driven development artifacts
+- **Development Automation** (`scripts/`) - Build, deploy, and release automation
+- **Internal Tooling** (`.claude/`, `.cursor/`) - AI-assisted development commands
+- **Sprint Retrospectives** - Lessons learned and process improvements
+- **Constitution & Governance** - Project principles and decision-making
+
+**Use this branch to:**
+- Understand how the project was developed
+- See Spec Kit workflow in action
+- Reference SDLC best practices
+- Learn from sprint retrospectives
+- Use automation scripts for your own projects
 
 ## Features
 
@@ -9,6 +32,9 @@ A cross-platform CLI tool for managing developer work contexts with notes, file 
 - 📁 **File Associations**: Link relevant files to contexts for easy reference
 - 🔄 **Automatic Transitions**: Previous context stops automatically when starting a new one
 - 📊 **History Tracking**: Full audit trail of all context switches
+- 🚨 **Signal Coordination**: Event-driven coordination between team members and processes
+- 👀 **Context Watching**: Monitor contexts for changes and execute commands automatically
+- 🏷️ **Context Metadata**: Enhanced context organization with created-by, parent, and labels
 - 💾 **Plain Text Storage**: All data stored as human-readable text files
 - 🌐 **Cross-Platform**: Works on Windows, Linux, and macOS
 - 🔧 **Unix Philosophy**: Composable commands with text I/O

@@ -13,7 +13,7 @@ var (
 	jsonOutput bool
 
 	// Version information - set via ldflags during build
-	Version   = "1.0.0"
+	Version   = "2.2.0-beta"
 	BuildTime = "unknown"
 	GitCommit = "unknown"
 )
@@ -38,6 +38,7 @@ func init() {
 	// Add all subcommands
 	rootCmd.AddCommand(commands.NewStartCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewStopCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewResumeCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewNoteCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewFileCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewTouchCmd(&jsonOutput))
@@ -47,6 +48,8 @@ func init() {
 	rootCmd.AddCommand(commands.NewExportCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewArchiveCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewDeleteCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewSignalCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewWatchCmd(&jsonOutput))
 }
 
 func main() {

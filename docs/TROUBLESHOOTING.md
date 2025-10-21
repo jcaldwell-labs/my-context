@@ -277,6 +277,82 @@ my-context archive "Old Context"
 
 ---
 
+## Signaling Issues
+
+### Problem: "signal command not found" after upgrade
+
+**Cause**: Using older version that doesn't have signaling features.
+
+**Solution**:
+```bash
+# Check your version
+my-context --version
+
+# Upgrade to v2.2.0+ for signaling features
+curl -sSL https://raw.githubusercontent.com/.../install.sh | bash
+```
+
+### Problem: Watch command uses too much CPU
+
+**Cause**: Watch command polls every 5 seconds by default.
+
+**Solution**:
+```bash
+# Increase polling interval
+my-context watch --interval=30s
+
+# Or set a timeout to limit runtime
+my-context watch --timeout=1h
+```
+
+### Problem: Signal files not being created or found
+
+**Cause**: Signals are stored in `~/.my-context/signals/` directory.
+
+**Solution**:
+```bash
+# Check signals directory exists
+ls -la ~/.my-context/signals/
+
+# Create directory if missing
+mkdir -p ~/.my-context/signals
+
+# List existing signals
+my-context signal list
+
+# Check permissions
+ls -ld ~/.my-context/signals/
+```
+
+### Problem: Watch command doesn't detect changes immediately
+
+**Cause**: Watch uses polling (not real-time file monitoring) for cross-platform compatibility.
+
+**Solution**:
+```bash
+# Reduce polling interval (uses more CPU)
+my-context watch --interval=1s
+
+# Note: On Linux, inotify support provides better performance
+# Check if you're on Linux for automatic optimization
+uname -s
+```
+
+### Problem: Context metadata not showing in show command
+
+**Cause**: Context was created before v2.2.0 or metadata fields were empty.
+
+**Solution**:
+```bash
+# Create new context with metadata
+my-context start "New Context" --created-by="your-name" --labels="feature,urgent"
+
+# Or check if context has metadata
+cat ~/.my-context/context-name/meta.json
+```
+
+---
+
 ## Data Issues
 
 ### Problem: "Lost my context data!"
