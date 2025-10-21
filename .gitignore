@@ -1,5 +1,41 @@
-bin/
+# Binaries
+/my-context
+/my-context.exe
+*.exe
+/bin/
 
-# Session documentation
-GITHUB-SETUP-*.md
+# IDE and editor configs
+.claude/
+.cursor/
+.cursorrules
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Internal development
+.specify/
+specs/
+CLAUDE.md
+HERE.md
+IMPLEMENTATION.md
+SDLC.md
+SETUP.md
+SPRINT-*.md
+TECH-DEBT*.md
+WORKTREE-*.md
+CONSTITUTION-*.md
+REMAINING-TECH-DEBT.md
+demo_*.md
 MY-CONTEXT-*.md
+TOOLS1-*.md
+DEPLOY-*.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage.out
+*.test
