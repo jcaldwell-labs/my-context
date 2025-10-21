@@ -366,6 +366,19 @@ my-context list
 my-context history
 ```
 
+## Tutorials & Guides
+
+### **📚 [Personal Productivity with Triggers Tutorial](docs/TRIGGERS-TUTORIAL.md)**
+
+Learn how to automate your workflow with signals and watches:
+- Get notified when you complete milestones
+- Receive warnings when contexts get too large
+- Automate end-of-day cleanup
+- Integrate with Pomodoro timers
+- Create smart context lifecycle automation
+
+**Perfect for**: Anyone wanting to level up their productivity with automation
+
 ## Advanced Usage
 
 ### Backup Your Contexts
