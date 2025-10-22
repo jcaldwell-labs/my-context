@@ -986,6 +986,16 @@ my-context watch --timeout=2h            # Set max watch time
 
 ---
 
+## Changelog
+
+### Version 1.0.0 (2025-10-21)
+- Initial release
+- Fixed critical bug: `--exec` command execution and output display
+- Fixed critical bug: `--new-notes` was monitoring wrong file (directory vs notes.log)
+- All examples tested and verified working
+
+---
+
 **Document Version**: 1.0.0
 **Created**: 2025-10-21
 **Author**: My-Context Team

@@ -13,15 +13,16 @@ import (
 
 // Monitor handles context watching and change detection
 type Monitor struct {
-	contextDir string
-	lastMtime  time.Time
-	useInotify bool
-	mu         sync.RWMutex
+	contextDir    string
+	lastMtime     time.Time
+	lastNotesMtime time.Time
+	useInotify    bool
+	mu            sync.RWMutex
 }
 
 // NewMonitor creates a new context monitor
 func NewMonitor(contextDir string) (*Monitor, error) {
-	// Get initial modification time
+	// Get initial modification time for directory
 	mtime, err := utils.GetModTime(contextDir)
 	if err != nil {
 		if utils.FileExists(contextDir) {
@@ -31,29 +32,53 @@ func NewMonitor(contextDir string) (*Monitor, error) {
 		mtime = time.Time{}
 	}
 
+	// Get initial modification time for notes.log
+	notesPath := fmt.Sprintf("%s/notes.log", contextDir)
+	notesMtime, err := utils.GetModTime(notesPath)
+	if err != nil {
+		// notes.log doesn't exist yet or can't be read
+		notesMtime = time.Time{}
+	}
+
 	// Enable inotify on Linux for better performance
 	useInotify := runtime.GOOS == "linux"
 
 	return &Monitor{
-		contextDir: contextDir,
-		lastMtime:  mtime,
-		useInotify: useInotify,
+		contextDir:    contextDir,
+		lastMtime:     mtime,
+		lastNotesMtime: notesMtime,
+		useInotify:    useInotify,
 	}, nil
 }
 
 // CheckForChanges checks if the context has been modified since last check
+// This checks notes.log since that's the most frequently updated file
 func (m *Monitor) CheckForChanges() (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	currentMtime, err := utils.GetModTime(m.contextDir)
+	// Check notes.log as the primary indicator of changes
+	// Most context updates involve adding notes
+	notesPath := fmt.Sprintf("%s/notes.log", m.contextDir)
+	currentNotesMtime, err := utils.GetModTime(notesPath)
 	if err != nil {
-		return false, fmt.Errorf("failed to get current mtime: %w", err)
+		// If notes.log doesn't exist or can't be read, check directory
+		currentDirMtime, dirErr := utils.GetModTime(m.contextDir)
+		if dirErr != nil {
+			return false, fmt.Errorf("failed to check for changes: %w", dirErr)
+		}
+
+		hasChanged := currentDirMtime.After(m.lastMtime)
+		if hasChanged {
+			m.lastMtime = currentDirMtime
+		}
+		return hasChanged, nil
 	}
 
-	hasChanged := currentMtime.After(m.lastMtime)
+	// Compare notes.log mtime
+	hasChanged := currentNotesMtime.After(m.lastNotesMtime)
 	if hasChanged {
-		m.lastMtime = currentMtime
+		m.lastNotesMtime = currentNotesMtime
 	}
 
 	return hasChanged, nil
@@ -61,7 +86,23 @@ func (m *Monitor) CheckForChanges() (bool, error) {
 
 // CheckForNewNotes checks specifically for new notes in the context
 func (m *Monitor) CheckForNewNotes() (bool, error) {
-	return m.CheckForChanges() // For now, any change means potential new notes
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Check notes.log file specifically
+	notesPath := fmt.Sprintf("%s/notes.log", m.contextDir)
+	currentNotesMtime, err := utils.GetModTime(notesPath)
+	if err != nil {
+		// If we can't read notes.log, treat as no changes
+		return false, nil
+	}
+
+	hasChanged := currentNotesMtime.After(m.lastNotesMtime)
+	if hasChanged {
+		m.lastNotesMtime = currentNotesMtime
+	}
+
+	return hasChanged, nil
 }
 
 // CheckForNewNotesWithPattern checks for new notes matching a pattern
@@ -248,12 +289,23 @@ func (w *Watcher) checkAndExecute() WatchResult {
 
 // executeCommand runs the specified command
 func (w *Watcher) executeCommand(cmd string) error {
-	// Simple command execution - split by spaces for basic support
-	parts := strings.Fields(cmd)
-	if len(parts) == 0 {
+	if strings.TrimSpace(cmd) == "" {
 		return fmt.Errorf("empty command")
 	}
 
-	command := exec.Command(parts[0], parts[1:]...)
-	return command.Run()
+	// Use shell to properly handle quotes, pipes, redirects, variables, etc.
+	var shellCmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		shellCmd = exec.Command("cmd", "/C", cmd)
+	} else {
+		shellCmd = exec.Command("sh", "-c", cmd)
+	}
+
+	// Capture and display output so user sees exec command results
+	output, err := shellCmd.CombinedOutput()
+	if len(output) > 0 {
+		fmt.Print(string(output))
+	}
+
+	return err
 }
