@@ -23,6 +23,35 @@ func GetContextHome() string {
 	return home
 }
 
+// GetContextHomeDisplay returns the context home path with ~ abbreviation for user home
+func GetContextHomeDisplay() string {
+	path := GetContextHome()
+
+	// Get user home directory
+	var userHome string
+	if isWSL() {
+		userHome = os.Getenv("HOME")
+	} else {
+		userHome, _ = os.UserHomeDir()
+	}
+
+	// Replace user home with ~ for brevity
+	if userHome != "" && strings.HasPrefix(path, userHome) {
+		return strings.Replace(path, userHome, "~", 1)
+	}
+
+	return path
+}
+
+// GetContextCount returns the number of contexts in the context home
+func GetContextCount() int {
+	dirs, err := ListContextDirs()
+	if err != nil {
+		return 0
+	}
+	return len(dirs)
+}
+
 // isWSL detects if running in WSL environment
 func isWSL() bool {
 	// Check for WSL-specific indicators

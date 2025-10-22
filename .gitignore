@@ -17,20 +17,17 @@
 # Internal development
 .specify/
 specs/
-CLAUDE.md
-HERE.md
-IMPLEMENTATION.md
-SDLC.md
-SETUP.md
-SPRINT-*.md
-TECH-DEBT*.md
-WORKTREE-*.md
-CONSTITUTION-*.md
-REMAINING-TECH-DEBT.md
-demo_*.md
-MY-CONTEXT-*.md
-TOOLS1-*.md
-DEPLOY-*.md
+# CLAUDE.md - now tracked (developer guidance)
+/HERE.md
+/SPRINT-*.md
+/WORKTREE-*.md
+/CONSTITUTION-*.md
+/demo_*.md
+/MY-CONTEXT-*.md
+/TOOLS1-*.md
+/DEPLOY-*.md
+/CURRENT-STATE.md
+/NOTIFY-*.md
 
 # OS files
 .DS_Store

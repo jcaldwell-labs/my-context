@@ -10,6 +10,17 @@ import (
 	pkgmodels "github.com/jefferycaldwell/my-context-copilot/pkg/models"
 )
 
+// PrintContextHomeHeader prints the context home location with separator
+func PrintContextHomeHeader(homeDisplay string, contextCount int) {
+	fmt.Printf("Context Home: %s", homeDisplay)
+	if contextCount > 0 {
+		fmt.Printf(" (%d contexts)", contextCount)
+	}
+	fmt.Println()
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println()
+}
+
 // getTimestampFormat returns the timestamp format based on MC_TIMESTAMP_FORMAT env var
 func getTimestampFormat() string {
 	format := os.Getenv("MC_TIMESTAMP_FORMAT")

@@ -119,6 +119,9 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 				}
 				fmt.Print(jsonStr)
 			} else {
+				// Print context home
+				fmt.Printf("Context Home: %s\n\n", core.GetContextHomeDisplay())
+
 				// Check if name was modified due to duplicate (e.g., "Bug fix" → "Bug fix_2")
 				if context.Name != contextName {
 					fmt.Printf("Context \"%s\" already exists.\n", contextName)
@@ -129,7 +132,7 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 					fmt.Printf("Stopped context: %s\n", previousContext)
 				}
 
-				fmt.Printf("Started context: %s\n", context.Name)
+				fmt.Printf("✓ Started: %s\n", context.Name)
 			}
 
 			return nil

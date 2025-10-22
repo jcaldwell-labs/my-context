@@ -38,6 +38,8 @@ func NewHistoryCmd(jsonOutput *bool) *cobra.Command {
 				}
 				fmt.Print(jsonStr)
 			} else {
+				// Print context home header
+				output.PrintContextHomeHeader(core.GetContextHomeDisplay(), core.GetContextCount())
 				fmt.Print(output.FormatTransitionHistory(transitions))
 			}
 
