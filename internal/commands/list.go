@@ -160,6 +160,8 @@ Supports filtering by project, search term, and archive status.`,
 				}
 				fmt.Print(jsonStr)
 			} else {
+				// Print context home header
+				output.PrintContextHomeHeader(core.GetContextHomeDisplay(), core.GetContextCount())
 				fmt.Print(output.FormatContextList(contexts, activeContextName))
 
 				// Show truncation message if limited

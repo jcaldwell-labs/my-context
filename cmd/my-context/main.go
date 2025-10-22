@@ -13,7 +13,7 @@ var (
 	jsonOutput bool
 
 	// Version information - set via ldflags during build
-	Version   = "2.2.0-beta"
+	Version   = "2.3.0"
 	BuildTime = "unknown"
 	GitCommit = "unknown"
 )
@@ -50,6 +50,7 @@ func init() {
 	rootCmd.AddCommand(commands.NewDeleteCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewSignalCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewWatchCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewWhichCmd(&jsonOutput))
 }
 
 func main() {
