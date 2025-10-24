@@ -1,0 +1,6 @@
+[2025-10-22T17:01:28-04:00] Context started
+2025-10-22T17:01:28-04:00|DECISION: Exponential backoff strategy - 1s, 2s, 4s, 8s
+2025-10-22T17:01:28-04:00|Using exponential backoff to handle transient failures
+2025-10-22T17:01:28-04:00|Max retries: 3 attempts before marking payment as failed
+2025-10-22T17:01:28-04:00|Using context.Context for cancellation support
+2025-10-22T17:01:28-04:00|Database transaction rolled back on timeout

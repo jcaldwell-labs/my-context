@@ -1,0 +1,8 @@
+{
+  "name": "backend-services: payment-api-release",
+  "start_time": "2025-10-22T17:01:29.291545507-04:00",
+  "end_time": "2025-10-22T17:01:29.312201938-04:00",
+  "status": "stopped",
+  "subdirectory_path": "/home/be-dev-agent/projects/my-context/docs/tutorials/context-homes/tutorial-07-release-alice/backend-services__payment-api-release",
+  "is_archived": false
+}

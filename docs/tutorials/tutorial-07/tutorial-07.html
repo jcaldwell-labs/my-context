@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorial 7: Signal Coordination - My-Context Visual Tutorial</title>
+    <style>
+/* My-Context Tutorial Dark Theme */
+/* Consistent dark-mode styling for all tutorial pages */
+
+:root {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #0d0d0d;
+    --bg-code: #1e1e1e;
+    --text-primary: #e0e0e0;
+    --text-secondary: #888888;
+    --text-dim: #666666;
+    --accent-cyan: #66d9ef;
+    --accent-green: #a6e22e;
+    --accent-yellow: #e6db74;
+    --accent-orange: #fd971f;
+    --accent-red: #f92672;
+    --border-color: #444;
+    --border-accent: #66d9ef;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Menlo', 'DejaVu Sans Mono', 'Consolas', 'Courier New', monospace;
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+.tutorial-header {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border-bottom: 3px solid var(--accent-cyan);
+    padding: 30px 0;
+    margin-bottom: 40px;
+}
+
+.tutorial-header h1 {
+    margin: 0 0 10px 0;
+    color: var(--accent-cyan);
+    font-size: 2.5em;
+}
+
+.tutorial-header .subtitle {
+    color: var(--text-secondary);
+    font-size: 1.2em;
+    margin: 0;
+}
+
+.tutorial-nav {
+    margin-top: 20px;
+    display: flex;
+    gap: 15px;
+}
+
+.tutorial-nav a {
+    color: var(--accent-cyan);
+    text-decoration: none;
+    padding: 8px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    transition: all 0.3s;
+}
+
+.tutorial-nav a:hover {
+    background-color: var(--bg-secondary);
+    border-color: var(--accent-cyan);
+}
+
+/* Sections */
+.section {
+    background-color: var(--bg-secondary);
+    border-left: 4px solid var(--accent-cyan);
+    padding: 25px;
+    margin: 30px 0;
+    border-radius: 4px;
+}
+
+.section h2 {
+    color: var(--accent-cyan);
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.8em;
+}
+
+.section h3 {
+    color: var(--accent-green);
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 1.4em;
+}
+
+.section p {
+    margin: 10px 0;
+    line-height: 1.8;
+}
+
+/* Scenario box */
+.scenario {
+    background-color: var(--bg-code);
+    border-left: 4px solid var(--accent-yellow);
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 4px;
+}
+
+.scenario strong {
+    color: var(--accent-yellow);
+}
+
+/* Learning objectives */
+.objectives {
+    background-color: var(--bg-code);
+    border-left: 4px solid var(--accent-green);
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 4px;
+}
+
+.objectives h3 {
+    color: var(--accent-green);
+    margin-top: 0;
+}
+
+.objectives ul {
+    margin: 10px 0;
+    padding-left: 25px;
+}
+
+.objectives li {
+    margin: 8px 0;
+}
+
+/* Code blocks */
+pre {
+    background-color: var(--bg-code);
+    color: var(--text-primary);
+    padding: 20px;
+    border-left: 3px solid var(--accent-cyan);
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Menlo', 'DejaVu Sans Mono', 'Consolas', 'Courier New', monospace;
+    background-color: var(--bg-code);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.95em;
+}
+
+pre code {
+    padding: 0;
+    background: none;
+}
+
+/* Syntax highlighting for bash */
+.bash-keyword {
+    color: var(--accent-red);
+}
+
+.bash-command {
+    color: var(--accent-cyan);
+}
+
+.bash-string {
+    color: var(--accent-yellow);
+}
+
+.bash-comment {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Step-by-step walkthrough */
+.step {
+    background-color: var(--bg-code);
+    border-left: 4px solid var(--accent-orange);
+    padding: 20px;
+    margin: 25px 0;
+    border-radius: 4px;
+}
+
+.step-number {
+    display: inline-block;
+    background-color: var(--accent-orange);
+    color: var(--bg-primary);
+    font-weight: bold;
+    padding: 5px 12px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.step h4 {
+    color: var(--accent-orange);
+    margin: 10px 0;
+    display: inline;
+}
+
+.step-description {
+    margin: 15px 0;
+    color: var(--text-primary);
+}
+
+/* Panel embeds */
+.panel-embed {
+    margin: 30px 0;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.panel-embed h3 {
+    background-color: var(--bg-code);
+    color: var(--accent-cyan);
+    margin: 0;
+    padding: 15px 20px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.panel-embed iframe {
+    width: 100%;
+    height: 600px;
+    border: none;
+    background-color: var(--bg-primary);
+}
+
+/* Key takeaways */
+.takeaways {
+    background-color: var(--bg-code);
+    border-left: 4px solid var(--accent-green);
+    padding: 20px;
+    margin: 30px 0;
+    border-radius: 4px;
+}
+
+.takeaways h3 {
+    color: var(--accent-green);
+    margin-top: 0;
+}
+
+.takeaways ul {
+    margin: 10px 0;
+    padding-left: 25px;
+}
+
+.takeaways li {
+    margin: 12px 0;
+    line-height: 1.8;
+}
+
+.takeaways li strong {
+    color: var(--accent-green);
+}
+
+/* Character/Role boxes */
+.character {
+    display: inline-block;
+    background-color: var(--bg-code);
+    color: var(--accent-cyan);
+    padding: 5px 12px;
+    border-radius: 4px;
+    margin: 5px 5px 5px 0;
+    font-weight: bold;
+    border: 1px solid var(--border-color);
+}
+
+.character.backend {
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+}
+
+.character.frontend {
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
+.character.qa {
+    border-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+}
+
+.character.scrum {
+    border-color: var(--accent-orange);
+    color: var(--accent-orange);
+}
+
+.character.product {
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+}
+
+.character.agent {
+    border-color: #9876aa;
+    color: #9876aa;
+}
+
+/* Navigation footer */
+.tutorial-footer {
+    background-color: var(--bg-secondary);
+    border-top: 3px solid var(--accent-cyan);
+    padding: 30px 0;
+    margin-top: 50px;
+}
+
+.footer-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.footer-nav a {
+    color: var(--accent-cyan);
+    text-decoration: none;
+    padding: 12px 24px;
+    border: 2px solid var(--accent-cyan);
+    border-radius: 4px;
+    transition: all 0.3s;
+    font-weight: bold;
+}
+
+.footer-nav a:hover {
+    background-color: var(--accent-cyan);
+    color: var(--bg-primary);
+}
+
+.footer-nav .prev::before {
+    content: "← ";
+}
+
+.footer-nav .next::after {
+    content: " →";
+}
+
+/* Alert boxes */
+.alert {
+    padding: 15px 20px;
+    margin: 20px 0;
+    border-radius: 4px;
+    border-left: 4px solid;
+}
+
+.alert.info {
+    background-color: rgba(102, 217, 239, 0.1);
+    border-left-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+}
+
+.alert.success {
+    background-color: rgba(166, 226, 46, 0.1);
+    border-left-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
+.alert.warning {
+    background-color: rgba(230, 219, 116, 0.1);
+    border-left-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+}
+
+/* Command output simulation */
+.output {
+    background-color: #000;
+    color: #00ff00;
+    padding: 15px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    margin: 15px 0;
+    white-space: pre-wrap;
+    font-size: 13px;
+}
+
+.output.success {
+    border-left: 3px solid var(--accent-green);
+}
+
+.output.error {
+    color: #ff4444;
+    border-left: 3px solid var(--accent-red);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+
+    .tutorial-header h1 {
+        font-size: 2em;
+    }
+
+    .section {
+        padding: 20px;
+    }
+
+    .footer-nav {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .footer-nav a {
+        text-align: center;
+    }
+}
+
+/* Links */
+a {
+    color: var(--accent-cyan);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Lists */
+ul, ol {
+    line-height: 1.8;
+}
+
+/* Horizontal rule */
+hr {
+    border: none;
+    border-top: 2px solid var(--border-color);
+    margin: 40px 0;
+}
+
+/* Table styling (for reference sections) */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    background-color: var(--bg-code);
+}
+
+table th {
+    background-color: var(--bg-secondary);
+    color: var(--accent-cyan);
+    padding: 12px;
+    text-align: left;
+    border-bottom: 2px solid var(--border-color);
+}
+
+table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+table tr:hover {
+    background-color: rgba(102, 217, 239, 0.05);
+}
+
+    </style>
+</head>
+<body>
+    <div class="tutorial-header">
+        <div class="container">
+            <h1>Tutorial 7: Signal Coordination</h1>
+            <p class="subtitle">Real-Time Team Coordination with Signals</p>
+            <div class="tutorial-nav"><a href="../INDEX.html">← All Tutorials</a></div>
+        </div>
+    </div>
+
+    <div class="container">
+
+<div class="section scenario">
+    <p><strong>Team Members:</strong>
+        <span class="character backend">Alice - Backend</span>
+        <span class="character frontend">Bob - Frontend</span>
+        <span class="character qa">Carol - QA</span>
+        <span class="character product">Eve - Product Owner</span>
+    </p>
+    <p><strong>Scenario:</strong> The team is coordinating a Payment API v2.0 release to staging. Each role depends on the previous one completing their work. They use signals for real-time coordination across the release pipeline.</p>
+    <p><strong>Collaboration Pattern:</strong> Real-time signal coordination (workflow dependencies)</p>
+</div>
+
+<div class="objectives">
+    <h3>🎯 Learning Objectives</h3>
+    <ul>
+        <li>Use signals to coordinate work across multiple team members</li>
+        <li>Create event-driven workflows with context signals</li>
+        <li>Track sequential dependencies in a release pipeline</li>
+        <li>Enable real-time team awareness of progress</li>
+    </ul>
+</div>
+
+<div class="section">
+    <h2>The Signal Coordination Flow</h2>
+
+    <div class="step">
+        <h4><span class="step-number">1</span> Alice: Backend Deployment (Creates First Signal)</h4>
+        <p class="step-description">Alice deploys the Payment API v2.0 to staging and signals it's ready.</p>
+        <pre><code># Alice deploys backend
+my-context start "payment-api-release" --project backend-services
+
+my-context note "Release: Payment API v2.0 to staging"
+my-context note "Endpoints ready: /process, /refund, /status"
+my-context note "Database migrations applied successfully"
+my-context note "Health check: ✅ All endpoints responding"
+
+# Signal to the team that backend is ready
+my-context signal create api-v2-staging-ready
+
+my-context stop</code></pre>
+    </div>
+
+    <div class="step">
+        <h4><span class="step-number">2</span> Bob: Frontend Integration (Watches for Alice's Signal)</h4>
+        <p class="step-description">Bob waits for the backend signal, then integrates the frontend.</p>
+        <pre><code># Bob waits for backend signal, then proceeds
+my-context start "frontend-integration" --project web-app
+
+my-context note "Waiting for api-v2-staging-ready signal..."
+# (Signal received from Alice!)
+my-context note "Signal received! Starting integration work"
+
+my-context note "Integrated payment API v2.0 endpoints"
+my-context note "Manual testing: Payment flow working end-to-end"
+my-context note "Deployed to staging environment"
+
+# Signal to QA that frontend is ready
+my-context signal create frontend-staging-ready
+
+my-context stop</code></pre>
+    </div>
+
+    <div class="step">
+        <h4><span class="step-number">3</span> Carol: QA Testing (Watches for Bob's Signal)</h4>
+        <p class="step-description">Carol waits for the frontend signal, then runs E2E tests.</p>
+        <pre><code># Carol waits for frontend signal
+my-context start "integration-testing" --project qa-suite
+
+my-context note "Waiting for frontend-staging-ready signal..."
+# (Signal received from Bob!)
+my-context note "Signal received! Starting E2E tests"
+
+my-context note "✅ Test suite: payment-flow-e2e (15 tests passed)"
+my-context note "✅ Test: Process payment with valid card"
+my-context note "✅ Test: Handle invalid card gracefully"
+my-context note "✅ Test: Refund processed payment"
+my-context note "✅ Test: Check payment status"
+my-context note "All tests passed - staging environment approved"
+
+# Signal to Product that QA approves
+my-context signal create qa-approved-staging
+
+my-context stop</code></pre>
+    </div>
+
+    <div class="step">
+        <h4><span class="step-number">4</span> Eve: Release Coordination (Watches for Carol's Signal)</h4>
+        <p class="step-description">Eve waits for QA approval, then schedules the production release.</p>
+        <pre><code># Eve coordinates final release
+my-context start "release-coordination" --project product
+
+my-context note "Release: Payment v2.0 feature"
+my-context note "Waiting for qa-approved-staging signal..."
+# (Signal received from Carol!)
+my-context note "QA approval received!"
+
+my-context note "DECISION: Release window - Friday 2pm PST"
+my-context note "Stakeholder notification sent"
+my-context note "Marketing: Blog post scheduled for Monday"
+my-context note "Support team: Training completed on new payment flow"
+
+my-context stop</code></pre>
+    </div>
+</div>
+
+<div class="section">
+    <h2>Visual Result: Signal Chain Across 4 Roles</h2>
+    <p>Each team member's context shows their part of the coordinated release:</p>
+
+    <h3>Alice - Backend Developer</h3>
+    <div class="panel-embed">
+    <h3>Alice's Backend Release Context</h3>
+    <iframe src="tutorial-07-release-alice_explorer.html" title="Alice's Backend Release Context"></iframe>
+</div>
+
+    <h3>Bob - Frontend Developer</h3>
+    <div class="panel-embed">
+    <h3>Bob's Frontend Integration Context</h3>
+    <iframe src="tutorial-07-release-bob_explorer.html" title="Bob's Frontend Integration Context"></iframe>
+</div>
+
+    <h3>Carol - QA Engineer</h3>
+    <div class="panel-embed">
+    <h3>Carol's Testing Context</h3>
+    <iframe src="tutorial-07-release-carol_explorer.html" title="Carol's Testing Context"></iframe>
+</div>
+
+    <h3>Eve - Product Owner</h3>
+    <div class="panel-embed">
+    <h3>Eve's Release Coordination Context</h3>
+    <iframe src="tutorial-07-release-eve_explorer.html" title="Eve's Release Coordination Context"></iframe>
+</div>
+</div>
+
+<div class="takeaways">
+    <h3>✅ Key Takeaways for Signal Coordination</h3>
+    <ul>
+        <li><strong>Event-driven workflows</strong>: Signals enable real-time coordination without constant checking</li>
+        <li><strong>Clear dependencies</strong>: Each team member knows exactly what they're waiting for</li>
+        <li><strong>Automated handoffs</strong>: No manual "I'm done" messages needed in Slack</li>
+        <li><strong>Audit trail</strong>: Signal history shows when each stage completed</li>
+        <li><strong>Scalable coordination</strong>: Works for 2 people or 20</li>
+    </ul>
+</div>
+
+<div class="section">
+    <h2>Advanced Signal Patterns</h2>
+
+    <h3>Pattern 1: Watch Multiple Signals</h3>
+    <pre><code># Wait for both backend AND database migration
+my-context signal watch api-ready
+my-context signal watch db-migration-complete
+
+# Proceed only when both are ready</code></pre>
+
+    <h3>Pattern 2: Broadcast Signal to Multiple Teams</h3>
+    <pre><code># Backend creates a signal
+my-context signal create api-breaking-change
+
+# Multiple teams watch for it
+# Frontend team watches
+# Mobile team watches
+# Partner integration team watches</code></pre>
+
+    <h3>Pattern 3: Conditional Signals</h3>
+    <pre><code># Create different signals based on test results
+if [ "$ALL_TESTS_PASSED" = "true" ]; then
+  my-context signal create qa-approved
+else
+  my-context signal create qa-blocked
+  my-context note "BLOCKER: 3 tests failing, see report.html"
+fi</code></pre>
+</div>
+
+<div class="section">
+    <h2>Try It Yourself</h2>
+    <p>Practice signal coordination with a simplified pipeline:</p>
+    <pre><code># Developer 1: Backend
+my-context start "backend-work"
+my-context note "API endpoints deployed"
+my-context signal create backend-ready
+my-context stop
+
+# Developer 2: Frontend (watches for backend)
+my-context start "frontend-work"
+my-context signal watch backend-ready
+my-context note "Backend ready! Integrating now..."
+my-context signal create frontend-ready
+my-context stop
+
+# Developer 3: QA (watches for frontend)
+my-context start "qa-work"
+my-context signal watch frontend-ready
+my-context note "Frontend ready! Running tests..."
+my-context note "✅ All tests passed"
+my-context signal create qa-approved
+my-context stop</code></pre>
+</div>
+
+    </div>
+
+    <div class="tutorial-footer">
+        <div class="container">
+            <div class="footer-nav"><a href="../tutorial-06/tutorial-06.html" class="prev">Previous Tutorial</a><a href="../INDEX.html">Tutorial Index</a><a href="../tutorial-08/tutorial-08.html" class="next">Next Tutorial</a></div>
+        </div>
+    </div>
+</body>
+</html>

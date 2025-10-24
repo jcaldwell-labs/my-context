@@ -1,0 +1,4 @@
+[2025-10-22T17:01:29-04:00] Context started
+2025-10-22T17:01:29-04:00|Client context: B2B SaaS, migrating MySQL → PostgreSQL
+2025-10-22T17:01:29-04:00|Migration strategy: Blue-green deployment with dual-write period
+2025-10-22T17:01:29-04:00|Data validation: Compare row counts after migration

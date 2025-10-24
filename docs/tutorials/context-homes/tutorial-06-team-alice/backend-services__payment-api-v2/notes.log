@@ -1,0 +1,8 @@
+[2025-10-22T17:01:29-04:00] Context started
+2025-10-22T17:01:29-04:00|API SPEC: POST /api/v2/payments/process
+2025-10-22T17:01:29-04:00|Request body: { amount, currency, payment_method, customer_id }
+2025-10-22T17:01:29-04:00|Response: { payment_id, status, transaction_id }
+2025-10-22T17:01:29-04:00|DECISION: Using idempotency keys to prevent duplicate charges
+2025-10-22T17:01:29-04:00|Idempotency key header: X-Idempotency-Key (UUID)
+2025-10-22T17:01:29-04:00|Error handling: Return 400 for validation, 402 for payment failure
+2025-10-22T17:01:29-04:00|Rate limiting: 100 requests/minute per customer

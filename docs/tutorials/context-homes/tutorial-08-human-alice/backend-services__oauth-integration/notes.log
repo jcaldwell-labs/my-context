@@ -1,0 +1,4 @@
+[2025-10-22T17:01:29-04:00] Context started
+2025-10-22T17:01:29-04:00|Implementing OAuth 2.0 client flow
+2025-10-22T17:01:29-04:00|Providers: Google, GitHub
+2025-10-22T17:01:29-04:00|Using authorization code flow with PKCE

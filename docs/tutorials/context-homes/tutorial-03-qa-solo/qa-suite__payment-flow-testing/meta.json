@@ -1,0 +1,8 @@
+{
+  "name": "qa-suite: payment-flow-testing",
+  "start_time": "2025-10-22T17:01:29.034501534-04:00",
+  "end_time": "2025-10-22T17:01:29.066393978-04:00",
+  "status": "stopped",
+  "subdirectory_path": "/home/be-dev-agent/projects/my-context/docs/tutorials/context-homes/tutorial-03-qa-solo/qa-suite__payment-flow-testing",
+  "is_archived": false
+}

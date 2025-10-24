@@ -1,0 +1,9 @@
+[2025-10-22T17:01:29-04:00] Context started
+2025-10-22T17:01:29-04:00|Waiting for frontend-staging-ready signal...
+2025-10-22T17:01:29-04:00|Signal received! Starting E2E tests
+2025-10-22T17:01:29-04:00|✅ Test suite: payment-flow-e2e (15 tests passed)
+2025-10-22T17:01:29-04:00|✅ Test: Process payment with valid card
+2025-10-22T17:01:29-04:00|✅ Test: Handle invalid card gracefully
+2025-10-22T17:01:29-04:00|✅ Test: Refund processed payment
+2025-10-22T17:01:29-04:00|✅ Test: Check payment status
+2025-10-22T17:01:29-04:00|All tests passed - staging environment approved

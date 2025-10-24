@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorial 5: Scrum Master Sprint Management - My-Context Visual Tutorial</title>
+    <style>
+/* My-Context Tutorial Dark Theme */
+/* Consistent dark-mode styling for all tutorial pages */
+
+:root {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #0d0d0d;
+    --bg-code: #1e1e1e;
+    --text-primary: #e0e0e0;
+    --text-secondary: #888888;
+    --text-dim: #666666;
+    --accent-cyan: #66d9ef;
+    --accent-green: #a6e22e;
+    --accent-yellow: #e6db74;
+    --accent-orange: #fd971f;
+    --accent-red: #f92672;
+    --border-color: #444;
+    --border-accent: #66d9ef;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Menlo', 'DejaVu Sans Mono', 'Consolas', 'Courier New', monospace;
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+.tutorial-header {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border-bottom: 3px solid var(--accent-cyan);
+    padding: 30px 0;
+    margin-bottom: 40px;
+}
+
+.tutorial-header h1 {
+    margin: 0 0 10px 0;
+    color: var(--accent-cyan);
+    font-size: 2.5em;
+}
+
+.tutorial-header .subtitle {
+    color: var(--text-secondary);
+    font-size: 1.2em;
+    margin: 0;
+}
+
+.tutorial-nav {
+    margin-top: 20px;
+    display: flex;
+    gap: 15px;
+}
+
+.tutorial-nav a {
+    color: var(--accent-cyan);
+    text-decoration: none;
+    padding: 8px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    transition: all 0.3s;
+}
+
+.tutorial-nav a:hover {
+    background-color: var(--bg-secondary);
+    border-color: var(--accent-cyan);
+}
+
+/* Sections */
+.section {
+    background-color: var(--bg-secondary);
+    border-left: 4px solid var(--accent-cyan);
+    padding: 25px;
+    margin: 30px 0;
+    border-radius: 4px;
+}
+
+.section h2 {
+    color: var(--accent-cyan);
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.8em;
+}
+
+.section h3 {
+    color: var(--accent-green);
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 1.4em;
+}
+
+.section p {
+    margin: 10px 0;
+    line-height: 1.8;
+}
+
+/* Scenario box */
+.scenario {
+    background-color: var(--bg-code);
+    border-left: 4px solid var(--accent-yellow);
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 4px;
+}
+
+.scenario strong {
+    color: var(--accent-yellow);
+}
+
+/* Learning objectives */
+.objectives {
+    background-color: var(--bg-code);
+    border-left: 4px solid var(--accent-green);
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 4px;
+}
+
+.objectives h3 {
+    color: var(--accent-green);
+    margin-top: 0;
+}
+
+.objectives ul {
+    margin: 10px 0;
+    padding-left: 25px;
+}
+
+.objectives li {
+    margin: 8px 0;
+}
+
+/* Code blocks */
+pre {
+    background-color: var(--bg-code);
+    color: var(--text-primary);
+    padding: 20px;
+    border-left: 3px solid var(--accent-cyan);
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Menlo', 'DejaVu Sans Mono', 'Consolas', 'Courier New', monospace;
+    background-color: var(--bg-code);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.95em;
+}
+
+pre code {
+    padding: 0;
+    background: none;
+}
+
+/* Syntax highlighting for bash */
+.bash-keyword {
+    color: var(--accent-red);
+}
+
+.bash-command {
+    color: var(--accent-cyan);
+}
+
+.bash-string {
+    color: var(--accent-yellow);
+}
+
+.bash-comment {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Step-by-step walkthrough */
+.step {
+    background-color: var(--bg-code);
+    border-left: 4px solid var(--accent-orange);
+    padding: 20px;
+    margin: 25px 0;
+    border-radius: 4px;
+}
+
+.step-number {
+    display: inline-block;
+    background-color: var(--accent-orange);
+    color: var(--bg-primary);
+    font-weight: bold;
+    padding: 5px 12px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.step h4 {
+    color: var(--accent-orange);
+    margin: 10px 0;
+    display: inline;
+}
+
+.step-description {
+    margin: 15px 0;
+    color: var(--text-primary);
+}
+
+/* Panel embeds */
+.panel-embed {
+    margin: 30px 0;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.panel-embed h3 {
+    background-color: var(--bg-code);
+    color: var(--accent-cyan);
+    margin: 0;
+    padding: 15px 20px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.panel-embed iframe {
+    width: 100%;
+    height: 600px;
+    border: none;
+    background-color: var(--bg-primary);
+}
+
+/* Key takeaways */
+.takeaways {
+    background-color: var(--bg-code);
+    border-left: 4px solid var(--accent-green);
+    padding: 20px;
+    margin: 30px 0;
+    border-radius: 4px;
+}
+
+.takeaways h3 {
+    color: var(--accent-green);
+    margin-top: 0;
+}
+
+.takeaways ul {
+    margin: 10px 0;
+    padding-left: 25px;
+}
+
+.takeaways li {
+    margin: 12px 0;
+    line-height: 1.8;
+}
+
+.takeaways li strong {
+    color: var(--accent-green);
+}
+
+/* Character/Role boxes */
+.character {
+    display: inline-block;
+    background-color: var(--bg-code);
+    color: var(--accent-cyan);
+    padding: 5px 12px;
+    border-radius: 4px;
+    margin: 5px 5px 5px 0;
+    font-weight: bold;
+    border: 1px solid var(--border-color);
+}
+
+.character.backend {
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+}
+
+.character.frontend {
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
+.character.qa {
+    border-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+}
+
+.character.scrum {
+    border-color: var(--accent-orange);
+    color: var(--accent-orange);
+}
+
+.character.product {
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+}
+
+.character.agent {
+    border-color: #9876aa;
+    color: #9876aa;
+}
+
+/* Navigation footer */
+.tutorial-footer {
+    background-color: var(--bg-secondary);
+    border-top: 3px solid var(--accent-cyan);
+    padding: 30px 0;
+    margin-top: 50px;
+}
+
+.footer-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.footer-nav a {
+    color: var(--accent-cyan);
+    text-decoration: none;
+    padding: 12px 24px;
+    border: 2px solid var(--accent-cyan);
+    border-radius: 4px;
+    transition: all 0.3s;
+    font-weight: bold;
+}
+
+.footer-nav a:hover {
+    background-color: var(--accent-cyan);
+    color: var(--bg-primary);
+}
+
+.footer-nav .prev::before {
+    content: "← ";
+}
+
+.footer-nav .next::after {
+    content: " →";
+}
+
+/* Alert boxes */
+.alert {
+    padding: 15px 20px;
+    margin: 20px 0;
+    border-radius: 4px;
+    border-left: 4px solid;
+}
+
+.alert.info {
+    background-color: rgba(102, 217, 239, 0.1);
+    border-left-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+}
+
+.alert.success {
+    background-color: rgba(166, 226, 46, 0.1);
+    border-left-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
+.alert.warning {
+    background-color: rgba(230, 219, 116, 0.1);
+    border-left-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+}
+
+/* Command output simulation */
+.output {
+    background-color: #000;
+    color: #00ff00;
+    padding: 15px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    margin: 15px 0;
+    white-space: pre-wrap;
+    font-size: 13px;
+}
+
+.output.success {
+    border-left: 3px solid var(--accent-green);
+}
+
+.output.error {
+    color: #ff4444;
+    border-left: 3px solid var(--accent-red);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+
+    .tutorial-header h1 {
+        font-size: 2em;
+    }
+
+    .section {
+        padding: 20px;
+    }
+
+    .footer-nav {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .footer-nav a {
+        text-align: center;
+    }
+}
+
+/* Links */
+a {
+    color: var(--accent-cyan);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Lists */
+ul, ol {
+    line-height: 1.8;
+}
+
+/* Horizontal rule */
+hr {
+    border: none;
+    border-top: 2px solid var(--border-color);
+    margin: 40px 0;
+}
+
+/* Table styling (for reference sections) */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    background-color: var(--bg-code);
+}
+
+table th {
+    background-color: var(--bg-secondary);
+    color: var(--accent-cyan);
+    padding: 12px;
+    text-align: left;
+    border-bottom: 2px solid var(--border-color);
+}
+
+table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+table tr:hover {
+    background-color: rgba(102, 217, 239, 0.05);
+}
+
+    </style>
+</head>
+<body>
+    <div class="tutorial-header">
+        <div class="container">
+            <h1>Tutorial 5: Scrum Master Sprint Management</h1>
+            <p class="subtitle">Planning, Standups, and Retrospectives</p>
+            <div class="tutorial-nav"><a href="../INDEX.html">← All Tutorials</a></div>
+        </div>
+    </div>
+
+    <div class="container">
+
+<div class="section scenario">
+    <p><strong>Role:</strong> <span class="character scrum">Dave - Scrum Master</span></p>
+    <p><strong>Scenario:</strong> Dave is managing Sprint 5 for Team Alpha (5 developers). He uses my-context to track sprint planning, daily standups, retrospectives, and action items throughout the sprint lifecycle.</p>
+    <p><strong>Team Context:</strong> Payment platform development, following 2-week sprints</p>
+</div>
+
+<div class="objectives">
+    <h3>🎯 Learning Objectives</h3>
+    <ul>
+        <li>Track sprint planning sessions with capacity and velocity calculations</li>
+        <li>Document daily standup notes and action items</li>
+        <li>Record retrospective insights for continuous improvement</li>
+        <li>Organize sprint contexts using the <code>--project</code> flag</li>
+    </ul>
+</div>
+
+<div class="section">
+    <h2>Dave's Sprint Workflow</h2>
+
+    <div class="step">
+        <h4><span class="step-number">1</span> Sprint Planning: Setting Up Sprint 5</h4>
+        <p class="step-description">Dave starts Sprint 5 planning by documenting team capacity, velocity, and goals.</p>
+        <pre><code># Start Sprint 5 planning context
+my-context start "sprint-5-planning" --project team-alpha
+
+# Document sprint goals
+my-context note "Sprint 5 goals: Payment integration + responsive UI"
+
+# Track team capacity
+my-context note "Team capacity: 5 developers × 8 days = 40 dev-days"
+my-context note "Team velocity: 42 story points (3-sprint average: 38)"
+my-context note "Sprint commitment: 40 story points (conservative)"
+
+# Identify blockers early
+my-context note "BLOCKER: API dependency on Platform team (payment gateway)"
+my-context note "Mitigation: Daily sync with Platform team lead"
+
+# Associate planning artifacts
+my-context file sprint-5/planning/sprint-backlog.md
+my-context file sprint-5/planning/capacity-plan.xlsx
+
+my-context stop</code></pre>
+    </div>
+
+    <div class="step">
+        <h4><span class="step-number">2</span> Daily Standup: Day 3 Progress Tracking</h4>
+        <p class="step-description">On Day 3 of the sprint, Dave tracks team updates and action items from standup.</p>
+        <pre><code># Track daily standup
+my-context start "sprint-5-day-3-standup" --project team-alpha
+
+# Document each team member's update
+my-context note "Alice: Payment retry logic - 80% complete"
+my-context note "Bob: Checkout UI - blocked on design review"
+my-context note "Carol: E2E tests - Safari bug found"
+
+# Capture action items
+my-context note "ACTION ITEM: Schedule design review for Bob today"
+
+my-context stop</code></pre>
+    </div>
+
+    <div class="step">
+        <h4><span class="step-number">3</span> Sprint 4 Retrospective: Lessons Learned</h4>
+        <p class="step-description">After Sprint 4 completes, Dave documents the retrospective insights.</p>
+        <pre><code># Document retrospective
+my-context start "sprint-4-retrospective" --project team-alpha
+
+# Track what went well
+my-context note "Sprint 4: Completed 38 / 40 story points"
+my-context note "What went well: Good collaboration, clear requirements"
+
+# Track improvements for next sprint
+my-context note "What to improve: Earlier QA involvement, better estimation"
+
+my-context stop</code></pre>
+    </div>
+
+    <div class="step">
+        <h4><span class="step-number">4</span> Viewing All Sprint Contexts</h4>
+        <p class="step-description">Dave can view all contexts for Team Alpha to see the full sprint timeline.</p>
+        <pre><code># View all Team Alpha contexts
+my-context list --project team-alpha
+
+# Output shows:
+# - sprint-5-planning (current sprint)
+# - sprint-5-day-3-standup (current sprint)
+# - sprint-4-retrospective (completed sprint)
+# - sprint-4-planning (completed sprint)</code></pre>
+    </div>
+</div>
+
+<div class="section">
+    <h2>Visual Result: Sprint Context Organization</h2>
+    <p>Dave's context history shows the complete sprint lifecycle, from planning through execution to retrospectives:</p>
+    <div class="panel-embed">
+    <h3>Dave's Sprint Management Contexts</h3>
+    <iframe src="tutorial-05-scrum-master_explorer.html" title="Dave's Sprint Management Contexts"></iframe>
+</div>
+</div>
+
+<div class="takeaways">
+    <h3>✅ Key Takeaways for Scrum Masters</h3>
+    <ul>
+        <li>Use separate contexts for <strong>each sprint ceremony</strong> (planning, standup, retrospective)</li>
+        <li>Document <strong>blockers and action items</strong> in real-time during meetings</li>
+        <li>Track <strong>team velocity and capacity</strong> for sprint-over-sprint trend analysis</li>
+        <li>Use the <code>--project</code> flag to <strong>group contexts by team</strong></li>
+        <li>Build a <strong>searchable history</strong> of sprint decisions and retrospective insights</li>
+    </ul>
+</div>
+
+<div class="section">
+    <h2>Advanced Patterns for Scrum Masters</h2>
+
+    <h3>Pattern 1: Sprint Goal Tracking</h3>
+    <pre><code># Create a context for overall sprint tracking
+my-context start "sprint-6-overview" --project team-alpha
+my-context note "Sprint goal: Achieve 95% payment success rate"
+my-context note "Success metric: Monitor Datadog dashboard"
+my-context note "Risk: Third-party API rate limiting"</code></pre>
+
+    <h3>Pattern 2: Blocker Escalation Trail</h3>
+    <pre><code># Document blocker progression
+my-context note "BLOCKER: Database migration blocked (Day 2)"
+my-context note "ESCALATION: Reached out to DBA team (Day 3)"
+my-context note "RESOLVED: Migration script approved (Day 4)"</code></pre>
+
+    <h3>Pattern 3: Multi-Team Coordination</h3>
+    <pre><code># Track dependencies across teams
+my-context start "cross-team-sync" --project team-alpha
+my-context note "Dependency: Waiting for Platform team API v2 release"
+my-context note "Platform ETA: End of Sprint 5 (Day 10)"
+my-context note "Mitigation: Build against v1 API, migrate to v2 next sprint"</code></pre>
+</div>
+
+<div class="section">
+    <h2>Try It Yourself</h2>
+    <p>Practice tracking a sprint ceremony:</p>
+    <pre><code># Start your own sprint planning context
+my-context start "sprint-planning" --project your-team
+
+# Document sprint details
+my-context note "Sprint goals: [Your sprint goals]"
+my-context note "Team capacity: [Number of devs] × [Days] = [Total dev-days]"
+my-context note "Team velocity: [Story points from last sprint]"
+
+# Track any blockers
+my-context note "BLOCKER: [Describe blocker]"
+my-context note "Mitigation: [How you'll address it]"
+
+# Stop when planning is done
+my-context stop
+
+# Later, review all sprint contexts
+my-context list --project your-team</code></pre>
+</div>
+
+    </div>
+
+    <div class="tutorial-footer">
+        <div class="container">
+            <div class="footer-nav"><a href="../tutorial-04/tutorial-04.html" class="prev">Previous Tutorial</a><a href="../INDEX.html">Tutorial Index</a><a href="../tutorial-06/tutorial-06.html" class="next">Next Tutorial</a></div>
+        </div>
+    </div>
+</body>
+</html>

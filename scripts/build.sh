@@ -21,8 +21,9 @@ echo "   Commit: $GIT_COMMIT"
 echo ""
 
 # Build with ldflags for metadata
+# Use ./cmd/my-context package path instead of main.go directly for better module support
 go build -ldflags "-X main.Version=$VERSION -X main.BuildTime=$BUILD_TIME -X main.GitCommit=$GIT_COMMIT" \
-    -o my-context cmd/my-context/main.go
+    -o my-context ./cmd/my-context/
 
 echo "✅ Build complete: my-context"
 echo ""

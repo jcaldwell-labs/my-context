@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorial 3: QA Engineer Workflow - My-Context Visual Tutorial</title>
+    <style>
+/* My-Context Tutorial Dark Theme */
+/* Consistent dark-mode styling for all tutorial pages */
+
+:root {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #0d0d0d;
+    --bg-code: #1e1e1e;
+    --text-primary: #e0e0e0;
+    --text-secondary: #888888;
+    --text-dim: #666666;
+    --accent-cyan: #66d9ef;
+    --accent-green: #a6e22e;
+    --accent-yellow: #e6db74;
+    --accent-orange: #fd971f;
+    --accent-red: #f92672;
+    --border-color: #444;
+    --border-accent: #66d9ef;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Menlo', 'DejaVu Sans Mono', 'Consolas', 'Courier New', monospace;
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+.tutorial-header {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border-bottom: 3px solid var(--accent-cyan);
+    padding: 30px 0;
+    margin-bottom: 40px;
+}
+
+.tutorial-header h1 {
+    margin: 0 0 10px 0;
+    color: var(--accent-cyan);
+    font-size: 2.5em;
+}
+
+.tutorial-header .subtitle {
+    color: var(--text-secondary);
+    font-size: 1.2em;
+    margin: 0;
+}
+
+.tutorial-nav {
+    margin-top: 20px;
+    display: flex;
+    gap: 15px;
+}
+
+.tutorial-nav a {
+    color: var(--accent-cyan);
+    text-decoration: none;
+    padding: 8px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    transition: all 0.3s;
+}
+
+.tutorial-nav a:hover {
+    background-color: var(--bg-secondary);
+    border-color: var(--accent-cyan);
+}
+
+/* Sections */
+.section {
+    background-color: var(--bg-secondary);
+    border-left: 4px solid var(--accent-cyan);
+    padding: 25px;
+    margin: 30px 0;
+    border-radius: 4px;
+}
+
+.section h2 {
+    color: var(--accent-cyan);
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.8em;
+}
+
+.section h3 {
+    color: var(--accent-green);
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 1.4em;
+}
+
+.section p {
+    margin: 10px 0;
+    line-height: 1.8;
+}
+
+/* Scenario box */
+.scenario {
+    background-color: var(--bg-code);
+    border-left: 4px solid var(--accent-yellow);
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 4px;
+}
+
+.scenario strong {
+    color: var(--accent-yellow);
+}
+
+/* Learning objectives */
+.objectives {
+    background-color: var(--bg-code);
+    border-left: 4px solid var(--accent-green);
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 4px;
+}
+
+.objectives h3 {
+    color: var(--accent-green);
+    margin-top: 0;
+}
+
+.objectives ul {
+    margin: 10px 0;
+    padding-left: 25px;
+}
+
+.objectives li {
+    margin: 8px 0;
+}
+
+/* Code blocks */
+pre {
+    background-color: var(--bg-code);
+    color: var(--text-primary);
+    padding: 20px;
+    border-left: 3px solid var(--accent-cyan);
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+code {
+    font-family: 'Menlo', 'DejaVu Sans Mono', 'Consolas', 'Courier New', monospace;
+    background-color: var(--bg-code);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.95em;
+}
+
+pre code {
+    padding: 0;
+    background: none;
+}
+
+/* Syntax highlighting for bash */
+.bash-keyword {
+    color: var(--accent-red);
+}
+
+.bash-command {
+    color: var(--accent-cyan);
+}
+
+.bash-string {
+    color: var(--accent-yellow);
+}
+
+.bash-comment {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Step-by-step walkthrough */
+.step {
+    background-color: var(--bg-code);
+    border-left: 4px solid var(--accent-orange);
+    padding: 20px;
+    margin: 25px 0;
+    border-radius: 4px;
+}
+
+.step-number {
+    display: inline-block;
+    background-color: var(--accent-orange);
+    color: var(--bg-primary);
+    font-weight: bold;
+    padding: 5px 12px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.step h4 {
+    color: var(--accent-orange);
+    margin: 10px 0;
+    display: inline;
+}
+
+.step-description {
+    margin: 15px 0;
+    color: var(--text-primary);
+}
+
+/* Panel embeds */
+.panel-embed {
+    margin: 30px 0;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.panel-embed h3 {
+    background-color: var(--bg-code);
+    color: var(--accent-cyan);
+    margin: 0;
+    padding: 15px 20px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.panel-embed iframe {
+    width: 100%;
+    height: 600px;
+    border: none;
+    background-color: var(--bg-primary);
+}
+
+/* Key takeaways */
+.takeaways {
+    background-color: var(--bg-code);
+    border-left: 4px solid var(--accent-green);
+    padding: 20px;
+    margin: 30px 0;
+    border-radius: 4px;
+}
+
+.takeaways h3 {
+    color: var(--accent-green);
+    margin-top: 0;
+}
+
+.takeaways ul {
+    margin: 10px 0;
+    padding-left: 25px;
+}
+
+.takeaways li {
+    margin: 12px 0;
+    line-height: 1.8;
+}
+
+.takeaways li strong {
+    color: var(--accent-green);
+}
+
+/* Character/Role boxes */
+.character {
+    display: inline-block;
+    background-color: var(--bg-code);
+    color: var(--accent-cyan);
+    padding: 5px 12px;
+    border-radius: 4px;
+    margin: 5px 5px 5px 0;
+    font-weight: bold;
+    border: 1px solid var(--border-color);
+}
+
+.character.backend {
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+}
+
+.character.frontend {
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
+.character.qa {
+    border-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+}
+
+.character.scrum {
+    border-color: var(--accent-orange);
+    color: var(--accent-orange);
+}
+
+.character.product {
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+}
+
+.character.agent {
+    border-color: #9876aa;
+    color: #9876aa;
+}
+
+/* Navigation footer */
+.tutorial-footer {
+    background-color: var(--bg-secondary);
+    border-top: 3px solid var(--accent-cyan);
+    padding: 30px 0;
+    margin-top: 50px;
+}
+
+.footer-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.footer-nav a {
+    color: var(--accent-cyan);
+    text-decoration: none;
+    padding: 12px 24px;
+    border: 2px solid var(--accent-cyan);
+    border-radius: 4px;
+    transition: all 0.3s;
+    font-weight: bold;
+}
+
+.footer-nav a:hover {
+    background-color: var(--accent-cyan);
+    color: var(--bg-primary);
+}
+
+.footer-nav .prev::before {
+    content: "← ";
+}
+
+.footer-nav .next::after {
+    content: " →";
+}
+
+/* Alert boxes */
+.alert {
+    padding: 15px 20px;
+    margin: 20px 0;
+    border-radius: 4px;
+    border-left: 4px solid;
+}
+
+.alert.info {
+    background-color: rgba(102, 217, 239, 0.1);
+    border-left-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+}
+
+.alert.success {
+    background-color: rgba(166, 226, 46, 0.1);
+    border-left-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
+.alert.warning {
+    background-color: rgba(230, 219, 116, 0.1);
+    border-left-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+}
+
+/* Command output simulation */
+.output {
+    background-color: #000;
+    color: #00ff00;
+    padding: 15px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    margin: 15px 0;
+    white-space: pre-wrap;
+    font-size: 13px;
+}
+
+.output.success {
+    border-left: 3px solid var(--accent-green);
+}
+
+.output.error {
+    color: #ff4444;
+    border-left: 3px solid var(--accent-red);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+
+    .tutorial-header h1 {
+        font-size: 2em;
+    }
+
+    .section {
+        padding: 20px;
+    }
+
+    .footer-nav {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .footer-nav a {
+        text-align: center;
+    }
+}
+
+/* Links */
+a {
+    color: var(--accent-cyan);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Lists */
+ul, ol {
+    line-height: 1.8;
+}
+
+/* Horizontal rule */
+hr {
+    border: none;
+    border-top: 2px solid var(--border-color);
+    margin: 40px 0;
+}
+
+/* Table styling (for reference sections) */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    background-color: var(--bg-code);
+}
+
+table th {
+    background-color: var(--bg-secondary);
+    color: var(--accent-cyan);
+    padding: 12px;
+    text-align: left;
+    border-bottom: 2px solid var(--border-color);
+}
+
+table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+table tr:hover {
+    background-color: rgba(102, 217, 239, 0.05);
+}
+
+    </style>
+</head>
+<body>
+    <div class="tutorial-header">
+        <div class="container">
+            <h1>Tutorial 3: QA Engineer Workflow</h1>
+            <p class="subtitle">Cross-Browser Testing and Bug Tracking</p>
+            <div class="tutorial-nav"><a href="../INDEX.html">← All Tutorials</a></div>
+        </div>
+    </div>
+
+    <div class="container">
+
+<div class="section scenario">
+    <p><strong>Role:</strong> <span class="character qa">Carol - QA Engineer</span></p>
+    <p><strong>Scenario:</strong> Carol is testing the payment flow across multiple browsers. She needs to track test results and document bugs she discovers.</p>
+</div>
+
+<div class="objectives">
+    <h3>🎯 Learning Objectives</h3>
+    <ul>
+        <li>Track QA test sessions</li>
+        <li>Document bug discoveries with details</li>
+        <li>Record browser compatibility results</li>
+    </ul>
+</div>
+
+<div class="section">
+    <h2>Carol's QA Workflow</h2>
+    <div class="step">
+        <h4><span class="step-number">1</span> Start Test Session</h4>
+        <pre><code>my-context start "payment-flow-testing" --project qa-suite</code></pre>
+    </div>
+    <div class="step">
+        <h4><span class="step-number">2</span> Track Test Results</h4>
+        <pre><code>my-context note "✅ Test passed: Chrome 120 - payment successful"
+my-context note "❌ BUG: Safari 16.2 - card validation fails on submit"</code></pre>
+    </div>
+</div>
+
+<div class="section">
+    <h2>Visual Result</h2>
+    <div class="panel-embed">
+    <h3>Carol's QA Testing Session</h3>
+    <iframe src="tutorial-03-qa-solo_explorer.html" title="Carol's QA Testing Session"></iframe>
+</div>
+</div>
+
+<div class="takeaways">
+    <h3>✅ Key Takeaways</h3>
+    <ul>
+        <li>QA engineers track <strong>test results</strong> and <strong>bugs</strong></li>
+        <li>Use emoji prefixes (✅ ❌) for quick visual status</li>
+    </ul>
+</div>
+
+    </div>
+
+    <div class="tutorial-footer">
+        <div class="container">
+            <div class="footer-nav"><a href="../tutorial-02/tutorial-02.html" class="prev">Previous Tutorial</a><a href="../INDEX.html">Tutorial Index</a><a href="../tutorial-04/tutorial-04.html" class="next">Next Tutorial</a></div>
+        </div>
+    </div>
+</body>
+</html>
