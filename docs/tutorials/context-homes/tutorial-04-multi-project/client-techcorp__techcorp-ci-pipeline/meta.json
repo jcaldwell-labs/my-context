@@ -1,0 +1,8 @@
+{
+  "name": "client-techcorp: techcorp-ci-pipeline",
+  "start_time": "2025-10-22T17:01:29.140724818-04:00",
+  "end_time": "2025-10-22T17:01:29.149339386-04:00",
+  "status": "stopped",
+  "subdirectory_path": "/home/be-dev-agent/projects/my-context/docs/tutorials/context-homes/tutorial-04-multi-project/client-techcorp__techcorp-ci-pipeline",
+  "is_archived": false
+}

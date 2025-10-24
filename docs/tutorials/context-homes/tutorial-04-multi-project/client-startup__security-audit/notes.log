@@ -1,0 +1,6 @@
+[2025-10-22T17:01:29-04:00] Context started
+2025-10-22T17:01:29-04:00|Client context: Fintech startup preparing for SOC2 audit
+2025-10-22T17:01:29-04:00|FINDING: API keys stored in plaintext in config files
+2025-10-22T17:01:29-04:00|RECOMMENDATION: Move to AWS Secrets Manager
+2025-10-22T17:01:29-04:00|FINDING: No rate limiting on public API endpoints
+2025-10-22T17:01:29-04:00|RECOMMENDATION: Implement token bucket algorithm

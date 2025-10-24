@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My-Context Visual Tutorials - Interactive Learning</title>
+    <style>
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #0d0d0d;
+            --bg-card: #1e1e1e;
+            --text-primary: #e0e0e0;
+            --text-secondary: #888888;
+            --accent-cyan: #66d9ef;
+            --accent-green: #a6e22e;
+            --accent-yellow: #e6db74;
+            --accent-orange: #fd971f;
+            --accent-red: #f92672;
+            --border-color: #444;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Menlo', 'DejaVu Sans Mono', 'Consolas', 'Courier New', monospace;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            border-bottom: 4px solid var(--accent-cyan);
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3em;
+            margin: 0 0 20px 0;
+            color: var(--accent-cyan);
+        }
+
+        .hero .tagline {
+            font-size: 1.5em;
+            color: var(--text-secondary);
+            margin: 0 0 30px 0;
+        }
+
+        .hero .subtitle {
+            font-size: 1.2em;
+            color: var(--text-primary);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .section-title {
+            color: var(--accent-cyan);
+            font-size: 2em;
+            margin: 50px 0 30px 0;
+            text-align: center;
+        }
+
+        .tutorial-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .tutorial-card {
+            background-color: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 25px;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: var(--text-primary);
+            display: block;
+        }
+
+        .tutorial-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 217, 239, 0.2);
+        }
+
+        .tutorial-number {
+            display: inline-block;
+            background-color: var(--accent-cyan);
+            color: var(--bg-primary);
+            font-weight: bold;
+            padding: 5px 15px;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        .tutorial-card h3 {
+            color: var(--accent-cyan);
+            margin: 10px 0;
+            font-size: 1.5em;
+        }
+
+        .tutorial-card .role {
+            color: var(--accent-green);
+            font-size: 0.95em;
+            margin: 5px 0 15px 0;
+        }
+
+        .tutorial-card p {
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin: 10px 0;
+        }
+
+        .tutorial-card .highlights {
+            margin: 15px 0 0 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .tutorial-card .highlights li {
+            color: var(--text-primary);
+            margin: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .tutorial-card .highlights li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--accent-cyan);
+        }
+
+        .difficulty {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-right: 10px;
+        }
+
+        .difficulty.beginner {
+            background-color: rgba(166, 226, 46, 0.2);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
+
+        .difficulty.intermediate {
+            background-color: rgba(230, 219, 116, 0.2);
+            color: var(--accent-yellow);
+            border: 1px solid var(--accent-yellow);
+        }
+
+        .difficulty.advanced {
+            background-color: rgba(253, 151, 31, 0.2);
+            color: var(--accent-orange);
+            border: 1px solid var(--accent-orange);
+        }
+
+        .difficulty.expert {
+            background-color: rgba(249, 38, 114, 0.2);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+
+        .cta {
+            background-color: var(--bg-secondary);
+            border: 2px solid var(--accent-green);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin: 60px 0;
+        }
+
+        .cta h2 {
+            color: var(--accent-green);
+            margin: 0 0 20px 0;
+        }
+
+        .cta p {
+            font-size: 1.1em;
+            margin: 15px 0;
+        }
+
+        .cta a {
+            display: inline-block;
+            background-color: var(--accent-cyan);
+            color: var(--bg-primary);
+            padding: 15px 40px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .cta a:hover {
+            background-color: var(--accent-green);
+            transform: scale(1.05);
+        }
+
+        footer {
+            background-color: var(--bg-secondary);
+            border-top: 3px solid var(--accent-cyan);
+            padding: 30px 20px;
+            text-align: center;
+            margin-top: 60px;
+        }
+
+        footer p {
+            margin: 10px 0;
+            color: var(--text-secondary);
+        }
+
+        footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2em;
+            }
+
+            .hero .tagline {
+                font-size: 1.2em;
+            }
+
+            .tutorial-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>My-Context Visual Tutorials</h1>
+        <p class="tagline">Learn by Seeing: Interactive Examples with Real Context Data</p>
+        <p class="subtitle">
+            Bootstrap your understanding of my-context through progressive scenarios showing
+            how individual contributors, planners, and AI agents use context tracking for productivity.
+        </p>
+    </div>
+
+    <div class="container">
+        <h2 class="section-title">Phase 1: Individual Productivity</h2>
+        <p style="text-align: center; color: var(--text-secondary); margin-bottom: 30px;">
+            Start here: Learn the basics with solo contributor workflows
+        </p>
+
+        <div class="tutorial-grid">
+            <a href="tutorial-01/tutorial-01.html" class="tutorial-card">
+                <span class="tutorial-number">Tutorial 1</span>
+                <span class="difficulty beginner">Beginner</span>
+                <h3>Your First Context</h3>
+                <p class="role">Backend Developer - Alice</p>
+                <p>Learn the five essential commands: start, note, file, show, stop. Track a payment retry feature from start to finish.</p>
+                <ul class="highlights">
+                    <li>Start your first context</li>
+                    <li>Document design decisions</li>
+                    <li>Track modified files</li>
+                    <li>5-minute walkthrough</li>
+                </ul>
+            </a>
+
+            <a href="tutorial-02/tutorial-02.html" class="tutorial-card">
+                <span class="tutorial-number">Tutorial 2</span>
+                <span class="difficulty beginner">Beginner</span>
+                <h3>Frontend Developer Pattern</h3>
+                <p class="role">Frontend Developer - Bob</p>
+                <p>Track responsive UI work with design decisions and accessibility testing notes.</p>
+                <ul class="highlights">
+                    <li>Component tracking</li>
+                    <li>Design decision documentation</li>
+                    <li>A11y testing notes</li>
+                    <li>CSS Grid layout choices</li>
+                </ul>
+            </a>
+
+            <a href="tutorial-03/tutorial-03.html" class="tutorial-card">
+                <span class="tutorial-number">Tutorial 3</span>
+                <span class="difficulty beginner">Beginner</span>
+                <h3>QA Engineer Workflow</h3>
+                <p class="role">QA Engineer - Carol</p>
+                <p>Track cross-browser testing with bug reports and test results.</p>
+                <ul class="highlights">
+                    <li>Test session tracking</li>
+                    <li>Bug documentation</li>
+                    <li>Browser compatibility notes</li>
+                    <li>Cross-browser testing</li>
+                </ul>
+            </a>
+        </div>
+
+        <h2 class="section-title">Phase 2: Multi-Project & Planning</h2>
+        <p style="text-align: center; color: var(--text-secondary); margin-bottom: 30px;">
+            Scale up: Manage multiple projects and coordinate teams
+        </p>
+
+        <div class="tutorial-grid">
+            <a href="tutorial-04/tutorial-04.html" class="tutorial-card">
+                <span class="tutorial-number">Tutorial 4</span>
+                <span class="difficulty intermediate">Intermediate</span>
+                <h3>Multi-Project Consultant</h3>
+                <p class="role">Consultant - Alice (3 clients)</p>
+                <p>Juggle multiple client projects with --project flag and context switching.</p>
+                <ul class="highlights">
+                    <li>Organize contexts by client/project</li>
+                    <li>Filter contexts with --project flag</li>
+                    <li>Track parallel work streams</li>
+                    <li>Real-world consultant workflow</li>
+                </ul>
+            </a>
+
+            <a href="tutorial-05/tutorial-05.html" class="tutorial-card">
+                <span class="tutorial-number">Tutorial 5</span>
+                <span class="difficulty intermediate">Intermediate</span>
+                <h3>Scrum Master Sprint</h3>
+                <p class="role">Scrum Master - Dave</p>
+                <p>Track sprint planning, daily standups, and retrospectives.</p>
+                <ul class="highlights">
+                    <li>Sprint planning with velocity tracking</li>
+                    <li>Daily standup notes and action items</li>
+                    <li>Retrospective insights</li>
+                    <li>Team coordination patterns</li>
+                </ul>
+            </a>
+        </div>
+
+        <h2 class="section-title">Phase 3: Team Collaboration</h2>
+        <p style="text-align: center; color: var(--text-secondary); margin-bottom: 30px;">
+            Work together: Share context between team members
+        </p>
+
+        <div class="tutorial-grid">
+            <a href="tutorial-06/tutorial-06.html" class="tutorial-card">
+                <span class="tutorial-number">Tutorial 6</span>
+                <span class="difficulty intermediate">Intermediate</span>
+                <h3>Team Handoff</h3>
+                <p class="role">Backend → Frontend (Alice → Bob)</p>
+                <p>Share context asynchronously via exports and documentation.</p>
+                <ul class="highlights">
+                    <li>Async collaboration patterns</li>
+                    <li>Context references across teams</li>
+                    <li>Documentation handoff</li>
+                    <li>Backend-Frontend integration</li>
+                </ul>
+            </a>
+
+            <a href="tutorial-07/tutorial-07.html" class="tutorial-card">
+                <span class="tutorial-number">Tutorial 7</span>
+                <span class="difficulty advanced">Advanced</span>
+                <h3>Signal Coordination</h3>
+                <p class="role">4 Team Members (Alice, Bob, Carol, Eve)</p>
+                <p>Real-time coordination using signals and watches for release management.</p>
+                <ul class="highlights">
+                    <li>Event-driven workflows</li>
+                    <li>Signal watch patterns</li>
+                    <li>Release pipeline coordination</li>
+                    <li>Multi-role dependencies</li>
+                </ul>
+            </a>
+        </div>
+
+        <h2 class="section-title">Phase 4: Agent Workflows</h2>
+        <p style="text-align: center; color: var(--text-secondary); margin-bottom: 30px;">
+            The future: AI agents as first-class context users
+        </p>
+
+        <div class="tutorial-grid">
+            <a href="tutorial-08/tutorial-08.html" class="tutorial-card">
+                <span class="tutorial-number">Tutorial 8</span>
+                <span class="difficulty expert">Expert</span>
+                <h3>Agents as Team Members</h3>
+                <p class="role">Human + Claude Agent + CI/CD + QA Bot</p>
+                <p>See how AI assistants and automation create contexts alongside humans.</p>
+                <ul class="highlights">
+                    <li>AI agents as first-class users</li>
+                    <li>Human-AI collaboration</li>
+                    <li>Automated workflow tracking</li>
+                    <li>Agent signal coordination</li>
+                </ul>
+            </a>
+        </div>
+
+        <div class="cta">
+            <h2>Ready to Get Started?</h2>
+            <p>Begin with Tutorial 1 and learn the fundamentals in just 5 minutes.</p>
+            <p>Each tutorial builds on the previous one, but you can jump to any that interests you.</p>
+            <a href="tutorial-01/tutorial-01.html">Start Tutorial 1 →</a>
+        </div>
+    </div>
+
+    <footer>
+        <p><strong>My-Context Visual Tutorials</strong></p>
+        <p>Learn context tracking through interactive examples with real data</p>
+        <p><a href="../GETTING-STARTED.md">Documentation</a> | <a href="https://github.com/jcaldwell1066/my-context">GitHub</a></p>
+        <p style="margin-top: 20px; font-size: 0.9em;">Generated: 2025-10-22</p>
+    </footer>
+</body>
+</html>

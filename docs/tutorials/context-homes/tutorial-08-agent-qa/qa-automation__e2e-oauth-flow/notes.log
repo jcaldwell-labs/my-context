@@ -1,0 +1,10 @@
+[2025-10-22T17:01:29-04:00] Context started
+2025-10-22T17:01:29-04:00|Parent context: oauth-integration (Alice)
+2025-10-22T17:01:29-04:00|Test suite: OAuth end-to-end flows
+2025-10-22T17:01:29-04:00|✅ Test: Authorization code flow (Google)
+2025-10-22T17:01:29-04:00|✅ Test: Authorization code flow (GitHub)
+2025-10-22T17:01:29-04:00|✅ Test: Token refresh on expiry
+2025-10-22T17:01:29-04:00|✅ Test: Handle invalid authorization code
+2025-10-22T17:01:29-04:00|✅ Test: Handle expired refresh token
+2025-10-22T17:01:29-04:00|Test duration: 45.2 seconds
+2025-10-22T17:01:29-04:00|All tests passed - feature ready for production
