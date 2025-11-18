@@ -761,3 +761,252 @@ func ListContextsFiltered(filter ContextFilter) ([]*intmodels.Context, error) {
 
 	return filtered, nil
 }
+
+// AddTags adds tags to a context and returns the list of newly added tags
+func AddTags(contextName string, tags []string) ([]string, error) {
+	// Load context with metadata
+	ctx, _, _, _, err := GetContextWithMetadata(contextName)
+	if err != nil {
+		return nil, fmt.Errorf("context %q not found", contextName)
+	}
+
+	// Track which tags were actually added (not duplicates)
+	var added []string
+	existingTags := make(map[string]bool)
+	for _, tag := range ctx.Metadata.Labels {
+		existingTags[tag] = true
+	}
+
+	// Add new tags
+	for _, tag := range tags {
+		if !existingTags[tag] {
+			ctx.Metadata.Labels = append(ctx.Metadata.Labels, tag)
+			added = append(added, tag)
+			existingTags[tag] = true
+		}
+	}
+
+	// Validate updated context
+	if err := ctx.Validate(); err != nil {
+		return nil, fmt.Errorf("validation failed: %w", err)
+	}
+
+	// Write updated meta.json
+	metaPath := GetMetaJSONPath(contextName)
+	if err := WriteJSON(metaPath, ctx); err != nil {
+		return nil, fmt.Errorf("failed to update context: %w", err)
+	}
+
+	return added, nil
+}
+
+// RemoveTags removes tags from a context and returns the list of removed tags
+func RemoveTags(contextName string, tags []string) ([]string, error) {
+	// Load context with metadata
+	ctx, _, _, _, err := GetContextWithMetadata(contextName)
+	if err != nil {
+		return nil, fmt.Errorf("context %q not found", contextName)
+	}
+
+	// Build set of tags to remove
+	toRemove := make(map[string]bool)
+	for _, tag := range tags {
+		toRemove[tag] = true
+	}
+
+	// Filter out tags to remove
+	var newLabels []string
+	var removed []string
+	for _, tag := range ctx.Metadata.Labels {
+		if toRemove[tag] {
+			removed = append(removed, tag)
+		} else {
+			newLabels = append(newLabels, tag)
+		}
+	}
+
+	// Update labels
+	ctx.Metadata.Labels = newLabels
+
+	// Write updated meta.json
+	metaPath := GetMetaJSONPath(contextName)
+	if err := WriteJSON(metaPath, ctx); err != nil {
+		return nil, fmt.Errorf("failed to update context: %w", err)
+	}
+
+	return removed, nil
+}
+
+// GetContextTags returns all tags for a specific context
+func GetContextTags(contextName string) ([]string, error) {
+	// Load context with metadata
+	ctx, _, _, _, err := GetContextWithMetadata(contextName)
+	if err != nil {
+		return nil, fmt.Errorf("context %q not found", contextName)
+	}
+
+	return ctx.Metadata.Labels, nil
+}
+
+// GetAllTags returns a map of all tags used across all contexts with their usage counts
+func GetAllTags() (map[string]int, error) {
+	dirs, err := ListContextDirs()
+	if err != nil {
+		return nil, err
+	}
+
+	tagCounts := make(map[string]int)
+
+	for _, dir := range dirs {
+		// Try to load as ContextWithMetadata
+		ctx, _, _, _, err := GetContextWithMetadata(dir)
+		if err != nil {
+			continue // Skip contexts that can't be loaded
+		}
+
+		// Count each tag
+		for _, tag := range ctx.Metadata.Labels {
+			tagCounts[tag]++
+		}
+	}
+
+	return tagCounts, nil
+}
+
+// SetParent sets the parent context for a child context
+func SetParent(childName string, parentName string) error {
+	// Load child context with metadata
+	ctx, _, _, _, err := GetContextWithMetadata(childName)
+	if err != nil {
+		return fmt.Errorf("child context %q not found", childName)
+	}
+
+	// Update parent
+	ctx.Metadata.Parent = parentName
+
+	// Validate updated context
+	if err := ctx.Validate(); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
+	// Write updated meta.json
+	metaPath := GetMetaJSONPath(childName)
+	if err := WriteJSON(metaPath, ctx); err != nil {
+		return fmt.Errorf("failed to update context: %w", err)
+	}
+
+	return nil
+}
+
+// ClearParent removes the parent relationship from a context
+func ClearParent(contextName string) error {
+	// Load context with metadata
+	ctx, _, _, _, err := GetContextWithMetadata(contextName)
+	if err != nil {
+		return fmt.Errorf("context %q not found", contextName)
+	}
+
+	// Clear parent
+	ctx.Metadata.Parent = ""
+
+	// Write updated meta.json
+	metaPath := GetMetaJSONPath(contextName)
+	if err := WriteJSON(metaPath, ctx); err != nil {
+		return fmt.Errorf("failed to update context: %w", err)
+	}
+
+	return nil
+}
+
+// GetChildren returns all contexts that have the given context as their parent
+func GetChildren(parentName string) ([]string, error) {
+	dirs, err := ListContextDirs()
+	if err != nil {
+		return nil, err
+	}
+
+	var children []string
+
+	for _, dir := range dirs {
+		// Try to load as ContextWithMetadata
+		ctx, _, _, _, err := GetContextWithMetadata(dir)
+		if err != nil {
+			continue // Skip contexts that can't be loaded
+		}
+
+		// Check if this context's parent matches
+		if ctx.Metadata.Parent == parentName {
+			children = append(children, ctx.Name)
+		}
+	}
+
+	return children, nil
+}
+
+// GetContextTree builds a tree structure starting from a root context
+type ContextTreeNode struct {
+	Name     string
+	Children []*ContextTreeNode
+}
+
+func GetContextTree(rootName string) (*ContextTreeNode, error) {
+	// Verify root context exists
+	if _, err := LoadContext(rootName); err != nil {
+		return nil, fmt.Errorf("context %q not found", rootName)
+	}
+
+	// Build tree recursively
+	return buildTreeNode(rootName, make(map[string]bool))
+}
+
+func buildTreeNode(name string, visited map[string]bool) (*ContextTreeNode, error) {
+	// Prevent infinite loops in case of circular dependencies
+	if visited[name] {
+		return &ContextTreeNode{Name: name + " (circular)"}, nil
+	}
+	visited[name] = true
+
+	node := &ContextTreeNode{Name: name}
+
+	// Get children
+	children, err := GetChildren(name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Recursively build child nodes
+	for _, childName := range children {
+		childNode, err := buildTreeNode(childName, visited)
+		if err != nil {
+			continue // Skip children that can't be built
+		}
+		node.Children = append(node.Children, childNode)
+	}
+
+	return node, nil
+}
+
+// GetRootContexts returns all contexts that don't have a parent
+func GetRootContexts() ([]string, error) {
+	dirs, err := ListContextDirs()
+	if err != nil {
+		return nil, err
+	}
+
+	var roots []string
+
+	for _, dir := range dirs {
+		// Try to load as ContextWithMetadata
+		ctx, _, _, _, err := GetContextWithMetadata(dir)
+		if err != nil {
+			continue // Skip contexts that can't be loaded
+		}
+
+		// Check if this context has no parent
+		if ctx.Metadata.Parent == "" {
+			roots = append(roots, ctx.Name)
+		}
+	}
+
+	return roots, nil
+}

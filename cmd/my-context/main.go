@@ -13,7 +13,7 @@ var (
 	jsonOutput bool
 
 	// Version information - set via ldflags during build
-	Version   = "2.3.0"
+	Version   = "3.1.0"
 	BuildTime = "unknown"
 	GitCommit = "unknown"
 )
@@ -48,6 +48,12 @@ func init() {
 	rootCmd.AddCommand(commands.NewExportCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewArchiveCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewDeleteCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewTagCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewLinkCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewUnlinkCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewTreeCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewUpCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewDownCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewSignalCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewWatchCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewWhichCmd(&jsonOutput))
