@@ -14,6 +14,7 @@ func NewListCmd(jsonOutput *bool) *cobra.Command {
 	var (
 		projectFilter string
 		searchTerm    string
+		tagFilter     string
 		limitCount    int
 		showAll       bool
 		showArchived  bool
@@ -71,6 +72,26 @@ Supports filtering by project, search term, and archive status.`,
 				for _, ctx := range contexts {
 					if strings.Contains(strings.ToLower(ctx.Name), searchLower) {
 						filtered = append(filtered, ctx)
+					}
+				}
+				contexts = filtered
+			}
+
+			// Filter by tag
+			if tagFilter != "" {
+				var filtered []*models.Context
+				for _, ctx := range contexts {
+					// Load context with metadata to check tags
+					ctxWithMeta, _, _, _, err := core.GetContextWithMetadata(ctx.Name)
+					if err != nil {
+						continue // Skip if can't load metadata
+					}
+					// Check if context has the tag
+					for _, tag := range ctxWithMeta.Metadata.Labels {
+						if strings.EqualFold(tag, tagFilter) {
+							filtered = append(filtered, ctx)
+							break
+						}
 					}
 				}
 				contexts = filtered
@@ -177,6 +198,7 @@ Supports filtering by project, search term, and archive status.`,
 	// Add flags
 	cmd.Flags().StringVar(&projectFilter, "project", "", "Filter by project name")
 	cmd.Flags().StringVar(&searchTerm, "search", "", "Search contexts by name (case-insensitive)")
+	cmd.Flags().StringVar(&tagFilter, "tag", "", "Filter by tag/label")
 	cmd.Flags().IntVar(&limitCount, "limit", 10, "Maximum number of contexts to show")
 	cmd.Flags().BoolVar(&showAll, "all", false, "Show all contexts (no limit)")
 	cmd.Flags().BoolVar(&showArchived, "archived", false, "Show only archived contexts")
