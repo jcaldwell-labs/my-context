@@ -133,7 +133,7 @@ func runBulkArchive() error {
 	}
 
 	if !confirmed {
-		fmt.Println("Bulk archive cancelled.")
+		fmt.Println("Bulk archive canceled.")
 		return nil
 	}
 

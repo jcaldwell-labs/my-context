@@ -20,11 +20,11 @@ func BenchmarkExportWith500Notes(b *testing.B) {
 	// Create context with 500 notes
 	contextName := "BenchmarkContext"
 	contextDir := filepath.Join(tmpHome, contextName)
-	os.MkdirAll(contextDir, 0755)
+	os.MkdirAll(contextDir, 0o755)
 
 	// Write meta.json
 	meta := `{"name":"` + contextName + `","active":false,"started":"2025-10-09T10:00:00-04:00","stopped":"2025-10-09T11:00:00-04:00"}`
-	os.WriteFile(filepath.Join(contextDir, "meta.json"), []byte(meta), 0644)
+	os.WriteFile(filepath.Join(contextDir, "meta.json"), []byte(meta), 0o644)
 
 	// Write 500 notes to notes.log
 	var notesBuilder strings.Builder
@@ -40,15 +40,15 @@ func BenchmarkExportWith500Notes(b *testing.B) {
 		notesBuilder.WriteString(string(rune('0' + i%10)))
 		notesBuilder.WriteString(" with some descriptive text about the work being done\n")
 	}
-	os.WriteFile(filepath.Join(contextDir, "notes.log"), []byte(notesBuilder.String()), 0644)
+	os.WriteFile(filepath.Join(contextDir, "notes.log"), []byte(notesBuilder.String()), 0o644)
 
 	// Write some files to files.log
 	filesContent := "2025-10-09T10:00:00-04:00|/path/to/file1.go\n2025-10-09T10:01:00-04:00|/path/to/file2.go\n"
-	os.WriteFile(filepath.Join(contextDir, "files.log"), []byte(filesContent), 0644)
+	os.WriteFile(filepath.Join(contextDir, "files.log"), []byte(filesContent), 0o644)
 
 	// Write some touches to touch.log
 	touchContent := "2025-10-09T10:00:00-04:00\n2025-10-09T10:15:00-04:00\n2025-10-09T10:30:00-04:00\n"
-	os.WriteFile(filepath.Join(contextDir, "touch.log"), []byte(touchContent), 0644)
+	os.WriteFile(filepath.Join(contextDir, "touch.log"), []byte(touchContent), 0o644)
 
 	// Create temporary output directory
 	tmpOutput := b.TempDir()
@@ -82,10 +82,10 @@ func BenchmarkExportSmallContext(b *testing.B) {
 	// Create context with 10 notes (typical)
 	contextName := "SmallContext"
 	contextDir := filepath.Join(tmpHome, contextName)
-	os.MkdirAll(contextDir, 0755)
+	os.MkdirAll(contextDir, 0o755)
 
 	meta := `{"name":"` + contextName + `","active":false,"started":"2025-10-09T10:00:00-04:00","stopped":"2025-10-09T10:10:00-04:00"}`
-	os.WriteFile(filepath.Join(contextDir, "meta.json"), []byte(meta), 0644)
+	os.WriteFile(filepath.Join(contextDir, "meta.json"), []byte(meta), 0o644)
 
 	notesContent := "2025-10-09T10:00:00-04:00|First note\n" +
 		"2025-10-09T10:01:00-04:00|Second note\n" +
@@ -97,7 +97,7 @@ func BenchmarkExportSmallContext(b *testing.B) {
 		"2025-10-09T10:07:00-04:00|Eighth note\n" +
 		"2025-10-09T10:08:00-04:00|Ninth note\n" +
 		"2025-10-09T10:09:00-04:00|Tenth note\n"
-	os.WriteFile(filepath.Join(contextDir, "notes.log"), []byte(notesContent), 0644)
+	os.WriteFile(filepath.Join(contextDir, "notes.log"), []byte(notesContent), 0o644)
 
 	tmpOutput := b.TempDir()
 
@@ -122,10 +122,10 @@ func BenchmarkExportWithFiles(b *testing.B) {
 	// Create context with 100 notes and 50 file associations
 	contextName := "FileHeavyContext"
 	contextDir := filepath.Join(tmpHome, contextName)
-	os.MkdirAll(contextDir, 0755)
+	os.MkdirAll(contextDir, 0o755)
 
 	meta := `{"name":"` + contextName + `","active":false,"started":"2025-10-09T10:00:00-04:00","stopped":"2025-10-09T11:00:00-04:00"}`
-	os.WriteFile(filepath.Join(contextDir, "meta.json"), []byte(meta), 0644)
+	os.WriteFile(filepath.Join(contextDir, "meta.json"), []byte(meta), 0o644)
 
 	// 100 notes
 	var notesBuilder strings.Builder
@@ -135,7 +135,7 @@ func BenchmarkExportWithFiles(b *testing.B) {
 		notesBuilder.WriteString(string(rune('0' + i%10)))
 		notesBuilder.WriteString("\n")
 	}
-	os.WriteFile(filepath.Join(contextDir, "notes.log"), []byte(notesBuilder.String()), 0644)
+	os.WriteFile(filepath.Join(contextDir, "notes.log"), []byte(notesBuilder.String()), 0o644)
 
 	// 50 file associations
 	var filesBuilder strings.Builder
@@ -145,7 +145,7 @@ func BenchmarkExportWithFiles(b *testing.B) {
 		filesBuilder.WriteString(string(rune('0' + i%10)))
 		filesBuilder.WriteString(".go\n")
 	}
-	os.WriteFile(filepath.Join(contextDir, "files.log"), []byte(filesBuilder.String()), 0644)
+	os.WriteFile(filepath.Join(contextDir, "files.log"), []byte(filesBuilder.String()), 0o644)
 
 	tmpOutput := b.TempDir()
 

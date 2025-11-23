@@ -21,8 +21,8 @@ func BenchmarkListWith1000Contexts(b *testing.B) {
 		contextName := "TestContext_" + string(rune('0'+i%10)) + string(rune('0'+i/10%10)) + string(rune('0'+i/100%10)) + string(rune('0'+i/1000))
 		contextDir := filepath.Join(tmpHome, contextName)
 		// Write minimal meta.json for each context
-		os.MkdirAll(contextDir, 0755)
-		os.WriteFile(filepath.Join(contextDir, "meta.json"), []byte(`{"name":"test","status":"stopped","is_archived":false}`), 0644)
+		os.MkdirAll(contextDir, 0o755)
+		os.WriteFile(filepath.Join(contextDir, "meta.json"), []byte(`{"name":"test","status":"stopped","is_archived":false}`), 0o644)
 	}
 
 	// Benchmark: List all contexts
@@ -56,8 +56,8 @@ func BenchmarkListWithDefaultLimit(b *testing.B) {
 	for i := 0; i < 100; i++ {
 		contextName := "TestContext_" + string(rune('0'+i))
 		contextDir := filepath.Join(tmpHome, contextName)
-		os.MkdirAll(contextDir, 0755)
-		os.WriteFile(filepath.Join(contextDir, "meta.json"), []byte(`{"name":"test","status":"stopped","is_archived":false}`), 0644)
+		os.MkdirAll(contextDir, 0o755)
+		os.WriteFile(filepath.Join(contextDir, "meta.json"), []byte(`{"name":"test","status":"stopped","is_archived":false}`), 0o644)
 	}
 
 	// Benchmark: List with default limit (10)
@@ -84,8 +84,8 @@ func BenchmarkListWithProjectFilter(b *testing.B) {
 		projectName := "project-" + string(rune('A'+i%10))
 		contextName := projectName + ": Phase " + string(rune('0'+i%10))
 		contextDir := filepath.Join(tmpHome, contextName)
-		os.MkdirAll(contextDir, 0755)
-		os.WriteFile(filepath.Join(contextDir, "meta.json"), []byte(`{"name":"test","status":"stopped","is_archived":false}`), 0644)
+		os.MkdirAll(contextDir, 0o755)
+		os.WriteFile(filepath.Join(contextDir, "meta.json"), []byte(`{"name":"test","status":"stopped","is_archived":false}`), 0o644)
 	}
 
 	// Benchmark: List with project filter

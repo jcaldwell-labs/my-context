@@ -177,7 +177,7 @@ func CreateContext(name string) (*intmodels.Context, string, error) {
 		GetFilesLogPath(finalDirName),
 		GetTouchLogPath(finalDirName),
 	} {
-		if err := os.WriteFile(path, []byte{}, 0600); err != nil {
+		if err := os.WriteFile(path, []byte{}, 0o600); err != nil {
 			return nil, "", err
 		}
 	}
@@ -603,7 +603,7 @@ func ExportContext(contextName string, outputPath string, asJSON bool) (string, 
 	}
 
 	// Write file
-	if err := os.WriteFile(outputPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(content), 0o600); err != nil {
 		return "", fmt.Errorf("failed to write export file: %w", err)
 	}
 

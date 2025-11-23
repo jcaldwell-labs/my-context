@@ -97,7 +97,7 @@ Examples:
 			}
 
 			// Create watch options
-			options := watch.WatchOptions{
+			options := watch.Options{
 				NewNotesOnly: newNotesOnly,
 				Pattern:      pattern,
 				ExecCommand:  execCommand,
@@ -164,12 +164,12 @@ Examples:
 
 			// Wait for timeout or interruption
 			if watchTimeout > 0 {
-				select {
-				case <-time.After(watchTimeout):
-					watcher.Stop()
-					if !*jsonOutput {
-						fmt.Println("\nWatch timeout reached")
-					}
+				<-time.After(watchTimeout)
+				if err := watcher.Stop(); err != nil {
+					return fmt.Errorf("error stopping watcher: %w", err)
+				}
+				if !*jsonOutput {
+					fmt.Println("\nWatch timeout reached")
 				}
 			} else {
 				// Wait indefinitely until interrupted

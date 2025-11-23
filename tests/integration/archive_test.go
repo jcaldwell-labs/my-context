@@ -136,7 +136,7 @@ func TestArchivePreservesData(t *testing.T) {
 	// Add notes and files
 	runCommand("note", "Important note")
 	testFile := filepath.Join(testDir, "test-file.txt")
-	os.WriteFile(testFile, []byte("test"), 0644)
+	os.WriteFile(testFile, []byte("test"), 0o644)
 
 	runCommand("stop")
 

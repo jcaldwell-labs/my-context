@@ -149,16 +149,16 @@ func (m *Monitor) notesMatchPattern(pattern string) (bool, error) {
 	return true, nil
 }
 
-// WatchOptions contains options for watching
-type WatchOptions struct {
+// Options contains options for watching
+type Options struct {
 	NewNotesOnly bool
 	Pattern      string
 	ExecCommand  string
 	Interval     time.Duration
 }
 
-// WatchResult represents the result of a watch operation
-type WatchResult struct {
+// Result represents the result of a watch operation
+type Result struct {
 	HasChanges bool
 	Matched    bool
 	Executed   bool
@@ -168,14 +168,14 @@ type WatchResult struct {
 // Watcher manages continuous watching with execution
 type Watcher struct {
 	monitor *Monitor
-	options WatchOptions
+	options Options
 	stopCh  chan struct{}
 	mu      sync.Mutex
 	running bool
 }
 
 // NewWatcher creates a new watcher
-func NewWatcher(contextDir string, options WatchOptions) (*Watcher, error) {
+func NewWatcher(contextDir string, options Options) (*Watcher, error) {
 	if options.Interval == 0 {
 		options.Interval = 5 * time.Second // Default interval
 	}
@@ -249,7 +249,7 @@ func (w *Watcher) watchLoop() {
 }
 
 // checkAndExecute checks for changes and executes command if needed
-func (w *Watcher) checkAndExecute() WatchResult {
+func (w *Watcher) checkAndExecute() Result {
 	var hasChanges bool
 	var err error
 
@@ -260,7 +260,7 @@ func (w *Watcher) checkAndExecute() WatchResult {
 	}
 
 	if err != nil || !hasChanges {
-		return WatchResult{
+		return Result{
 			HasChanges: hasChanges,
 			Matched:    hasChanges,
 			Executed:   false,
@@ -271,7 +271,7 @@ func (w *Watcher) checkAndExecute() WatchResult {
 	// Execute command if specified
 	if w.options.ExecCommand != "" {
 		execErr := w.executeCommand(w.options.ExecCommand)
-		return WatchResult{
+		return Result{
 			HasChanges: true,
 			Matched:    true,
 			Executed:   execErr == nil,
@@ -279,7 +279,7 @@ func (w *Watcher) checkAndExecute() WatchResult {
 		}
 	}
 
-	return WatchResult{
+	return Result{
 		HasChanges: true,
 		Matched:    true,
 		Executed:   false,

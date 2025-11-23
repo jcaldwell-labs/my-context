@@ -145,8 +145,8 @@ func setupTestEnvironment(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
-	// Set MY_CONTEXT_HOME to test directory
-	os.Setenv("MY_CONTEXT_HOME", testDir)
+	// Set MY_CONTEXT_HOME to test directory (t.Setenv handles cleanup automatically)
+	t.Setenv("MY_CONTEXT_HOME", testDir)
 	return testDir
 }
 
@@ -154,7 +154,7 @@ func setupTestEnvironment(t *testing.T) string {
 func cleanupTestEnvironment(t *testing.T, testDir string) {
 	t.Helper()
 	os.RemoveAll(testDir)
-	os.Unsetenv("MY_CONTEXT_HOME")
+	// Note: os.Unsetenv not needed - t.Setenv handles cleanup automatically
 }
 
 // createTestContext creates a test context directory structure
