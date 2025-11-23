@@ -43,4 +43,3 @@ func ParseFileLogLine(line string) (*FileAssociation, error) {
 		FilePath:  parts[1],
 	}, nil
 }
-

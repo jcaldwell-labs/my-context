@@ -193,39 +193,4 @@ func TestExportJSONOutput(t *testing.T) {
 	}
 }
 
-// Helper functions (to be implemented)
-
-func setupTestEnvironment(t *testing.T) string {
-	// Create temporary directory for test
-	t.Helper()
-	testDir, err := os.MkdirTemp("", "my-context-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create test directory: %v", err)
-	}
-	// Set MY_CONTEXT_HOME to test directory
-	os.Setenv("MY_CONTEXT_HOME", testDir)
-	return testDir
-}
-
-func cleanupTestEnvironment(t *testing.T, testDir string) {
-	t.Helper()
-	os.RemoveAll(testDir)
-	os.Unsetenv("MY_CONTEXT_HOME")
-}
-
-func createTestContext(t *testing.T, testDir, contextName string) {
-	t.Helper()
-	// This will fail until the actual implementation exists
-	err := runCommand("start", contextName)
-	if err != nil {
-		t.Logf("Note: Context creation failed (expected until implementation): %v", err)
-	}
-	runCommand("stop")
-}
-
-func runCommand(args ...string) error {
-	// This is a placeholder that will be replaced with actual command execution
-	// For now, it will fail (which is expected for TDD)
-	return os.ErrNotExist
-}
-
+// Helper functions moved to helpers_test.go

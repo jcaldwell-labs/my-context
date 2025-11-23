@@ -127,12 +127,12 @@ Examples:
 			// Output start message
 			if *jsonOutput {
 				data := map[string]interface{}{
-					"context":     contextName,
-					"new_notes":   newNotesOnly,
-					"pattern":     pattern,
-					"exec":        execCommand,
-					"interval":    watchInterval.String(),
-					"timeout":     timeoutString(watchTimeout),
+					"context":   contextName,
+					"new_notes": newNotesOnly,
+					"pattern":   pattern,
+					"exec":      execCommand,
+					"interval":  watchInterval.String(),
+					"timeout":   timeoutString(watchTimeout),
 				}
 				jsonStr, err := output.FormatJSON("watch", data)
 				if err != nil {

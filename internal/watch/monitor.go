@@ -13,11 +13,11 @@ import (
 
 // Monitor handles context watching and change detection
 type Monitor struct {
-	contextDir    string
-	lastMtime     time.Time
+	contextDir     string
+	lastMtime      time.Time
 	lastNotesMtime time.Time
-	useInotify    bool
-	mu            sync.RWMutex
+	useInotify     bool
+	mu             sync.RWMutex
 }
 
 // NewMonitor creates a new context monitor
@@ -44,10 +44,10 @@ func NewMonitor(contextDir string) (*Monitor, error) {
 	useInotify := runtime.GOOS == "linux"
 
 	return &Monitor{
-		contextDir:    contextDir,
-		lastMtime:     mtime,
+		contextDir:     contextDir,
+		lastMtime:      mtime,
 		lastNotesMtime: notesMtime,
-		useInotify:    useInotify,
+		useInotify:     useInotify,
 	}, nil
 }
 
@@ -159,10 +159,10 @@ type WatchOptions struct {
 
 // WatchResult represents the result of a watch operation
 type WatchResult struct {
-	HasChanges   bool
-	Matched      bool
-	Executed     bool
-	Error        error
+	HasChanges bool
+	Matched    bool
+	Executed   bool
+	Error      error
 }
 
 // Watcher manages continuous watching with execution

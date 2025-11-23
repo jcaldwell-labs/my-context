@@ -132,7 +132,7 @@ func TestProjectCaseInsensitive(t *testing.T) {
 
 	// Test different case variations
 	cases := []string{"ps-cli", "PS-CLI", "Ps-Cli", "pS-cLi"}
-	
+
 	for _, searchCase := range cases {
 		t.Run("search_"+searchCase, func(t *testing.T) {
 			output, _ := runCommandWithOutput("list", "--project", searchCase)

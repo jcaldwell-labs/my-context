@@ -557,7 +557,7 @@ func GetTransitions() ([]*intmodels.ContextTransition, error) {
 }
 
 // ExportContext exports a context to a markdown file
-func ExportContext(contextName string, outputPath string) (string, error) {
+func ExportContext(contextName string, outputPath string, asJSON bool) (string, error) {
 	// Load context data
 	ctx, notes, files, touches, err := GetContext(contextName)
 	if err != nil {
@@ -575,14 +575,26 @@ func ExportContext(contextName string, outputPath string) (string, error) {
 		fileModels = append(fileModels, *f)
 	}
 
-	// Generate markdown content
-	content := output.FormatExportMarkdown(ctx, noteModels, fileModels, len(touches))
+	// Generate content based on format
+	var content string
+	var defaultExt string
+	if asJSON {
+		jsonContent, err := output.FormatExportJSON(ctx, noteModels, fileModels, len(touches))
+		if err != nil {
+			return "", fmt.Errorf("failed to generate JSON export: %w", err)
+		}
+		content = jsonContent
+		defaultExt = ".json"
+	} else {
+		content = output.FormatExportMarkdown(ctx, noteModels, fileModels, len(touches))
+		defaultExt = ".md"
+	}
 
 	// Determine output file path
 	if outputPath == "" {
 		// Default: sanitized context name in current directory
 		sanitized := SanitizeFilename(contextName)
-		outputPath = sanitized + ".md"
+		outputPath = sanitized + defaultExt
 	}
 
 	// Create parent directories if needed
@@ -598,8 +610,8 @@ func ExportContext(contextName string, outputPath string) (string, error) {
 	return outputPath, nil
 }
 
-// ExportAllContexts exports all contexts to separate markdown files in a directory
-func ExportAllContexts(outputDir string) ([]string, error) {
+// ExportAllContexts exports all contexts to separate files in a directory
+func ExportAllContexts(outputDir string, asJSON bool) ([]string, error) {
 	contexts, err := ListContexts()
 	if err != nil {
 		return nil, err
@@ -609,12 +621,17 @@ func ExportAllContexts(outputDir string) ([]string, error) {
 		return nil, err
 	}
 
+	ext := ".md"
+	if asJSON {
+		ext = ".json"
+	}
+
 	var exportedPaths []string
 	for _, ctx := range contexts {
 		sanitized := SanitizeFilename(ctx.Name)
-		outputPath := filepath.Join(outputDir, sanitized+".md")
+		outputPath := filepath.Join(outputDir, sanitized+ext)
 
-		path, err := ExportContext(ctx.Name, outputPath)
+		path, err := ExportContext(ctx.Name, outputPath, asJSON)
 		if err != nil {
 			continue // Skip failed exports
 		}

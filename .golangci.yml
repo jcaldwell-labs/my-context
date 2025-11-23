@@ -1,3 +1,5 @@
+version: 2
+
 run:
   timeout: 5m
   tests: true
@@ -7,29 +9,22 @@ linters:
   enable:
     # Enabled by default
     - errcheck      # Check for unchecked errors
-    - gosimple      # Simplify code
     - govet         # Go vet examinations
     - ineffassign   # Detect ineffectual assignments
     - staticcheck   # Advanced static analysis
     - unused        # Check for unused constants, variables, functions
 
     # Additional recommended linters
-    - gofmt         # Check formatting
-    - goimports     # Check imports formatting
     - misspell      # Spell checker
     - revive        # Fast, extensible, flexible linter
     - unconvert     # Remove unnecessary type conversions
     - unparam       # Find unused function parameters
     - gosec         # Security issues
     - bodyclose     # Check HTTP response body is closed
-    - noctx         # Detect http request without context
     - gocritic      # Opinionated linter
     - gocyclo       # Cyclomatic complexity
     - dupl          # Code duplication
     - prealloc      # Slice preallocation
-    - stylecheck    # Style checks
-    - exportloopref # Detect pointers to loop variables
-    - sqlclose      # Check SQL rows/statements are closed
 
 linters-settings:
   gocyclo:

@@ -58,15 +58,15 @@ func (ct *ContextTransition) ToLogLine() string {
 		prev = *ct.PreviousContext
 	}
 
-	new := "NULL"
+	newCtx := "NULL"
 	if ct.NewContext != nil {
-		new = *ct.NewContext
+		newCtx = *ct.NewContext
 	}
 
 	return fmt.Sprintf("%s|%s|%s|%s",
 		ct.Timestamp.Format(time.RFC3339),
 		prev,
-		new,
+		newCtx,
 		ct.TransitionType)
 }
 
@@ -101,4 +101,3 @@ func ParseTransitionLogLine(line string) (*ContextTransition, error) {
 		TransitionType:  transitionType,
 	}, nil
 }
-

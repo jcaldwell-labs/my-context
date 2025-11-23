@@ -91,7 +91,7 @@ Examples:
 					}
 					fmt.Println(string(jsonStr))
 				} else {
-					fmt.Println("Context hierarchy (all root contexts):\n")
+					fmt.Println("Context hierarchy (all root contexts):")
 					for i, tree := range trees {
 						printTree(tree, "", true)
 						if i < len(trees)-1 {

@@ -19,7 +19,7 @@ func FormatExportMarkdown(ctx *models.Context, notes []models.Note, files []mode
 
 	// Metadata
 	sb.WriteString(fmt.Sprintf("**Started**: %s\n", formatLocalTime(ctx.StartTime)))
-	
+
 	if ctx.EndTime != nil {
 		sb.WriteString(fmt.Sprintf("**Ended**: %s\n", formatLocalTime(*ctx.EndTime)))
 	} else {
@@ -28,7 +28,7 @@ func FormatExportMarkdown(ctx *models.Context, notes []models.Note, files []mode
 
 	sb.WriteString(fmt.Sprintf("**Duration**: %s\n\n", formatDuration(ctx.Duration())))
 	sb.WriteString(fmt.Sprintf("**Exported**: %s\n\n", formatLocalTime(exportTime)))
-	
+
 	if ctx.IsArchived {
 		sb.WriteString("*This context is archived*\n\n")
 	}

@@ -9,19 +9,20 @@ import (
 // If no colon, returns the full context name (trimmed).
 //
 // Examples:
-//   "ps-cli: Phase 1" -> "ps-cli"
-//   "garden: Planning" -> "garden"
-//   "StandaloneContext" -> "StandaloneContext"
-//   "project: Phase 1: Subphase A" -> "project" (only first colon used)
+//
+//	"ps-cli: Phase 1" -> "ps-cli"
+//	"garden: Planning" -> "garden"
+//	"StandaloneContext" -> "StandaloneContext"
+//	"project: Phase 1: Subphase A" -> "project" (only first colon used)
 func ExtractProjectName(contextName string) string {
 	// Split on first colon only
 	parts := strings.SplitN(contextName, ":", 2)
-	
+
 	if len(parts) > 1 {
 		// Has colon - return text before it, trimmed
 		return strings.TrimSpace(parts[0])
 	}
-	
+
 	// No colon - full name is project name, trimmed
 	return strings.TrimSpace(contextName)
 }
@@ -54,9 +55,9 @@ func FilterContextsByProject(contextNames []string, projectName string) []string
 
 // ProjectMetadata represents extracted project information
 type ProjectMetadata struct {
-	ProjectName   string
-	ContextNames  []string
-	ContextCount  int
+	ProjectName  string
+	ContextNames []string
+	ContextCount int
 }
 
 // ExtractProjectMetadata analyzes a list of contexts and groups them by project

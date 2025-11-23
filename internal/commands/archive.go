@@ -14,10 +14,10 @@ import (
 )
 
 var (
-	archivePattern       string
-	archiveDryRun        bool
+	archivePattern         string
+	archiveDryRun          bool
 	archiveCompletedBefore string
-	archiveAllStopped    bool
+	archiveAllStopped      bool
 )
 
 func NewArchiveCmd(jsonOutput *bool) *cobra.Command {

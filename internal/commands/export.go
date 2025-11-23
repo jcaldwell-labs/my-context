@@ -39,12 +39,16 @@ Examples:
 					outputDir = "."
 				}
 
-				exportedPaths, err := core.ExportAllContexts(outputDir)
+				exportedPaths, err := core.ExportAllContexts(outputDir, exportAsJSON)
 				if err != nil {
 					return fmt.Errorf("export failed: %w", err)
 				}
 
-				fmt.Printf("Exporting %d contexts to %s...\n", len(exportedPaths), outputDir)
+				format := "markdown"
+				if exportAsJSON {
+					format = "JSON"
+				}
+				fmt.Printf("Exporting %d contexts to %s as %s...\n", len(exportedPaths), outputDir, format)
 				for _, path := range exportedPaths {
 					fmt.Printf("  ✓ %s\n", path)
 				}
@@ -55,12 +59,16 @@ Examples:
 			// Export single context
 			contextName := args[0]
 
-			outputPath, err := core.ExportContext(contextName, exportToPath)
+			outputPath, err := core.ExportContext(contextName, exportToPath, exportAsJSON)
 			if err != nil {
 				return err
 			}
 
-			fmt.Printf("Exported context %q to %s\n", contextName, outputPath)
+			format := "markdown"
+			if exportAsJSON {
+				format = "JSON"
+			}
+			fmt.Printf("Exported context %q to %s (%s)\n", contextName, outputPath, format)
 			return nil
 		},
 	}

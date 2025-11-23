@@ -57,7 +57,7 @@ func BenchmarkExportWith500Notes(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		outputPath := filepath.Join(tmpOutput, "export_"+string(rune('0'+i%10))+".md")
-		_, err := core.ExportContext(contextName, outputPath)
+		_, err := core.ExportContext(contextName, outputPath, false)
 		if err != nil {
 			b.Fatalf("ExportContext failed: %v", err)
 		}
@@ -105,7 +105,7 @@ func BenchmarkExportSmallContext(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		outputPath := filepath.Join(tmpOutput, "small_export_"+string(rune('0'+i%10))+".md")
-		_, err := core.ExportContext(contextName, outputPath)
+		_, err := core.ExportContext(contextName, outputPath, false)
 		if err != nil {
 			b.Fatalf("ExportContext failed: %v", err)
 		}
@@ -153,10 +153,9 @@ func BenchmarkExportWithFiles(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		outputPath := filepath.Join(tmpOutput, "file_heavy_export_"+string(rune('0'+i%10))+".md")
-		_, err := core.ExportContext(contextName, outputPath)
+		_, err := core.ExportContext(contextName, outputPath, false)
 		if err != nil {
 			b.Fatalf("ExportContext failed: %v", err)
 		}
 	}
 }
-

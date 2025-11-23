@@ -121,4 +121,3 @@ func ShowNoteWarning(currentCount int) {
 		}
 	}
 }
-

@@ -280,21 +280,30 @@ func WriteMarkdown(path string, content string) error {
 }
 
 // ReadNotes parses notes.log and returns structured data
-func ReadNotes(contextDir string) ([]struct{ Timestamp string; Content string }, error) {
+func ReadNotes(contextDir string) ([]struct {
+	Timestamp string
+	Content   string
+}, error) {
 	notesPath := filepath.Join(contextDir, "notes.log")
 	lines, err := ReadLog(notesPath)
 	if err != nil {
 		return nil, err
 	}
 
-	var notes []struct{ Timestamp string; Content string }
+	var notes []struct {
+		Timestamp string
+		Content   string
+	}
 	for _, line := range lines {
 		if line == "" {
 			continue
 		}
 		parts := strings.SplitN(line, "|", 2)
 		if len(parts) == 2 {
-			notes = append(notes, struct{ Timestamp string; Content string }{
+			notes = append(notes, struct {
+				Timestamp string
+				Content   string
+			}{
 				Timestamp: parts[0],
 				Content:   parts[1],
 			})
@@ -304,21 +313,30 @@ func ReadNotes(contextDir string) ([]struct{ Timestamp string; Content string },
 }
 
 // ReadFiles parses files.log and returns structured data
-func ReadFiles(contextDir string) ([]struct{ Timestamp string; Path string }, error) {
+func ReadFiles(contextDir string) ([]struct {
+	Timestamp string
+	Path      string
+}, error) {
 	filesPath := filepath.Join(contextDir, "files.log")
 	lines, err := ReadLog(filesPath)
 	if err != nil {
 		return nil, err
 	}
 
-	var files []struct{ Timestamp string; Path string }
+	var files []struct {
+		Timestamp string
+		Path      string
+	}
 	for _, line := range lines {
 		if line == "" {
 			continue
 		}
 		parts := strings.SplitN(line, "|", 2)
 		if len(parts) == 2 {
-			files = append(files, struct{ Timestamp string; Path string }{
+			files = append(files, struct {
+				Timestamp string
+				Path      string
+			}{
 				Timestamp: parts[0],
 				Path:      parts[1],
 			})

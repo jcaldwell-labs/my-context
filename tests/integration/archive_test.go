@@ -32,7 +32,7 @@ func TestArchiveStoppedContext(t *testing.T) {
 
 	var meta map[string]interface{}
 	json.Unmarshal(content, &meta)
-	
+
 	if archived, ok := meta["is_archived"].(bool); !ok || !archived {
 		t.Error("Expected is_archived to be true in meta.json")
 	}
@@ -137,7 +137,7 @@ func TestArchivePreservesData(t *testing.T) {
 	runCommand("note", "Important note")
 	testFile := filepath.Join(testDir, "test-file.txt")
 	os.WriteFile(testFile, []byte("test"), 0644)
-	
+
 	runCommand("stop")
 
 	// Get pre-archive data
@@ -166,7 +166,7 @@ func TestArchiveAlreadyArchived(t *testing.T) {
 	contextName := "already-archived"
 	createTestContext(t, testDir, contextName)
 	runCommand("stop")
-	
+
 	// Archive once
 	runCommand("archive", contextName)
 
@@ -183,9 +183,4 @@ func TestArchiveAlreadyArchived(t *testing.T) {
 	// Success case: command is idempotent
 }
 
-// Helper functions
-
-func runCommandWithOutput(args ...string) (string, error) {
-	// Placeholder - will return empty until implementation exists
-	return "", os.ErrNotExist
-}
+// Helper functions moved to helpers_test.go

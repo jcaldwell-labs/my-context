@@ -246,9 +246,9 @@ func resumeExistingContext(ctx *models.Context, jsonOutput *bool) error {
 	// Output
 	if *jsonOutput {
 		data := output.StartData{
-			ContextName:     ctx.Name,
-			OriginalName:    ctx.Name,
-			WasDuplicate:    false,
+			ContextName:  ctx.Name,
+			OriginalName: ctx.Name,
+			WasDuplicate: false,
 		}
 		if previousContext != "" {
 			data.PreviousContext = &previousContext

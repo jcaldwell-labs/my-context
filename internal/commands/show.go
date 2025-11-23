@@ -84,4 +84,3 @@ func NewShowCmd(jsonOutput *bool) *cobra.Command {
 
 	return cmd
 }
-

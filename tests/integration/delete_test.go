@@ -136,8 +136,4 @@ func TestDeletePreservesTransitionsLog(t *testing.T) {
 	}
 }
 
-// Helper function
-func runCommandWithInput(args ...string) error {
-	// Placeholder - will simulate stdin input
-	return os.ErrNotExist
-}
+// Helper functions moved to helpers_test.go

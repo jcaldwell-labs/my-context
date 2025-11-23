@@ -26,4 +26,3 @@ func ParseTouchLogLine(line string) (*TouchEvent, error) {
 		Timestamp: timestamp,
 	}, nil
 }
-

@@ -163,8 +163,8 @@ func TestEndToEndWorkflow(t *testing.T) {
 		testContexts := 0
 		for _, ctx := range allContexts {
 			if strings.HasPrefix(ctx.Name, "e2e-project:") ||
-			   strings.HasPrefix(ctx.Name, ctx1Name) ||
-			   strings.HasPrefix(ctx.Name, "unrelated:") {
+				strings.HasPrefix(ctx.Name, ctx1Name) ||
+				strings.HasPrefix(ctx.Name, "unrelated:") {
 				testContexts++
 			}
 		}

@@ -70,4 +70,3 @@ func NewTouchCmd(jsonOutput *bool) *cobra.Command {
 
 	return cmd
 }
-

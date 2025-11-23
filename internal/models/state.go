@@ -22,4 +22,3 @@ func (s *AppState) GetActiveContextName() string {
 	}
 	return *s.ActiveContext
 }
-

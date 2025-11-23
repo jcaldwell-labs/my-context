@@ -241,4 +241,3 @@ func FormatSimpleMessage(message string) string {
 func FormatError(err error) string {
 	return "Error: " + err.Error() + "\n"
 }
-

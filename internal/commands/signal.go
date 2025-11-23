@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/jefferycaldwell/my-context-copilot/internal/signal"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
+	"github.com/jefferycaldwell/my-context-copilot/internal/signal"
 	"github.com/spf13/cobra"
 )
 

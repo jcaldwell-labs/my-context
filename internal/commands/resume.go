@@ -132,9 +132,9 @@ func resumeContext(ctx *models.Context, jsonOutput *bool) error {
 	// Log the transition
 	now := time.Now()
 	transition := &models.ContextTransition{
-		Timestamp:       now,
-		NewContext:      &ctx.Name,
-		TransitionType:  models.TransitionStart,
+		Timestamp:      now,
+		NewContext:     &ctx.Name,
+		TransitionType: models.TransitionStart,
 	}
 
 	if err := core.AppendLog(core.GetTransitionsLogPath(), transition.ToLogLine()); err != nil {

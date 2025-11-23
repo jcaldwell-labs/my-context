@@ -109,8 +109,8 @@ func TestStopLifecycleAdvisorIntegration(t *testing.T) {
 
 		// Should show up to 3 related contexts
 		if !strings.Contains(outputStr, "project-x: feature-three") ||
-		   !strings.Contains(outputStr, "project-x: feature-two") ||
-		   !strings.Contains(outputStr, "project-x: feature-one") {
+			!strings.Contains(outputStr, "project-x: feature-two") ||
+			!strings.Contains(outputStr, "project-x: feature-one") {
 			t.Errorf("Expected to find 3 related project-x contexts in output: %s", outputStr)
 		}
 	})

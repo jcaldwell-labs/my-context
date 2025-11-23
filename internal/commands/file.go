@@ -75,4 +75,3 @@ func NewFileCmd(jsonOutput *bool) *cobra.Command {
 
 	return cmd
 }
-

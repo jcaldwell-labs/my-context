@@ -237,4 +237,3 @@ func ExtractProjectName(contextName string) string {
 	}
 	return strings.TrimSpace(contextName)
 }
-

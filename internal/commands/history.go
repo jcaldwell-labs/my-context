@@ -49,4 +49,3 @@ func NewHistoryCmd(jsonOutput *bool) *cobra.Command {
 
 	return cmd
 }
-
