@@ -275,10 +275,11 @@ func FindRelatedContexts(contextName string) ([]*models.Context, error) {
 
 // extractContextPrefix extracts the common prefix from a context name
 // Examples:
-//   "my-project: feature-auth" -> "my-project"
-//   "feature-login" -> "feature-login" (no colon, return whole name)
-//   "ps-cli: Phase 1" -> "ps-cli"
-//   "bug-fix-123" -> "bug-fix-123" (no colon, return whole name)
+//
+//	"my-project: feature-auth" -> "my-project"
+//	"feature-login" -> "feature-login" (no colon, return whole name)
+//	"ps-cli: Phase 1" -> "ps-cli"
+//	"bug-fix-123" -> "bug-fix-123" (no colon, return whole name)
 func extractContextPrefix(contextName string) string {
 	// Split on first colon and take the first part
 	parts := strings.SplitN(contextName, ":", 2)

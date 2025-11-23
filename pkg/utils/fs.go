@@ -19,7 +19,7 @@ func NormalizePath(path string) string {
 
 // EnsureDir creates a directory and all necessary parents
 func EnsureDir(path string) error {
-	return os.MkdirAll(path, 0755)
+	return os.MkdirAll(path, 0o755)
 }
 
 // FileExists checks if a file exists
@@ -56,7 +56,7 @@ func HasFileChanged(path string, since time.Time) (bool, error) {
 }
 
 // ListFiles returns all files in a directory matching a pattern
-func ListFiles(dir string, pattern string) ([]string, error) {
+func ListFiles(dir, pattern string) ([]string, error) {
 	files, err := filepath.Glob(filepath.Join(dir, pattern))
 	if err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ func SafeWriteFile(path string, data []byte) error {
 	}
 
 	// Write to temp file
-	if err := os.WriteFile(tempFile, data, 0644); err != nil {
+	if err := os.WriteFile(tempFile, data, 0o600); err != nil {
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
 

@@ -8,7 +8,7 @@ import (
 
 // PatternMatcher handles pattern matching for notes
 type PatternMatcher struct {
-	pattern *regexp.Regexp
+	pattern    *regexp.Regexp
 	rawPattern string
 }
 

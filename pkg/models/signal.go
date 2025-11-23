@@ -16,7 +16,7 @@ type Signal struct {
 }
 
 // NewSignal creates a new signal instance
-func NewSignal(name string, signalsDir string) *Signal {
+func NewSignal(name, signalsDir string) *Signal {
 	now := time.Now()
 	filename := fmt.Sprintf("%s.signal", name)
 	path := filepath.Join(signalsDir, filename)
@@ -38,13 +38,13 @@ func (s *Signal) Exists() bool {
 func (s *Signal) Create() error {
 	// Ensure directory exists
 	dir := filepath.Dir(s.Path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create signals directory: %w", err)
 	}
 
 	// Create the signal file with timestamp as content
 	content := s.CreatedAt.Format(time.RFC3339) + "\n"
-	if err := os.WriteFile(s.Path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(s.Path, []byte(content), 0o600); err != nil {
 		return fmt.Errorf("failed to create signal file: %w", err)
 	}
 

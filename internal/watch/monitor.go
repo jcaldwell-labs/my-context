@@ -13,11 +13,11 @@ import (
 
 // Monitor handles context watching and change detection
 type Monitor struct {
-	contextDir    string
-	lastMtime     time.Time
+	contextDir     string
+	lastMtime      time.Time
 	lastNotesMtime time.Time
-	useInotify    bool
-	mu            sync.RWMutex
+	useInotify     bool
+	mu             sync.RWMutex
 }
 
 // NewMonitor creates a new context monitor
@@ -44,10 +44,10 @@ func NewMonitor(contextDir string) (*Monitor, error) {
 	useInotify := runtime.GOOS == "linux"
 
 	return &Monitor{
-		contextDir:    contextDir,
-		lastMtime:     mtime,
+		contextDir:     contextDir,
+		lastMtime:      mtime,
 		lastNotesMtime: notesMtime,
-		useInotify:    useInotify,
+		useInotify:     useInotify,
 	}, nil
 }
 
@@ -149,33 +149,33 @@ func (m *Monitor) notesMatchPattern(pattern string) (bool, error) {
 	return true, nil
 }
 
-// WatchOptions contains options for watching
-type WatchOptions struct {
+// Options contains options for watching
+type Options struct {
 	NewNotesOnly bool
 	Pattern      string
 	ExecCommand  string
 	Interval     time.Duration
 }
 
-// WatchResult represents the result of a watch operation
-type WatchResult struct {
-	HasChanges   bool
-	Matched      bool
-	Executed     bool
-	Error        error
+// Result represents the result of a watch operation
+type Result struct {
+	HasChanges bool
+	Matched    bool
+	Executed   bool
+	Error      error
 }
 
 // Watcher manages continuous watching with execution
 type Watcher struct {
 	monitor *Monitor
-	options WatchOptions
+	options Options
 	stopCh  chan struct{}
 	mu      sync.Mutex
 	running bool
 }
 
 // NewWatcher creates a new watcher
-func NewWatcher(contextDir string, options WatchOptions) (*Watcher, error) {
+func NewWatcher(contextDir string, options Options) (*Watcher, error) {
 	if options.Interval == 0 {
 		options.Interval = 5 * time.Second // Default interval
 	}
@@ -236,11 +236,9 @@ func (w *Watcher) watchLoop() {
 	for {
 		select {
 		case <-ticker.C:
-			result := w.checkAndExecute()
-			if result.Error != nil {
-				// In a real implementation, you'd want to log this
-				// For now, we'll continue watching
-			}
+			_ = w.checkAndExecute()
+			// In a real implementation, you'd want to log errors
+			// For now, we'll continue watching
 
 		case <-w.stopCh:
 			return
@@ -249,7 +247,7 @@ func (w *Watcher) watchLoop() {
 }
 
 // checkAndExecute checks for changes and executes command if needed
-func (w *Watcher) checkAndExecute() WatchResult {
+func (w *Watcher) checkAndExecute() Result {
 	var hasChanges bool
 	var err error
 
@@ -260,7 +258,7 @@ func (w *Watcher) checkAndExecute() WatchResult {
 	}
 
 	if err != nil || !hasChanges {
-		return WatchResult{
+		return Result{
 			HasChanges: hasChanges,
 			Matched:    hasChanges,
 			Executed:   false,
@@ -271,7 +269,7 @@ func (w *Watcher) checkAndExecute() WatchResult {
 	// Execute command if specified
 	if w.options.ExecCommand != "" {
 		execErr := w.executeCommand(w.options.ExecCommand)
-		return WatchResult{
+		return Result{
 			HasChanges: true,
 			Matched:    true,
 			Executed:   execErr == nil,
@@ -279,7 +277,7 @@ func (w *Watcher) checkAndExecute() WatchResult {
 		}
 	}
 
-	return WatchResult{
+	return Result{
 		HasChanges: true,
 		Matched:    true,
 		Executed:   false,

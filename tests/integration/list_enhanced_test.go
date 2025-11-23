@@ -13,7 +13,7 @@ func TestListDefaultLimit(t *testing.T) {
 
 	// Create 15 contexts
 	for i := 1; i <= 15; i++ {
-		createTestContext(t, testDir, fmt.Sprintf("context-%d", i))
+		createTestContext(t, fmt.Sprintf("context-%d", i))
 		runCommand("stop")
 	}
 
@@ -33,7 +33,7 @@ func TestListAllFlag(t *testing.T) {
 
 	// Create 15 contexts
 	for i := 1; i <= 15; i++ {
-		createTestContext(t, testDir, fmt.Sprintf("context-%d", i))
+		createTestContext(t, fmt.Sprintf("context-%d", i))
 		runCommand("stop")
 	}
 
@@ -56,7 +56,7 @@ func TestListCustomLimit(t *testing.T) {
 
 	// Create 20 contexts
 	for i := 1; i <= 20; i++ {
-		createTestContext(t, testDir, fmt.Sprintf("context-%d", i))
+		createTestContext(t, fmt.Sprintf("context-%d", i))
 		runCommand("stop")
 	}
 
@@ -75,11 +75,11 @@ func TestListSearch(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	// Create contexts with different names
-	createTestContext(t, testDir, "ps-cli: Phase 1")
+	createTestContext(t, "ps-cli: Phase 1")
 	runCommand("stop")
-	createTestContext(t, testDir, "ps-cli: Phase 2")
+	createTestContext(t, "ps-cli: Phase 2")
 	runCommand("stop")
-	createTestContext(t, testDir, "garden: Planning")
+	createTestContext(t, "garden: Planning")
 	runCommand("stop")
 
 	// Execute: Search for "Phase"
@@ -101,13 +101,13 @@ func TestListArchivedFlag(t *testing.T) {
 
 	// Create and archive one context
 	archived := "archived-context"
-	createTestContext(t, testDir, archived)
+	createTestContext(t, archived)
 	runCommand("stop")
 	runCommand("archive", archived)
 
 	// Create normal context
 	normal := "normal-context"
-	createTestContext(t, testDir, normal)
+	createTestContext(t, normal)
 	runCommand("stop")
 
 	// Execute: List --archived
@@ -128,12 +128,12 @@ func TestListActiveOnly(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	// Create stopped contexts
-	createTestContext(t, testDir, "stopped-1")
+	createTestContext(t, "stopped-1")
 	runCommand("stop")
 
 	// Create active context
 	active := "active-context"
-	createTestContext(t, testDir, active)
+	createTestContext(t, active)
 
 	// Execute: List --active-only
 	output, _ := runCommandWithOutput("list", "--active-only")
@@ -154,7 +154,7 @@ func TestListCombinedFilters(t *testing.T) {
 
 	// Create project contexts
 	for i := 1; i <= 10; i++ {
-		createTestContext(t, testDir, fmt.Sprintf("ps-cli: Phase %d", i))
+		createTestContext(t, fmt.Sprintf("ps-cli: Phase %d", i))
 		runCommand("stop")
 	}
 

@@ -23,19 +23,19 @@ type JSONError struct {
 
 // ContextData represents context data for JSON output
 type ContextData struct {
-	Context interface{}                `json:"context"` // Can be *models.Context or *pkgmodels.ContextWithMetadata
-	Notes   []*models.Note             `json:"notes,omitempty"`
-	Files   []*models.FileAssociation  `json:"files,omitempty"`
-	Touches []*models.TouchEvent       `json:"touches,omitempty"`
+	Context interface{}               `json:"context"` // Can be *models.Context or *pkgmodels.ContextWithMetadata
+	Notes   []*models.Note            `json:"notes,omitempty"`
+	Files   []*models.FileAssociation `json:"files,omitempty"`
+	Touches []*models.TouchEvent      `json:"touches,omitempty"`
 }
 
 // StartData represents start command output data
 type StartData struct {
-	ContextName            string  `json:"context_name"`
-	OriginalName           string  `json:"original_name"`
-	WasDuplicate           bool    `json:"was_duplicate"`
-	PreviousContext        *string `json:"previous_context,omitempty"`
-	PreviousDurationSeconds *int   `json:"previous_duration_seconds,omitempty"`
+	ContextName             string  `json:"context_name"`
+	OriginalName            string  `json:"original_name"`
+	WasDuplicate            bool    `json:"was_duplicate"`
+	PreviousContext         *string `json:"previous_context,omitempty"`
+	PreviousDurationSeconds *int    `json:"previous_duration_seconds,omitempty"`
 }
 
 // StopData represents stop command output data
@@ -124,3 +124,39 @@ func FormatJSONError(command string, code int, message string) (string, error) {
 	return string(jsonData) + "\n", nil
 }
 
+// ExportData represents export data structure for JSON output
+type ExportData struct {
+	Name       string                    `json:"name"`
+	StartTime  time.Time                 `json:"start_time"`
+	EndTime    *time.Time                `json:"end_time,omitempty"`
+	Status     string                    `json:"status"`
+	IsArchived bool                      `json:"is_archived"`
+	Duration   int                       `json:"duration_seconds"`
+	Notes      []models.Note             `json:"notes"`
+	Files      []models.FileAssociation  `json:"files"`
+	TouchCount int                       `json:"touch_count"`
+	ExportTime time.Time                 `json:"export_time"`
+}
+
+// FormatExportJSON formats context export data as JSON
+func FormatExportJSON(ctx *models.Context, notes []models.Note, files []models.FileAssociation, touchCount int) (string, error) {
+	exportData := ExportData{
+		Name:       ctx.Name,
+		StartTime:  ctx.StartTime,
+		EndTime:    ctx.EndTime,
+		Status:     ctx.Status,
+		IsArchived: ctx.IsArchived,
+		Duration:   int(ctx.Duration().Seconds()),
+		Notes:      notes,
+		Files:      files,
+		TouchCount: touchCount,
+		ExportTime: time.Now(),
+	}
+
+	jsonData, err := json.MarshalIndent(exportData, "", "  ")
+	if err != nil {
+		return "", err
+	}
+
+	return string(jsonData) + "\n", nil
+}

@@ -18,36 +18,35 @@ func buildTestBinary(t *testing.T) string {
 	return "./my-context-test"
 }
 
-// runCommand executes a my-context command and returns stdout, stderr, and exit code
-func runCommand(binary string, args ...string) (string, string, int) {
+// runCommand executes a my-context command and returns stderr and exit code
+func runCommand(binary string, args ...string) (stderrStr string, exitCode int) {
 	cmd := exec.Command(binary, args...)
 	stdout, stdoutErr := cmd.StdoutPipe()
 	if stdoutErr != nil {
-		return "", "Failed to create stdout pipe: " + stdoutErr.Error(), 1
+		return "Failed to create stdout pipe: " + stdoutErr.Error(), 1
 	}
 
 	stderr, stderrErr := cmd.StderrPipe()
 	if stderrErr != nil {
-		return "", "Failed to create stderr pipe: " + stderrErr.Error(), 1
+		return "Failed to create stderr pipe: " + stderrErr.Error(), 1
 	}
 
 	// Start the command
 	err := cmd.Start()
 	if err != nil {
-		return "", err.Error(), 1
+		return err.Error(), 1
 	}
 
 	// Read output
-	outBytes, outErr := io.ReadAll(stdout)
+	_, outErr := io.ReadAll(stdout)
 	errBytes, errErr := io.ReadAll(stderr)
 
 	// Wait for completion
 	exitErr := cmd.Wait()
 
-	stdoutStr := string(outBytes)
-	stderrStr := string(errBytes)
+	stderrStr = string(errBytes)
 
-	exitCode := 0
+	exitCode = 0
 	if exitErr != nil {
 		if exit, ok := exitErr.(*exec.ExitError); ok {
 			exitCode = exit.ExitCode()
@@ -64,7 +63,7 @@ func runCommand(binary string, args ...string) (string, string, int) {
 		stderrStr += "\nRead stderr error: " + errErr.Error()
 	}
 
-	return stdoutStr, stderrStr, exitCode
+	return
 }
 
 // TestSignalCreateCommand tests the signal create command
@@ -73,7 +72,7 @@ func TestSignalCreateCommand(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test creating a signal
-	_, stderr, exitCode := runCommand(binary, "signal", "create", "test-contract-signal")
+	stderr, exitCode := runCommand(binary, "signal", "create", "test-contract-signal")
 
 	// The command doesn't exist yet, so it should fail
 	assert.NotEqual(t, 0, exitCode, "Command should fail since signal command is not implemented yet")
@@ -90,7 +89,7 @@ func TestSignalListCommand(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test listing signals
-	_, stderr, exitCode := runCommand(binary, "signal", "list")
+	stderr, exitCode := runCommand(binary, "signal", "list")
 
 	// The command doesn't exist yet, so it should fail
 	assert.NotEqual(t, 0, exitCode, "Command should fail since signal command is not implemented yet")
@@ -108,7 +107,7 @@ func TestSignalWaitCommand(t *testing.T) {
 
 	// Test waiting for a signal with timeout
 	start := time.Now()
-	_, stderr, exitCode := runCommand(binary, "signal", "wait", "nonexistent-signal", "--timeout", "500ms")
+	stderr, exitCode := runCommand(binary, "signal", "wait", "nonexistent-signal", "--timeout", "500ms")
 	duration := time.Since(start)
 
 	// The command doesn't exist yet, so it should fail
@@ -130,7 +129,7 @@ func TestSignalClearCommand(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test clearing a signal
-	_, stderr, exitCode := runCommand(binary, "signal", "clear", "test-clear-signal")
+	stderr, exitCode := runCommand(binary, "signal", "clear", "test-clear-signal")
 
 	// The command doesn't exist yet, so it should fail
 	assert.NotEqual(t, 0, exitCode, "Command should fail since signal command is not implemented yet")
@@ -147,7 +146,7 @@ func TestSignalCommandHelp(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test signal command help
-	_, stderr, exitCode := runCommand(binary, "signal", "--help")
+	stderr, exitCode := runCommand(binary, "signal", "--help")
 
 	// The command doesn't exist yet, so it should fail
 	assert.NotEqual(t, 0, exitCode, "Command should fail since signal command is not implemented yet")
@@ -168,7 +167,7 @@ func TestSignalCommandInvalidArgs(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test signal command with no subcommand
-	_, stderr, exitCode := runCommand(binary, "signal")
+	stderr, exitCode := runCommand(binary, "signal")
 
 	// The command doesn't exist yet, so it should fail
 	assert.NotEqual(t, 0, exitCode, "Command should fail since signal command is not implemented yet")
@@ -185,7 +184,7 @@ func TestSignalCreateWithSpecialChars(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test creating a signal with special characters
-	_, stderr, exitCode := runCommand(binary, "signal", "create", "test_signal.with-dashes")
+	stderr, exitCode := runCommand(binary, "signal", "create", "test_signal.with-dashes")
 
 	// The command doesn't exist yet, so it should fail
 	assert.NotEqual(t, 0, exitCode, "Command should fail since signal command is not implemented yet")
@@ -202,7 +201,7 @@ func TestSignalWaitWithInvalidTimeout(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test waiting with invalid timeout
-	_, stderr, exitCode := runCommand(binary, "signal", "wait", "test-signal", "--timeout", "invalid")
+	stderr, exitCode := runCommand(binary, "signal", "wait", "test-signal", "--timeout", "invalid")
 
 	// The command doesn't exist yet, so it should fail
 	assert.NotEqual(t, 0, exitCode, "Command should fail since signal command is not implemented yet")

@@ -16,7 +16,7 @@ func TestLoadSprint1MetaJSON(t *testing.T) {
 	// Create a Sprint 1 style meta.json (without is_archived field)
 	contextName := "sprint1-context"
 	contextDir := filepath.Join(testDir, contextName)
-	os.MkdirAll(contextDir, 0755)
+	os.MkdirAll(contextDir, 0o755)
 
 	sprint1Meta := map[string]interface{}{
 		"name":       contextName,
@@ -26,7 +26,7 @@ func TestLoadSprint1MetaJSON(t *testing.T) {
 
 	metaPath := filepath.Join(contextDir, "meta.json")
 	metaJSON, _ := json.Marshal(sprint1Meta)
-	os.WriteFile(metaPath, metaJSON, 0644)
+	os.WriteFile(metaPath, metaJSON, 0o644)
 
 	// Execute: List contexts (should load Sprint 1 context)
 	output, err := runCommandWithOutput("list")
@@ -48,7 +48,7 @@ func TestSprint1ContextsDefaultToNotArchived(t *testing.T) {
 	// Create Sprint 1 context
 	contextName := "sprint1-not-archived"
 	contextDir := filepath.Join(testDir, contextName)
-	os.MkdirAll(contextDir, 0755)
+	os.MkdirAll(contextDir, 0o755)
 
 	sprint1Meta := map[string]interface{}{
 		"name":       contextName,
@@ -59,7 +59,7 @@ func TestSprint1ContextsDefaultToNotArchived(t *testing.T) {
 
 	metaPath := filepath.Join(contextDir, "meta.json")
 	metaJSON, _ := json.Marshal(sprint1Meta)
-	os.WriteFile(metaPath, metaJSON, 0644)
+	os.WriteFile(metaPath, metaJSON, 0o644)
 
 	// Execute: Try to archive it
 	err := runCommand("archive", contextName)
@@ -85,7 +85,7 @@ func TestNewFeaturesWorkOnOldContexts(t *testing.T) {
 	// Create Sprint 1 context
 	contextName := "sprint1-feature-test"
 	contextDir := filepath.Join(testDir, contextName)
-	os.MkdirAll(contextDir, 0755)
+	os.MkdirAll(contextDir, 0o755)
 
 	// Sprint 1 meta.json
 	sprint1Meta := map[string]interface{}{
@@ -96,11 +96,11 @@ func TestNewFeaturesWorkOnOldContexts(t *testing.T) {
 
 	metaPath := filepath.Join(contextDir, "meta.json")
 	metaJSON, _ := json.Marshal(sprint1Meta)
-	os.WriteFile(metaPath, metaJSON, 0644)
+	os.WriteFile(metaPath, metaJSON, 0o644)
 
 	// Create Sprint 1 notes log
 	notesPath := filepath.Join(contextDir, "notes.log")
-	os.WriteFile(notesPath, []byte("2025-10-05T14:35:00Z|Sprint 1 note\n"), 0644)
+	os.WriteFile(notesPath, []byte("2025-10-05T14:35:00Z|Sprint 1 note\n"), 0o644)
 
 	// Test Sprint 2 features on Sprint 1 context
 	tests := []struct {
@@ -130,7 +130,7 @@ func TestBackwardCompatibilityWithDataPreservation(t *testing.T) {
 	// Create Sprint 1 context with all data files
 	contextName := "sprint1-full-context"
 	contextDir := filepath.Join(testDir, contextName)
-	os.MkdirAll(contextDir, 0755)
+	os.MkdirAll(contextDir, 0o755)
 
 	// Meta
 	sprint1Meta := map[string]interface{}{
@@ -139,19 +139,19 @@ func TestBackwardCompatibilityWithDataPreservation(t *testing.T) {
 		"end_time":   "2025-10-05T16:45:00Z",
 	}
 	metaJSON, _ := json.Marshal(sprint1Meta)
-	os.WriteFile(filepath.Join(contextDir, "meta.json"), metaJSON, 0644)
+	os.WriteFile(filepath.Join(contextDir, "meta.json"), metaJSON, 0o644)
 
 	// Notes
 	notesContent := "2025-10-05T14:35:00Z|Note 1\n2025-10-05T14:40:00Z|Note 2\n"
-	os.WriteFile(filepath.Join(contextDir, "notes.log"), []byte(notesContent), 0644)
+	os.WriteFile(filepath.Join(contextDir, "notes.log"), []byte(notesContent), 0o644)
 
 	// Files
 	filesContent := "2025-10-05T14:36:00Z|/path/to/file1.go\n"
-	os.WriteFile(filepath.Join(contextDir, "files.log"), []byte(filesContent), 0644)
+	os.WriteFile(filepath.Join(contextDir, "files.log"), []byte(filesContent), 0o644)
 
 	// Touches
 	touchesContent := "2025-10-05T14:37:00Z\n"
-	os.WriteFile(filepath.Join(contextDir, "touches.log"), []byte(touchesContent), 0644)
+	os.WriteFile(filepath.Join(contextDir, "touches.log"), []byte(touchesContent), 0o644)
 
 	// Execute: List (loads and processes Sprint 1 data)
 	output, _ := runCommandWithOutput("list")

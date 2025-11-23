@@ -37,8 +37,8 @@ func (n *Note) Escape() string {
 
 // Unescape unescapes special characters from log file storage
 func UnescapeNote(text string) string {
-	result := strings.ReplaceAll(text, "\\n", "\n")  // Unescape newlines
-	result = strings.ReplaceAll(result, "\\|", "|")  // Unescape pipes
+	result := strings.ReplaceAll(text, "\\n", "\n")   // Unescape newlines
+	result = strings.ReplaceAll(result, "\\|", "|")   // Unescape pipes
 	result = strings.ReplaceAll(result, "\\\\", "\\") // Unescape backslashes last
 	return result
 }
@@ -65,4 +65,3 @@ func ParseNoteLogLine(line string) (*Note, error) {
 		TextContent: UnescapeNote(parts[1]),
 	}, nil
 }
-

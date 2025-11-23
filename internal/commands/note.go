@@ -110,15 +110,15 @@ func ShowNoteWarning(currentCount int) {
 	newCount := currentCount + 1 // Count after adding this note
 
 	// Display appropriate warning based on new count
-	if newCount == warnAt1 {
+	switch {
+	case newCount == warnAt1:
 		fmt.Printf("⚠️  Context now has %d notes. Consider stopping and starting a new context for better organization.\n", newCount)
-	} else if newCount == warnAt2 {
+	case newCount == warnAt2:
 		fmt.Printf("⚠️  Context now has %d notes and is getting large. Consider chunking your work into smaller contexts.\n", newCount)
-	} else if newCount >= warnAt3 {
+	case newCount >= warnAt3:
 		// Periodic warnings every 25 notes after threshold 3
 		if (newCount-warnAt3)%25 == 0 {
 			fmt.Printf("⚠️  Context now has %d notes. This context is quite large - consider stopping and creating a new one.\n", newCount)
 		}
 	}
 }
-

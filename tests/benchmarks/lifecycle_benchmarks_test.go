@@ -112,7 +112,7 @@ func BenchmarkBulkArchiveOperation(b *testing.B) {
 			operations = 0
 			// Recreate contexts for next cycle
 			for _, name := range stoppedContexts {
-				if _, _, err := core.CreateContext(name+"-reset"); err == nil {
+				if _, _, err := core.CreateContext(name + "-reset"); err == nil {
 					core.StopContext()
 				}
 			}

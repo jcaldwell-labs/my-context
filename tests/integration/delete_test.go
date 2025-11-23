@@ -13,7 +13,7 @@ func TestDeleteWithConfirmationAccept(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "delete-test"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	runCommand("stop")
 
 	// Simulate user accepting confirmation
@@ -35,7 +35,7 @@ func TestDeleteWithConfirmationCancel(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "cancel-delete"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	runCommand("stop")
 
 	// Simulate user declining confirmation
@@ -59,7 +59,7 @@ func TestDeleteWithForceFlag(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "force-delete"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	runCommand("stop")
 
 	// Execute: Delete with --force
@@ -81,7 +81,7 @@ func TestDeleteActiveContext(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "active-delete-test"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	// Don't stop - leave active
 
 	// Execute: Try to delete active context
@@ -104,12 +104,12 @@ func TestDeletePreservesTransitionsLog(t *testing.T) {
 
 	// Create first context
 	context1 := "context-1"
-	createTestContext(t, testDir, context1)
+	createTestContext(t, context1)
 	runCommand("stop")
 
 	// Create second context (creates transition)
 	context2 := "context-2"
-	createTestContext(t, testDir, context2)
+	createTestContext(t, context2)
 	runCommand("stop")
 
 	// Read transitions log before deletion
@@ -136,8 +136,4 @@ func TestDeletePreservesTransitionsLog(t *testing.T) {
 	}
 }
 
-// Helper function
-func runCommandWithInput(args ...string) error {
-	// Placeholder - will simulate stdin input
-	return os.ErrNotExist
-}
+// Helper functions moved to helpers_test.go

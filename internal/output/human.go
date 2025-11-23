@@ -40,95 +40,139 @@ func getTimestampFormat() string {
 }
 
 // FormatContext formats a context with all its data for human-readable output
-func FormatContext(ctx interface{}, notes []*models.Note, files []*models.FileAssociation, touches []*models.TouchEvent) string {
+// contextInfo holds extracted context information
+type contextInfo struct {
+	name        string
+	status      string
+	startTime   time.Time
+	duration    time.Duration
+	hasMetadata bool
+	metadata    interface{}
+}
+
+// extractContextInfo extracts common fields from different context types
+func extractContextInfo(ctx interface{}) (contextInfo, error) {
+	var info contextInfo
+
+	switch c := ctx.(type) {
+	case *pkgmodels.ContextWithMetadata:
+		info.name = c.Name
+		info.status = c.Status
+		info.startTime = c.StartTime
+		info.duration = c.Duration()
+		info.hasMetadata = true
+		info.metadata = c.Metadata
+	case *models.Context:
+		info.name = c.Name
+		info.status = c.Status
+		info.startTime = c.StartTime
+		info.duration = c.Duration()
+		info.hasMetadata = false
+	default:
+		return info, fmt.Errorf("unknown context type")
+	}
+	return info, nil
+}
+
+// formatMetadataSection formats the metadata section if available
+func formatMetadataSection(hasMetadata bool, metadata interface{}) string {
+	if !hasMetadata {
+		return ""
+	}
+
+	meta, ok := metadata.(pkgmodels.ContextMetadata)
+	if !ok || (meta.CreatedBy == "" && meta.Parent == "" && len(meta.Labels) == 0) {
+		return ""
+	}
+
 	var sb strings.Builder
+	sb.WriteString("\nMetadata:\n")
+	if meta.CreatedBy != "" {
+		sb.WriteString(fmt.Sprintf("  Created by: %s\n", meta.CreatedBy))
+	}
+	if meta.Parent != "" {
+		sb.WriteString(fmt.Sprintf("  Parent: %s\n", meta.Parent))
+	}
+	if len(meta.Labels) > 0 {
+		sb.WriteString(fmt.Sprintf("  Labels: %s\n", strings.Join(meta.Labels, ", ")))
+	}
+	return sb.String()
+}
 
-	// Handle different context types
-	var name, status string
-	var startTime time.Time
-	var duration time.Duration
-	var hasMetadata bool
-	var metadata interface{}
+// formatNotesSection formats the notes section
+func formatNotesSection(notes []*models.Note) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("\nNotes (%d):\n", len(notes)))
 
-	// Try to cast to ContextWithMetadata first
-	if ctxWithMeta, ok := ctx.(*pkgmodels.ContextWithMetadata); ok {
-		name = ctxWithMeta.Name
-		status = ctxWithMeta.Status
-		startTime = ctxWithMeta.StartTime
-		duration = ctxWithMeta.Duration()
-		hasMetadata = true
-		metadata = ctxWithMeta.Metadata
-	} else if ctxBasic, ok := ctx.(*models.Context); ok {
-		// Fallback to basic context
-		name = ctxBasic.Name
-		status = ctxBasic.Status
-		startTime = ctxBasic.StartTime
-		duration = ctxBasic.Duration()
-		hasMetadata = false
-	} else {
-		// Unknown type, use reflection as last resort
-		sb.WriteString("Error: Unknown context type\n")
+	if len(notes) == 0 {
+		sb.WriteString("  (none)\n")
 		return sb.String()
 	}
 
-	sb.WriteString(fmt.Sprintf("Context: %s\n", name))
-	sb.WriteString(fmt.Sprintf("Status: %s\n", status))
-
-	// Format start time with relative time
-	sb.WriteString(fmt.Sprintf("Started: %s (%s ago)\n",
-		startTime.Format("2006-01-02 15:04:05"),
-		FormatDuration(duration)))
-
-	// Display metadata if available
-	if hasMetadata {
-		if meta, ok := metadata.(pkgmodels.ContextMetadata); ok && (meta.CreatedBy != "" || meta.Parent != "" || len(meta.Labels) > 0) {
-			sb.WriteString("\nMetadata:\n")
-			if meta.CreatedBy != "" {
-				sb.WriteString(fmt.Sprintf("  Created by: %s\n", meta.CreatedBy))
-			}
-			if meta.Parent != "" {
-				sb.WriteString(fmt.Sprintf("  Parent: %s\n", meta.Parent))
-			}
-			if len(meta.Labels) > 0 {
-				sb.WriteString(fmt.Sprintf("  Labels: %s\n", strings.Join(meta.Labels, ", ")))
-			}
-		}
+	timestampFormat := getTimestampFormat()
+	for _, note := range notes {
+		sb.WriteString(fmt.Sprintf("  [%s] %s\n",
+			note.Timestamp.Format(timestampFormat),
+			note.TextContent))
 	}
+	return sb.String()
+}
 
-	// Notes section
-	sb.WriteString(fmt.Sprintf("\nNotes (%d):\n", len(notes)))
-	if len(notes) == 0 {
-		sb.WriteString("  (none)\n")
-	} else {
-		timestampFormat := getTimestampFormat()
-		for _, note := range notes {
-			sb.WriteString(fmt.Sprintf("  [%s] %s\n",
-				note.Timestamp.Format(timestampFormat),
-				note.TextContent))
-		}
-	}
-
-	// Files section
+// formatFilesSection formats the files section
+func formatFilesSection(files []*models.FileAssociation) string {
+	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("\nFiles (%d):\n", len(files)))
+
 	if len(files) == 0 {
 		sb.WriteString("  (none)\n")
-	} else {
-		timestampFormat := getTimestampFormat()
-		for _, file := range files {
-			sb.WriteString(fmt.Sprintf("  [%s] %s\n",
-				file.Timestamp.Format(timestampFormat),
-				file.FilePath))
-		}
+		return sb.String()
 	}
 
-	// Activity section
+	timestampFormat := getTimestampFormat()
+	for _, file := range files {
+		sb.WriteString(fmt.Sprintf("  [%s] %s\n",
+			file.Timestamp.Format(timestampFormat),
+			file.FilePath))
+	}
+	return sb.String()
+}
+
+// formatActivitySection formats the activity section
+func formatActivitySection(touches []*models.TouchEvent) string {
+	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("\nActivity: %d touches", len(touches)))
+
 	if len(touches) > 0 {
 		timestampFormat := getTimestampFormat()
 		lastTouch := touches[len(touches)-1]
 		sb.WriteString(fmt.Sprintf(" (last: %s)", lastTouch.Timestamp.Format(timestampFormat)))
 	}
 	sb.WriteString("\n")
+	return sb.String()
+}
+
+func FormatContext(ctx interface{}, notes []*models.Note, files []*models.FileAssociation, touches []*models.TouchEvent) string {
+	var sb strings.Builder
+
+	// Extract context information
+	info, err := extractContextInfo(ctx)
+	if err != nil {
+		sb.WriteString("Error: Unknown context type\n")
+		return sb.String()
+	}
+
+	// Format header
+	sb.WriteString(fmt.Sprintf("Context: %s\n", info.name))
+	sb.WriteString(fmt.Sprintf("Status: %s\n", info.status))
+	sb.WriteString(fmt.Sprintf("Started: %s (%s ago)\n",
+		info.startTime.Format("2006-01-02 15:04:05"),
+		FormatDuration(info.duration)))
+
+	// Format sections
+	sb.WriteString(formatMetadataSection(info.hasMetadata, info.metadata))
+	sb.WriteString(formatNotesSection(notes))
+	sb.WriteString(formatFilesSection(files))
+	sb.WriteString(formatActivitySection(touches))
 
 	return sb.String()
 }
@@ -217,15 +261,16 @@ func FormatTransitionHistory(transitions []*models.ContextTransition) string {
 
 // FormatDuration formats a duration in a human-readable way
 func FormatDuration(d time.Duration) string {
-	if d < time.Minute {
+	switch {
+	case d < time.Minute:
 		return fmt.Sprintf("%ds", int(d.Seconds()))
-	} else if d < time.Hour {
+	case d < time.Hour:
 		return fmt.Sprintf("%dm", int(d.Minutes()))
-	} else if d < 24*time.Hour {
+	case d < 24*time.Hour:
 		hours := int(d.Hours())
 		minutes := int(d.Minutes()) % 60
 		return fmt.Sprintf("%dh %dm", hours, minutes)
-	} else {
+	default:
 		days := int(d.Hours()) / 24
 		hours := int(d.Hours()) % 24
 		return fmt.Sprintf("%dd %dh", days, hours)
@@ -241,4 +286,3 @@ func FormatSimpleMessage(message string) string {
 func FormatError(err error) string {
 	return "Error: " + err.Error() + "\n"
 }
-

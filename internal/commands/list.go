@@ -10,6 +10,130 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// filterByProject filters contexts by project name
+func filterByProject(contexts []*models.Context, projectFilter string) []*models.Context {
+	contextNames := make([]string, 0, len(contexts))
+	for _, ctx := range contexts {
+		contextNames = append(contextNames, ctx.Name)
+	}
+	filteredNames := core.FilterContextsByProject(contextNames, projectFilter)
+
+	filtered := make([]*models.Context, 0, len(contexts))
+	for _, ctx := range contexts {
+		for _, name := range filteredNames {
+			if ctx.Name == name {
+				filtered = append(filtered, ctx)
+				break
+			}
+		}
+	}
+	return filtered
+}
+
+// filterBySearch filters contexts by search term (case-insensitive)
+func filterBySearch(contexts []*models.Context, searchTerm string) []*models.Context {
+	var filtered []*models.Context
+	searchLower := strings.ToLower(searchTerm)
+	for _, ctx := range contexts {
+		if strings.Contains(strings.ToLower(ctx.Name), searchLower) {
+			filtered = append(filtered, ctx)
+		}
+	}
+	return filtered
+}
+
+// filterByTag filters contexts by tag/label
+func filterByTag(contexts []*models.Context, tagFilter string) []*models.Context {
+	var filtered []*models.Context
+	for _, ctx := range contexts {
+		ctxWithMeta, _, _, _, err := core.GetContextWithMetadata(ctx.Name)
+		if err != nil {
+			continue
+		}
+		for _, tag := range ctxWithMeta.Metadata.Labels {
+			if strings.EqualFold(tag, tagFilter) {
+				filtered = append(filtered, ctx)
+				break
+			}
+		}
+	}
+	return filtered
+}
+
+// filterByArchiveStatus filters contexts by archive status
+func filterByArchiveStatus(contexts []*models.Context, showArchived, activeOnly bool) []*models.Context {
+	if showArchived {
+		var filtered []*models.Context
+		for _, ctx := range contexts {
+			if ctx.IsArchived {
+				filtered = append(filtered, ctx)
+			}
+		}
+		return filtered
+	}
+	if !activeOnly {
+		var filtered []*models.Context
+		for _, ctx := range contexts {
+			if !ctx.IsArchived {
+				filtered = append(filtered, ctx)
+			}
+		}
+		return filtered
+	}
+	return contexts
+}
+
+// filterByActive filters to show only the active context
+func filterByActive(contexts []*models.Context, activeContextName string) []*models.Context {
+	for _, ctx := range contexts {
+		if ctx.Name == activeContextName {
+			return []*models.Context{ctx}
+		}
+	}
+	return []*models.Context{}
+}
+
+// applyFilters applies all filters to the context list
+func applyFilters(contexts []*models.Context, projectFilter, searchTerm, tagFilter string, showArchived, activeOnly bool, activeContextName string) []*models.Context {
+	if projectFilter != "" {
+		contexts = filterByProject(contexts, projectFilter)
+	}
+	if searchTerm != "" {
+		contexts = filterBySearch(contexts, searchTerm)
+	}
+	if tagFilter != "" {
+		contexts = filterByTag(contexts, tagFilter)
+	}
+	contexts = filterByArchiveStatus(contexts, showArchived, activeOnly)
+	if activeOnly {
+		contexts = filterByActive(contexts, activeContextName)
+	}
+	return contexts
+}
+
+// buildContextSummaries builds context summaries for JSON output
+func buildContextSummaries(contexts []*models.Context) []*output.ContextSummary {
+	summaries := make([]*output.ContextSummary, 0, len(contexts))
+	for _, ctx := range contexts {
+		notesLines, _ := core.ReadLog(core.GetNotesLogPath(ctx.Name))
+		filesLines, _ := core.ReadLog(core.GetFilesLogPath(ctx.Name))
+		touchesLines, _ := core.ReadLog(core.GetTouchLogPath(ctx.Name))
+
+		summary := &output.ContextSummary{
+			Name:            ctx.Name,
+			StartTime:       ctx.StartTime,
+			EndTime:         ctx.EndTime,
+			Status:          ctx.Status,
+			DurationSeconds: int(ctx.Duration().Seconds()),
+			NoteCount:       len(notesLines),
+			FileCount:       len(filesLines),
+			TouchCount:      len(touchesLines),
+		}
+		summaries = append(summaries, summary)
+	}
+	return summaries
+}
+
 func NewListCmd(jsonOutput *bool) *cobra.Command {
 	var (
 		projectFilter string
@@ -41,83 +165,6 @@ Supports filtering by project, search term, and archive status.`,
 				return err
 			}
 
-			// Apply filters
-			contexts := allContexts
-
-			// Filter by project
-			if projectFilter != "" {
-				var contextNames []string
-				for _, ctx := range contexts {
-					contextNames = append(contextNames, ctx.Name)
-				}
-				filteredNames := core.FilterContextsByProject(contextNames, projectFilter)
-
-				// Keep only matching contexts
-				var filtered []*models.Context
-				for _, ctx := range contexts {
-					for _, name := range filteredNames {
-						if ctx.Name == name {
-							filtered = append(filtered, ctx)
-							break
-						}
-					}
-				}
-				contexts = filtered
-			}
-
-			// Filter by search term (case-insensitive)
-			if searchTerm != "" {
-				var filtered []*models.Context
-				searchLower := strings.ToLower(searchTerm)
-				for _, ctx := range contexts {
-					if strings.Contains(strings.ToLower(ctx.Name), searchLower) {
-						filtered = append(filtered, ctx)
-					}
-				}
-				contexts = filtered
-			}
-
-			// Filter by tag
-			if tagFilter != "" {
-				var filtered []*models.Context
-				for _, ctx := range contexts {
-					// Load context with metadata to check tags
-					ctxWithMeta, _, _, _, err := core.GetContextWithMetadata(ctx.Name)
-					if err != nil {
-						continue // Skip if can't load metadata
-					}
-					// Check if context has the tag
-					for _, tag := range ctxWithMeta.Metadata.Labels {
-						if strings.EqualFold(tag, tagFilter) {
-							filtered = append(filtered, ctx)
-							break
-						}
-					}
-				}
-				contexts = filtered
-			}
-
-			// Filter by archive status
-			if showArchived {
-				// Show only archived
-				var filtered []*models.Context
-				for _, ctx := range contexts {
-					if ctx.IsArchived {
-						filtered = append(filtered, ctx)
-					}
-				}
-				contexts = filtered
-			} else if !activeOnly {
-				// Default: hide archived contexts
-				var filtered []*models.Context
-				for _, ctx := range contexts {
-					if !ctx.IsArchived {
-						filtered = append(filtered, ctx)
-					}
-				}
-				contexts = filtered
-			}
-
 			// Get active context
 			state, err := core.GetActiveContext()
 			if err != nil {
@@ -128,20 +175,10 @@ Supports filtering by project, search term, and archive status.`,
 				}
 				return err
 			}
-
 			activeContextName := state.GetActiveContextName()
 
-			// Filter by active only
-			if activeOnly {
-				var filtered []*models.Context
-				for _, ctx := range contexts {
-					if ctx.Name == activeContextName {
-						filtered = append(filtered, ctx)
-						break
-					}
-				}
-				contexts = filtered
-			}
+			// Apply all filters
+			contexts := applyFilters(allContexts, projectFilter, searchTerm, tagFilter, showArchived, activeOnly, activeContextName)
 
 			// Apply limit (default 10 unless --all)
 			totalCount := len(contexts)
@@ -151,41 +188,17 @@ Supports filtering by project, search term, and archive status.`,
 
 			// Output
 			if *jsonOutput {
-				// Build context summaries with counts
-				var summaries []*output.ContextSummary
-				for _, ctx := range contexts {
-					// Get counts from log files
-					notesLines, _ := core.ReadLog(core.GetNotesLogPath(ctx.Name))
-					filesLines, _ := core.ReadLog(core.GetFilesLogPath(ctx.Name))
-					touchesLines, _ := core.ReadLog(core.GetTouchLogPath(ctx.Name))
-
-					summary := &output.ContextSummary{
-						Name:            ctx.Name,
-						StartTime:       ctx.StartTime,
-						EndTime:         ctx.EndTime,
-						Status:          ctx.Status,
-						DurationSeconds: int(ctx.Duration().Seconds()),
-						NoteCount:       len(notesLines),
-						FileCount:       len(filesLines),
-						TouchCount:      len(touchesLines),
-					}
-					summaries = append(summaries, summary)
-				}
-
-				data := output.ListData{
-					Contexts: summaries,
-				}
+				summaries := buildContextSummaries(contexts)
+				data := output.ListData{Contexts: summaries}
 				jsonStr, err := output.FormatJSON("list", map[string]interface{}{"data": data})
 				if err != nil {
 					return err
 				}
 				fmt.Print(jsonStr)
 			} else {
-				// Print context home header
 				output.PrintContextHomeHeader(core.GetContextHomeDisplay(), core.GetContextCount())
 				fmt.Print(output.FormatContextList(contexts, activeContextName))
 
-				// Show truncation message if limited
 				if !showAll && limitCount > 0 && totalCount > len(contexts) {
 					fmt.Printf("\nShowing %d of %d contexts. Use --all to see all.\n", len(contexts), totalCount)
 				}

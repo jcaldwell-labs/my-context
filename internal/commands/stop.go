@@ -179,4 +179,3 @@ func detectCompletion(notes []*models.Note) bool {
 
 	return false
 }
-

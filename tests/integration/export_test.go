@@ -15,7 +15,7 @@ func TestExportSingleContextDefaultPath(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "test-export-context"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 
 	// Execute: Export the context
 	outputPath := filepath.Join(testDir, contextName+".md")
@@ -49,7 +49,7 @@ func TestExportWithCustomPath(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "test-custom-path"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 
 	// Execute: Export with custom path
 	customPath := filepath.Join(testDir, "exports", "my-export.md")
@@ -78,7 +78,7 @@ func TestExportAllFlag(t *testing.T) {
 	// Create multiple contexts
 	contexts := []string{"context-1", "context-2", "context-3"}
 	for _, name := range contexts {
-		createTestContext(t, testDir, name)
+		createTestContext(t, name)
 	}
 
 	// Execute: Export all
@@ -122,7 +122,7 @@ func TestExportMarkdownFormat(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "format-test"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 
 	// Add some notes and files to the context
 	runCommand("note", "Test note 1")
@@ -165,7 +165,7 @@ func TestExportJSONOutput(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "json-test"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 
 	// Execute: Export as JSON
 	outputPath := filepath.Join(testDir, contextName+".json")
@@ -193,39 +193,4 @@ func TestExportJSONOutput(t *testing.T) {
 	}
 }
 
-// Helper functions (to be implemented)
-
-func setupTestEnvironment(t *testing.T) string {
-	// Create temporary directory for test
-	t.Helper()
-	testDir, err := os.MkdirTemp("", "my-context-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create test directory: %v", err)
-	}
-	// Set MY_CONTEXT_HOME to test directory
-	os.Setenv("MY_CONTEXT_HOME", testDir)
-	return testDir
-}
-
-func cleanupTestEnvironment(t *testing.T, testDir string) {
-	t.Helper()
-	os.RemoveAll(testDir)
-	os.Unsetenv("MY_CONTEXT_HOME")
-}
-
-func createTestContext(t *testing.T, testDir, contextName string) {
-	t.Helper()
-	// This will fail until the actual implementation exists
-	err := runCommand("start", contextName)
-	if err != nil {
-		t.Logf("Note: Context creation failed (expected until implementation): %v", err)
-	}
-	runCommand("stop")
-}
-
-func runCommand(args ...string) error {
-	// This is a placeholder that will be replaced with actual command execution
-	// For now, it will fail (which is expected for TDD)
-	return os.ErrNotExist
-}
-
+// Helper functions moved to helpers_test.go

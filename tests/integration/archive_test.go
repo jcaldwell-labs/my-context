@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -14,7 +15,7 @@ func TestArchiveStoppedContext(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "stopped-context"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	runCommand("stop") // Ensure context is stopped
 
 	// Execute: Archive the context
@@ -32,7 +33,7 @@ func TestArchiveStoppedContext(t *testing.T) {
 
 	var meta map[string]interface{}
 	json.Unmarshal(content, &meta)
-	
+
 	if archived, ok := meta["is_archived"].(bool); !ok || !archived {
 		t.Error("Expected is_archived to be true in meta.json")
 	}
@@ -44,7 +45,7 @@ func TestArchiveActiveContext(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "active-context"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	// Don't stop - leave it active
 
 	// Execute: Try to archive active context
@@ -86,7 +87,7 @@ func TestArchiveHidesFromDefaultList(t *testing.T) {
 
 	// Create and archive a context
 	contextName := "to-be-archived"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	runCommand("stop")
 	runCommand("archive", contextName)
 
@@ -109,7 +110,7 @@ func TestArchivedFlagShowsArchivedContexts(t *testing.T) {
 
 	// Create and archive a context
 	contextName := "archived-context"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	runCommand("stop")
 	runCommand("archive", contextName)
 
@@ -131,13 +132,13 @@ func TestArchivePreservesData(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "data-preservation-test"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 
 	// Add notes and files
 	runCommand("note", "Important note")
 	testFile := filepath.Join(testDir, "test-file.txt")
-	os.WriteFile(testFile, []byte("test"), 0644)
-	
+	os.WriteFile(testFile, []byte("test"), 0o644)
+
 	runCommand("stop")
 
 	// Get pre-archive data
@@ -153,7 +154,7 @@ func TestArchivePreservesData(t *testing.T) {
 		t.Error("Notes file should still exist after archiving")
 	}
 
-	if string(preArchiveNotes) != string(postArchiveNotes) {
+	if !bytes.Equal(preArchiveNotes, postArchiveNotes) {
 		t.Error("Notes content should be preserved after archiving")
 	}
 }
@@ -164,9 +165,9 @@ func TestArchiveAlreadyArchived(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "already-archived"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	runCommand("stop")
-	
+
 	// Archive once
 	runCommand("archive", contextName)
 
@@ -183,9 +184,4 @@ func TestArchiveAlreadyArchived(t *testing.T) {
 	// Success case: command is idempotent
 }
 
-// Helper functions
-
-func runCommandWithOutput(args ...string) (string, error) {
-	// Placeholder - will return empty until implementation exists
-	return "", os.ErrNotExist
-}
+// Helper functions moved to helpers_test.go

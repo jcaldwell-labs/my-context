@@ -14,7 +14,7 @@ import (
 )
 
 // CreateContextWithMetadata creates a new context with metadata, handling duplicate names and previous active context
-func CreateContextWithMetadata(name string, createdBy string, parent string, labels []string) (*pkgmodels.ContextWithMetadata, string, error) {
+func CreateContextWithMetadata(name, createdBy, parent string, labels []string) (*pkgmodels.ContextWithMetadata, string, error) {
 	if err := EnsureContextHome(); err != nil {
 		return nil, "", err
 	}
@@ -177,7 +177,7 @@ func CreateContext(name string) (*intmodels.Context, string, error) {
 		GetFilesLogPath(finalDirName),
 		GetTouchLogPath(finalDirName),
 	} {
-		if err := os.WriteFile(path, []byte{}, 0600); err != nil {
+		if err := os.WriteFile(path, []byte{}, 0o600); err != nil {
 			return nil, "", err
 		}
 	}
@@ -396,7 +396,7 @@ func GetContextWithMetadata(contextName string) (*pkgmodels.ContextWithMetadata,
 		return nil, nil, nil, nil, err
 	}
 
-	var notes []*intmodels.Note
+	notes := make([]*intmodels.Note, 0, len(notesLines))
 	for _, line := range notesLines {
 		if line == "" {
 			continue
@@ -413,7 +413,7 @@ func GetContextWithMetadata(contextName string) (*pkgmodels.ContextWithMetadata,
 		return nil, nil, nil, nil, err
 	}
 
-	var files []*intmodels.FileAssociation
+	files := make([]*intmodels.FileAssociation, 0, len(filesLines))
 	for _, line := range filesLines {
 		if line == "" {
 			continue
@@ -430,7 +430,7 @@ func GetContextWithMetadata(contextName string) (*pkgmodels.ContextWithMetadata,
 		return nil, nil, nil, nil, err
 	}
 
-	var touches []*intmodels.TouchEvent
+	touches := make([]*intmodels.TouchEvent, 0, len(touchesLines))
 	for _, line := range touchesLines {
 		if line == "" {
 			continue
@@ -459,7 +459,7 @@ func GetContext(contextName string) (*intmodels.Context, []*intmodels.Note, []*i
 		return nil, nil, nil, nil, err
 	}
 
-	var notes []*intmodels.Note
+	notes := make([]*intmodels.Note, 0, len(notesLines))
 	for _, line := range notesLines {
 		if line == "" {
 			continue
@@ -477,7 +477,7 @@ func GetContext(contextName string) (*intmodels.Context, []*intmodels.Note, []*i
 		return nil, nil, nil, nil, err
 	}
 
-	var files []*intmodels.FileAssociation
+	files := make([]*intmodels.FileAssociation, 0, len(filesLines))
 	for _, line := range filesLines {
 		if line == "" {
 			continue
@@ -495,7 +495,7 @@ func GetContext(contextName string) (*intmodels.Context, []*intmodels.Note, []*i
 		return nil, nil, nil, nil, err
 	}
 
-	var touches []*intmodels.TouchEvent
+	touches := make([]*intmodels.TouchEvent, 0, len(touchesLines))
 	for _, line := range touchesLines {
 		if line == "" {
 			continue
@@ -517,7 +517,7 @@ func ListContexts() ([]*intmodels.Context, error) {
 		return nil, err
 	}
 
-	var contexts []*intmodels.Context
+	contexts := make([]*intmodels.Context, 0, len(dirs))
 	for _, dir := range dirs {
 		var context intmodels.Context
 		if err := ReadJSON(GetMetaJSONPath(dir), &context); err != nil {
@@ -541,7 +541,7 @@ func GetTransitions() ([]*intmodels.ContextTransition, error) {
 		return nil, err
 	}
 
-	var transitions []*intmodels.ContextTransition
+	transitions := make([]*intmodels.ContextTransition, 0, len(lines))
 	for _, line := range lines {
 		if line == "" {
 			continue
@@ -557,7 +557,7 @@ func GetTransitions() ([]*intmodels.ContextTransition, error) {
 }
 
 // ExportContext exports a context to a markdown file
-func ExportContext(contextName string, outputPath string) (string, error) {
+func ExportContext(contextName, outputPath string, asJSON bool) (string, error) {
 	// Load context data
 	ctx, notes, files, touches, err := GetContext(contextName)
 	if err != nil {
@@ -565,24 +565,36 @@ func ExportContext(contextName string, outputPath string) (string, error) {
 	}
 
 	// Convert to model types for export
-	var noteModels []intmodels.Note
+	noteModels := make([]intmodels.Note, 0, len(notes))
 	for _, n := range notes {
 		noteModels = append(noteModels, *n)
 	}
 
-	var fileModels []intmodels.FileAssociation
+	fileModels := make([]intmodels.FileAssociation, 0, len(files))
 	for _, f := range files {
 		fileModels = append(fileModels, *f)
 	}
 
-	// Generate markdown content
-	content := output.FormatExportMarkdown(ctx, noteModels, fileModels, len(touches))
+	// Generate content based on format
+	var content string
+	var defaultExt string
+	if asJSON {
+		jsonContent, err := output.FormatExportJSON(ctx, noteModels, fileModels, len(touches))
+		if err != nil {
+			return "", fmt.Errorf("failed to generate JSON export: %w", err)
+		}
+		content = jsonContent
+		defaultExt = ".json"
+	} else {
+		content = output.FormatExportMarkdown(ctx, noteModels, fileModels, len(touches))
+		defaultExt = ".md"
+	}
 
 	// Determine output file path
 	if outputPath == "" {
 		// Default: sanitized context name in current directory
 		sanitized := SanitizeFilename(contextName)
-		outputPath = sanitized + ".md"
+		outputPath = sanitized + defaultExt
 	}
 
 	// Create parent directories if needed
@@ -591,15 +603,15 @@ func ExportContext(contextName string, outputPath string) (string, error) {
 	}
 
 	// Write file
-	if err := os.WriteFile(outputPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(content), 0o600); err != nil {
 		return "", fmt.Errorf("failed to write export file: %w", err)
 	}
 
 	return outputPath, nil
 }
 
-// ExportAllContexts exports all contexts to separate markdown files in a directory
-func ExportAllContexts(outputDir string) ([]string, error) {
+// ExportAllContexts exports all contexts to separate files in a directory
+func ExportAllContexts(outputDir string, asJSON bool) ([]string, error) {
 	contexts, err := ListContexts()
 	if err != nil {
 		return nil, err
@@ -609,12 +621,17 @@ func ExportAllContexts(outputDir string) ([]string, error) {
 		return nil, err
 	}
 
-	var exportedPaths []string
+	ext := ".md"
+	if asJSON {
+		ext = ".json"
+	}
+
+	exportedPaths := make([]string, 0, len(contexts))
 	for _, ctx := range contexts {
 		sanitized := SanitizeFilename(ctx.Name)
-		outputPath := filepath.Join(outputDir, sanitized+".md")
+		outputPath := filepath.Join(outputDir, sanitized+ext)
 
-		path, err := ExportContext(ctx.Name, outputPath)
+		path, err := ExportContext(ctx.Name, outputPath, asJSON)
 		if err != nil {
 			continue // Skip failed exports
 		}
@@ -655,7 +672,7 @@ func ArchiveContext(contextName string) error {
 }
 
 // DeleteContext permanently removes a context and all its data
-func DeleteContext(contextName string, force bool, confirmed bool) error {
+func DeleteContext(contextName string, force, confirmed bool) error {
 	// Load context
 	var ctx intmodels.Context
 	metaPath := GetMetaJSONPath(contextName)
@@ -710,6 +727,49 @@ type ContextFilter struct {
 }
 
 // ListContextsFiltered returns contexts matching the filter criteria
+// matchesFilter checks if a context matches the given filter criteria
+func matchesFilter(ctx *intmodels.Context, filter ContextFilter) bool {
+	// Skip archived contexts unless explicitly requested
+	if ctx.IsArchived && !filter.ShowArchived && !filter.Archived {
+		return false
+	}
+
+	// If --archived flag, show ONLY archived
+	if filter.Archived && !ctx.IsArchived {
+		return false
+	}
+
+	// If --active-only, show ONLY active
+	if filter.ActiveOnly && !ctx.IsActive() {
+		return false
+	}
+
+	// Project filter (case-insensitive)
+	if filter.Project != "" {
+		projectName := ExtractProjectName(ctx.Name)
+		if !strings.EqualFold(projectName, filter.Project) {
+			return false
+		}
+	}
+
+	// Search filter (case-insensitive substring)
+	if filter.Search != "" {
+		if !strings.Contains(strings.ToLower(ctx.Name), strings.ToLower(filter.Search)) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// applyLimit applies the limit to the filtered contexts
+func applyLimit(contexts []*intmodels.Context, limit int) []*intmodels.Context {
+	if limit > 0 && len(contexts) > limit {
+		return contexts[:limit]
+	}
+	return contexts
+}
+
 func ListContextsFiltered(filter ContextFilter) ([]*intmodels.Context, error) {
 	// Get all contexts
 	allContexts, err := ListContexts()
@@ -717,49 +777,16 @@ func ListContextsFiltered(filter ContextFilter) ([]*intmodels.Context, error) {
 		return nil, err
 	}
 
-	var filtered []*intmodels.Context
-
-	// Apply filters
+	// Filter contexts
+	filtered := make([]*intmodels.Context, 0, len(allContexts))
 	for _, ctx := range allContexts {
-		// Skip archived contexts unless explicitly requested
-		if ctx.IsArchived && !filter.ShowArchived && !filter.Archived {
-			continue
+		if matchesFilter(ctx, filter) {
+			filtered = append(filtered, ctx)
 		}
-
-		// If --archived flag, show ONLY archived
-		if filter.Archived && !ctx.IsArchived {
-			continue
-		}
-
-		// If --active-only, show ONLY active
-		if filter.ActiveOnly && !ctx.IsActive() {
-			continue
-		}
-
-		// Project filter (case-insensitive)
-		if filter.Project != "" {
-			projectName := ExtractProjectName(ctx.Name)
-			if !strings.EqualFold(projectName, filter.Project) {
-				continue
-			}
-		}
-
-		// Search filter (case-insensitive substring)
-		if filter.Search != "" {
-			if !strings.Contains(strings.ToLower(ctx.Name), strings.ToLower(filter.Search)) {
-				continue
-			}
-		}
-
-		filtered = append(filtered, ctx)
 	}
 
 	// Apply limit
-	if filter.Limit > 0 && len(filtered) > filter.Limit {
-		filtered = filtered[:filter.Limit]
-	}
-
-	return filtered, nil
+	return applyLimit(filtered, filter.Limit), nil
 }
 
 // AddTags adds tags to a context and returns the list of newly added tags
@@ -874,7 +901,7 @@ func GetAllTags() (map[string]int, error) {
 }
 
 // SetParent sets the parent context for a child context
-func SetParent(childName string, parentName string) error {
+func SetParent(childName, parentName string) error {
 	// Load child context with metadata
 	ctx, _, _, _, err := GetContextWithMetadata(childName)
 	if err != nil {

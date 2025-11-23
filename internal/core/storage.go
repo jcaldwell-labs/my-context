@@ -68,12 +68,12 @@ func isWSL() bool {
 // EnsureContextHome creates the context home directory if it doesn't exist
 func EnsureContextHome() error {
 	home := GetContextHome()
-	return os.MkdirAll(home, 0700)
+	return os.MkdirAll(home, 0o700)
 }
 
 // CreateDir creates a directory with proper permissions
 func CreateDir(path string) error {
-	return os.MkdirAll(path, 0700)
+	return os.MkdirAll(path, 0o700)
 }
 
 // ReadJSON reads and unmarshals JSON from a file
@@ -94,7 +94,7 @@ func WriteJSON(path string, v interface{}) error {
 
 	// Write to temp file first
 	tmpPath := path + ".tmp"
-	err = os.WriteFile(tmpPath, data, 0600)
+	err = os.WriteFile(tmpPath, data, 0o600)
 	if err != nil {
 		return err
 	}
@@ -104,8 +104,8 @@ func WriteJSON(path string, v interface{}) error {
 }
 
 // AppendLog appends a line to a log file
-func AppendLog(path string, line string) error {
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+func AppendLog(path, line string) error {
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
 	}
@@ -259,72 +259,84 @@ func SanitizeFilename(name string) string {
 // CreateParentDirs creates parent directories for a file path if they don't exist
 func CreateParentDirs(filePath string) error {
 	dir := filepath.Dir(filePath)
-	return os.MkdirAll(dir, 0755)
+	return os.MkdirAll(dir, 0o755)
 }
 
 // WriteMarkdown writes markdown content to a file atomically
-func WriteMarkdown(path string, content string) error {
+func WriteMarkdown(path, content string) error {
 	// Create parent directories if they don't exist
 	parentDir := filepath.Dir(path)
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
+	if err := os.MkdirAll(parentDir, 0o755); err != nil {
 		return err
 	}
 
 	// Write atomically: temp file + rename
 	tempPath := path + ".tmp"
-	if err := os.WriteFile(tempPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(tempPath, []byte(content), 0o600); err != nil {
 		return err
 	}
 
 	return os.Rename(tempPath, path)
 }
 
-// ReadNotes parses notes.log and returns structured data
-func ReadNotes(contextDir string) ([]struct{ Timestamp string; Content string }, error) {
-	notesPath := filepath.Join(contextDir, "notes.log")
-	lines, err := ReadLog(notesPath)
+// parseTwoColumnLog is a helper function that parses log files with timestamp|value format
+func parseTwoColumnLog[T any](logPath string, createItem func(timestamp, value string) T) ([]T, error) {
+	lines, err := ReadLog(logPath)
 	if err != nil {
 		return nil, err
 	}
 
-	var notes []struct{ Timestamp string; Content string }
+	var items []T
 	for _, line := range lines {
 		if line == "" {
 			continue
 		}
 		parts := strings.SplitN(line, "|", 2)
 		if len(parts) == 2 {
-			notes = append(notes, struct{ Timestamp string; Content string }{
-				Timestamp: parts[0],
-				Content:   parts[1],
-			})
+			items = append(items, createItem(parts[0], parts[1]))
 		}
 	}
-	return notes, nil
+	return items, nil
+}
+
+// ReadNotes parses notes.log and returns structured data
+func ReadNotes(contextDir string) ([]struct {
+	Timestamp string
+	Content   string
+}, error) {
+	notesPath := filepath.Join(contextDir, "notes.log")
+	return parseTwoColumnLog(notesPath, func(timestamp, content string) struct {
+		Timestamp string
+		Content   string
+	} {
+		return struct {
+			Timestamp string
+			Content   string
+		}{
+			Timestamp: timestamp,
+			Content:   content,
+		}
+	})
 }
 
 // ReadFiles parses files.log and returns structured data
-func ReadFiles(contextDir string) ([]struct{ Timestamp string; Path string }, error) {
+func ReadFiles(contextDir string) ([]struct {
+	Timestamp string
+	Path      string
+}, error) {
 	filesPath := filepath.Join(contextDir, "files.log")
-	lines, err := ReadLog(filesPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var files []struct{ Timestamp string; Path string }
-	for _, line := range lines {
-		if line == "" {
-			continue
+	return parseTwoColumnLog(filesPath, func(timestamp, path string) struct {
+		Timestamp string
+		Path      string
+	} {
+		return struct {
+			Timestamp string
+			Path      string
+		}{
+			Timestamp: timestamp,
+			Path:      path,
 		}
-		parts := strings.SplitN(line, "|", 2)
-		if len(parts) == 2 {
-			files = append(files, struct{ Timestamp string; Path string }{
-				Timestamp: parts[0],
-				Path:      parts[1],
-			})
-		}
-	}
-	return files, nil
+	})
 }
 
 // ReadTouches parses touches.log and returns structured data
@@ -335,7 +347,7 @@ func ReadTouches(contextDir string) ([]struct{ Timestamp string }, error) {
 		return nil, err
 	}
 
-	var touches []struct{ Timestamp string }
+	touches := make([]struct{ Timestamp string }, 0, len(lines))
 	for _, line := range lines {
 		if line == "" {
 			continue

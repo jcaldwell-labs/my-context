@@ -17,6 +17,37 @@ import (
 
 var resumeLast bool
 
+// findTargetContext finds the context to resume based on arguments and flags
+func findTargetContext(args []string, useLast bool) (*models.Context, error) {
+	if useLast {
+		return core.GetMostRecentStopped()
+	}
+
+	if len(args) == 0 {
+		return nil, errors.New("must specify context name/pattern or use --last flag")
+	}
+
+	pattern := args[0]
+	contexts, err := core.FindContextsByPattern(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	switch len(contexts) {
+	case 0:
+		availableContexts, listErr := getAvailableStoppedContexts()
+		errMsg := fmt.Sprintf("No stopped contexts match pattern %q", pattern)
+		if listErr == nil && len(availableContexts) > 0 {
+			errMsg += fmt.Sprintf(". Available stopped contexts: %s", strings.Join(availableContexts, ", "))
+		}
+		return nil, errors.New(errMsg)
+	case 1:
+		return contexts[0], nil
+	default:
+		return PromptSelection(contexts)
+	}
+}
+
 func NewResumeCmd(jsonOutput *bool) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "resume <name|pattern>",
@@ -46,70 +77,15 @@ func NewResumeCmd(jsonOutput *bool) *cobra.Command {
 				return errors.New(errMsg)
 			}
 
-			var targetContext *models.Context
-
-			// Handle --last flag
-			if resumeLast {
-				targetContext, err = core.GetMostRecentStopped()
-				if err != nil {
-					if *jsonOutput {
-						jsonStr, _ := output.FormatJSONError("resume", 1, err.Error())
-						fmt.Print(jsonStr)
-						return nil
-					}
-					return err
-				}
-			} else if len(args) == 0 {
-				// No arguments and no --last flag
-				errMsg := "Must specify context name/pattern or use --last flag"
+			// Find the target context to resume
+			targetContext, err := findTargetContext(args, resumeLast)
+			if err != nil {
 				if *jsonOutput {
-					jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
+					jsonStr, _ := output.FormatJSONError("resume", 1, err.Error())
 					fmt.Print(jsonStr)
 					return nil
 				}
-				return errors.New(errMsg)
-			} else {
-				// Handle name/pattern argument
-				pattern := args[0]
-				contexts, err := core.FindContextsByPattern(pattern)
-				if err != nil {
-					if *jsonOutput {
-						jsonStr, _ := output.FormatJSONError("resume", 2, err.Error())
-						fmt.Print(jsonStr)
-						return nil
-					}
-					return err
-				}
-
-				if len(contexts) == 0 {
-					// No matches found
-					availableContexts, listErr := getAvailableStoppedContexts()
-					errMsg := fmt.Sprintf("No stopped contexts match pattern %q", pattern)
-					if listErr == nil && len(availableContexts) > 0 {
-						errMsg += fmt.Sprintf(". Available stopped contexts: %s", strings.Join(availableContexts, ", "))
-					}
-
-					if *jsonOutput {
-						jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
-						fmt.Print(jsonStr)
-						return nil
-					}
-					return errors.New(errMsg)
-				} else if len(contexts) == 1 {
-					// Single match - use it directly
-					targetContext = contexts[0]
-				} else {
-					// Multiple matches - prompt for selection
-					targetContext, err = PromptSelection(contexts)
-					if err != nil {
-						if *jsonOutput {
-							jsonStr, _ := output.FormatJSONError("resume", 3, err.Error())
-							fmt.Print(jsonStr)
-							return nil
-						}
-						return err
-					}
-				}
+				return err
 			}
 
 			// Resume the selected context
@@ -132,9 +108,9 @@ func resumeContext(ctx *models.Context, jsonOutput *bool) error {
 	// Log the transition
 	now := time.Now()
 	transition := &models.ContextTransition{
-		Timestamp:       now,
-		NewContext:      &ctx.Name,
-		TransitionType:  models.TransitionStart,
+		Timestamp:      now,
+		NewContext:     &ctx.Name,
+		TransitionType: models.TransitionStart,
 	}
 
 	if err := core.AppendLog(core.GetTransitionsLogPath(), transition.ToLogLine()); err != nil {

@@ -10,6 +10,7 @@ import (
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/jefferycaldwell/my-context-copilot/internal/models"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
+	pkgmodels "github.com/jefferycaldwell/my-context-copilot/pkg/models"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -19,6 +20,77 @@ var startForce bool
 var startCreatedBy string
 var startParent string
 var startLabels string
+
+// handleDuplicateContext handles the case where a context with the same name already exists
+func handleDuplicateContext(existingContext *models.Context, contextName string, force bool) (newName string, shouldResume bool, err error) {
+	if force {
+		// Force flag - let CreateContext handle auto-suffixing
+		return contextName, false, nil
+	}
+
+	isInteractive := term.IsTerminal(int(os.Stdin.Fd()))
+	if isInteractive {
+		// Interactive mode - prompt for resume
+		resume, err := promptResume(existingContext)
+		if err != nil {
+			return "", false, err
+		}
+
+		if resume {
+			return "", true, nil
+		}
+
+		// User declined resume - prompt for new name
+		newName, err := promptNewName(contextName)
+		if err != nil {
+			return "", false, err
+		}
+		return newName, false, nil
+	}
+
+	// Non-interactive mode - auto-resume
+	return "", true, nil
+}
+
+// parseLabels parses comma-separated labels string
+func parseLabels(labelsStr string) []string {
+	if labelsStr == "" {
+		return nil
+	}
+	return strings.Split(strings.ReplaceAll(labelsStr, " ", ""), ",")
+}
+
+// outputStartResult outputs the result of starting a context
+func outputStartResult(context *pkgmodels.ContextWithMetadata, originalName, previousContext string, jsonOutput *bool) error {
+	if *jsonOutput {
+		data := output.StartData{
+			ContextName:  context.Name,
+			OriginalName: originalName,
+			WasDuplicate: context.Name != core.SanitizeContextName(originalName),
+		}
+		if previousContext != "" {
+			data.PreviousContext = &previousContext
+		}
+		jsonStr, err := output.FormatJSON("start", map[string]interface{}{"data": data})
+		if err != nil {
+			return err
+		}
+		fmt.Print(jsonStr)
+	} else {
+		fmt.Printf("Context Home: %s\n\n", core.GetContextHomeDisplay())
+
+		if context.Name != originalName {
+			fmt.Printf("Context \"%s\" already exists.\n", originalName)
+		}
+
+		if previousContext != "" {
+			fmt.Printf("Stopped context: %s\n", previousContext)
+		}
+
+		fmt.Printf("✓ Started: %s\n", context.Name)
+	}
+	return nil
+}
 
 func NewStartCmd(jsonOutput *bool) *cobra.Command {
 	cmd := &cobra.Command{
@@ -42,55 +114,25 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 			// Check for duplicate context name (smart resume)
 			existingContext, err := core.FindContextByName(contextName)
 			if err == nil && existingContext.Status == "stopped" {
-				if startForce {
-					// Force flag - never prompt, auto-resolve duplicates
-					// Let CreateContext handle auto-suffixing (_2, _3, etc.)
-					// This makes --force truly script-friendly by bypassing ALL prompts
-				} else {
-					// Normal flow - check if interactive
-					isInteractive := term.IsTerminal(int(os.Stdin.Fd()))
-
-					if isInteractive {
-						// Interactive mode - prompt for resume
-						resume, err := promptResume(existingContext)
-						if err != nil {
-							if *jsonOutput {
-								jsonStr, _ := output.FormatJSONError("start", 3, err.Error())
-								fmt.Print(jsonStr)
-								return nil
-							}
-							return err
-						}
-
-						if resume {
-							// Resume the existing context
-							return resumeExistingContext(existingContext, jsonOutput)
-						} else {
-							// User declined resume - prompt for new name
-							newName, err := promptNewName(contextName)
-							if err != nil {
-								if *jsonOutput {
-									jsonStr, _ := output.FormatJSONError("start", 3, err.Error())
-									fmt.Print(jsonStr)
-									return nil
-								}
-								return err
-							}
-							contextName = newName
-						}
-					} else {
-						// Non-interactive mode - auto-resume if duplicate
-						// Preserves script behavior: duplicate name resumes existing context
-						return resumeExistingContext(existingContext, jsonOutput)
+				newName, shouldResume, err := handleDuplicateContext(existingContext, contextName, startForce)
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("start", 3, err.Error())
+						fmt.Print(jsonStr)
+						return nil
 					}
+					return err
+				}
+				if shouldResume {
+					return resumeExistingContext(existingContext, jsonOutput)
+				}
+				if newName != "" {
+					contextName = newName
 				}
 			}
 
 			// Parse labels
-			var labels []string
-			if startLabels != "" {
-				labels = strings.Split(strings.ReplaceAll(startLabels, " ", ""), ",")
-			}
+			labels := parseLabels(startLabels)
 
 			// Create the context
 			context, previousContext, err := core.CreateContextWithMetadata(contextName, startCreatedBy, startParent, labels)
@@ -104,38 +146,7 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 			}
 
 			// Output
-			if *jsonOutput {
-				data := output.StartData{
-					ContextName:  context.Name,
-					OriginalName: contextName,
-					WasDuplicate: context.Name != core.SanitizeContextName(contextName),
-				}
-				if previousContext != "" {
-					data.PreviousContext = &previousContext
-				}
-				jsonStr, err := output.FormatJSON("start", map[string]interface{}{"data": data})
-				if err != nil {
-					return err
-				}
-				fmt.Print(jsonStr)
-			} else {
-				// Print context home
-				fmt.Printf("Context Home: %s\n\n", core.GetContextHomeDisplay())
-
-				// Check if name was modified due to duplicate (e.g., "Bug fix" → "Bug fix_2")
-				if context.Name != contextName {
-					fmt.Printf("Context \"%s\" already exists.\n", contextName)
-				}
-
-				// Show previous context stop message
-				if previousContext != "" {
-					fmt.Printf("Stopped context: %s\n", previousContext)
-				}
-
-				fmt.Printf("✓ Started: %s\n", context.Name)
-			}
-
-			return nil
+			return outputStartResult(context, contextName, previousContext, jsonOutput)
 		},
 	}
 
@@ -172,11 +183,12 @@ func promptResume(ctx *models.Context) (bool, error) {
 	}
 
 	response = strings.ToLower(strings.TrimSpace(response))
-	if response == "y" || response == "yes" || response == "" {
+	switch response {
+	case "y", "yes", "":
 		return true, nil
-	} else if response == "n" || response == "no" {
+	case "n", "no":
 		return false, nil
-	} else {
+	default:
 		return false, fmt.Errorf("invalid response: %s (expected Y/n)", response)
 	}
 }
@@ -246,9 +258,9 @@ func resumeExistingContext(ctx *models.Context, jsonOutput *bool) error {
 	// Output
 	if *jsonOutput {
 		data := output.StartData{
-			ContextName:     ctx.Name,
-			OriginalName:    ctx.Name,
-			WasDuplicate:    false,
+			ContextName:  ctx.Name,
+			OriginalName: ctx.Name,
+			WasDuplicate: false,
 		}
 		if previousContext != "" {
 			data.PreviousContext = &previousContext

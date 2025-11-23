@@ -62,7 +62,7 @@ Examples:
 
 				response = strings.TrimSpace(strings.ToLower(response))
 				if response != "yes" && response != "y" {
-					fmt.Println("Delete cancelled.")
+					fmt.Println("Delete canceled.")
 					return nil
 				}
 			}

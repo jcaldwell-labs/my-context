@@ -9,9 +9,83 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewTreeCmd(jsonOutput *bool) *cobra.Command {
-	var showAll bool
+// showSingleContextTree shows the tree for a specific context
+func showSingleContextTree(contextName string, jsonOutput *bool) error {
+	tree, err := core.GetContextTree(contextName)
+	if err != nil {
+		if *jsonOutput {
+			jsonStr, _ := output.FormatJSONError("tree", 1, err.Error())
+			fmt.Print(jsonStr)
+			return nil
+		}
+		return err
+	}
 
+	if *jsonOutput {
+		jsonStr, err := json.MarshalIndent(tree, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(jsonStr))
+	} else {
+		fmt.Printf("Context hierarchy for \"%s\":\n\n", contextName)
+		printTree(tree, "", true)
+	}
+	return nil
+}
+
+// showAllRootContexts shows all root contexts
+func showAllRootContexts(jsonOutput *bool) error {
+	roots, err := core.GetRootContexts()
+	if err != nil {
+		if *jsonOutput {
+			jsonStr, _ := output.FormatJSONError("tree", 2, err.Error())
+			fmt.Print(jsonStr)
+			return nil
+		}
+		return err
+	}
+
+	if len(roots) == 0 {
+		if *jsonOutput {
+			data := map[string]interface{}{"message": "No contexts found"}
+			jsonStr, _ := output.FormatJSON("tree", map[string]interface{}{"data": data})
+			fmt.Print(jsonStr)
+		} else {
+			fmt.Println("No contexts found")
+		}
+		return nil
+	}
+
+	// Build trees for all roots
+	trees := make([]*core.ContextTreeNode, 0, len(roots))
+	for _, rootName := range roots {
+		tree, err := core.GetContextTree(rootName)
+		if err != nil {
+			continue
+		}
+		trees = append(trees, tree)
+	}
+
+	if *jsonOutput {
+		jsonStr, err := json.MarshalIndent(trees, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(jsonStr))
+	} else {
+		fmt.Printf("Context hierarchies (%d root contexts):\n\n", len(roots))
+		for i, tree := range trees {
+			printTree(tree, "", true)
+			if i < len(trees)-1 {
+				fmt.Println()
+			}
+		}
+	}
+	return nil
+}
+
+func NewTreeCmd(jsonOutput *bool) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tree [context]",
 		Short: "Show context hierarchy as a tree",
@@ -24,88 +98,11 @@ Examples:
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 1 {
-				// Show tree for specific context
-				contextName := args[0]
-
-				tree, err := core.GetContextTree(contextName)
-				if err != nil {
-					if *jsonOutput {
-						jsonStr, _ := output.FormatJSONError("tree", 1, err.Error())
-						fmt.Print(jsonStr)
-						return nil
-					}
-					return err
-				}
-
-				// Output
-				if *jsonOutput {
-					jsonStr, err := json.MarshalIndent(tree, "", "  ")
-					if err != nil {
-						return err
-					}
-					fmt.Println(string(jsonStr))
-				} else {
-					fmt.Printf("Context hierarchy for \"%s\":\n\n", contextName)
-					printTree(tree, "", true)
-				}
-			} else {
-				// Show all root contexts
-				roots, err := core.GetRootContexts()
-				if err != nil {
-					if *jsonOutput {
-						jsonStr, _ := output.FormatJSONError("tree", 2, err.Error())
-						fmt.Print(jsonStr)
-						return nil
-					}
-					return err
-				}
-
-				if len(roots) == 0 {
-					if *jsonOutput {
-						data := map[string]interface{}{
-							"message": "No contexts found",
-						}
-						jsonStr, _ := output.FormatJSON("tree", map[string]interface{}{"data": data})
-						fmt.Print(jsonStr)
-					} else {
-						fmt.Println("No contexts found")
-					}
-					return nil
-				}
-
-				// Build trees for all roots
-				var trees []*core.ContextTreeNode
-				for _, rootName := range roots {
-					tree, err := core.GetContextTree(rootName)
-					if err != nil {
-						continue // Skip roots that can't be built
-					}
-					trees = append(trees, tree)
-				}
-
-				// Output
-				if *jsonOutput {
-					jsonStr, err := json.MarshalIndent(trees, "", "  ")
-					if err != nil {
-						return err
-					}
-					fmt.Println(string(jsonStr))
-				} else {
-					fmt.Println("Context hierarchy (all root contexts):\n")
-					for i, tree := range trees {
-						printTree(tree, "", true)
-						if i < len(trees)-1 {
-							fmt.Println()
-						}
-					}
-				}
+				return showSingleContextTree(args[0], jsonOutput)
 			}
-
-			return nil
+			return showAllRootContexts(jsonOutput)
 		},
 	}
-
-	cmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show all contexts including orphans")
 
 	return cmd
 }
