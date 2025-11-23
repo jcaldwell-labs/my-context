@@ -54,7 +54,7 @@ type ContextWithMetadata struct {
 }
 
 // NewContextWithMetadata creates a new context with metadata
-func NewContextWithMetadata(name string, createdBy string, parent string, labels []string) *ContextWithMetadata {
+func NewContextWithMetadata(name, createdBy, parent string, labels []string) *ContextWithMetadata {
 	now := time.Now()
 	metadata := ContextMetadata{
 		CreatedBy: createdBy,

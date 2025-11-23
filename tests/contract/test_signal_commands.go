@@ -19,7 +19,7 @@ func buildTestBinary(t *testing.T) string {
 }
 
 // runCommand executes a my-context command and returns stdout, stderr, and exit code
-func runCommand(binary string, args ...string) (stdoutStr string, stderrStr string, exitCode int) {
+func runCommand(binary string, args ...string) (stdoutStr, stderrStr string, exitCode int) {
 	cmd := exec.Command(binary, args...)
 	stdout, stdoutErr := cmd.StdoutPipe()
 	if stdoutErr != nil {

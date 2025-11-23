@@ -14,7 +14,7 @@ import (
 )
 
 // CreateContextWithMetadata creates a new context with metadata, handling duplicate names and previous active context
-func CreateContextWithMetadata(name string, createdBy string, parent string, labels []string) (*pkgmodels.ContextWithMetadata, string, error) {
+func CreateContextWithMetadata(name, createdBy, parent string, labels []string) (*pkgmodels.ContextWithMetadata, string, error) {
 	if err := EnsureContextHome(); err != nil {
 		return nil, "", err
 	}
@@ -557,7 +557,7 @@ func GetTransitions() ([]*intmodels.ContextTransition, error) {
 }
 
 // ExportContext exports a context to a markdown file
-func ExportContext(contextName string, outputPath string, asJSON bool) (string, error) {
+func ExportContext(contextName, outputPath string, asJSON bool) (string, error) {
 	// Load context data
 	ctx, notes, files, touches, err := GetContext(contextName)
 	if err != nil {
@@ -672,7 +672,7 @@ func ArchiveContext(contextName string) error {
 }
 
 // DeleteContext permanently removes a context and all its data
-func DeleteContext(contextName string, force bool, confirmed bool) error {
+func DeleteContext(contextName string, force, confirmed bool) error {
 	// Load context
 	var ctx intmodels.Context
 	metaPath := GetMetaJSONPath(contextName)
@@ -727,6 +727,49 @@ type ContextFilter struct {
 }
 
 // ListContextsFiltered returns contexts matching the filter criteria
+// matchesFilter checks if a context matches the given filter criteria
+func matchesFilter(ctx *intmodels.Context, filter ContextFilter) bool {
+	// Skip archived contexts unless explicitly requested
+	if ctx.IsArchived && !filter.ShowArchived && !filter.Archived {
+		return false
+	}
+
+	// If --archived flag, show ONLY archived
+	if filter.Archived && !ctx.IsArchived {
+		return false
+	}
+
+	// If --active-only, show ONLY active
+	if filter.ActiveOnly && !ctx.IsActive() {
+		return false
+	}
+
+	// Project filter (case-insensitive)
+	if filter.Project != "" {
+		projectName := ExtractProjectName(ctx.Name)
+		if !strings.EqualFold(projectName, filter.Project) {
+			return false
+		}
+	}
+
+	// Search filter (case-insensitive substring)
+	if filter.Search != "" {
+		if !strings.Contains(strings.ToLower(ctx.Name), strings.ToLower(filter.Search)) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// applyLimit applies the limit to the filtered contexts
+func applyLimit(contexts []*intmodels.Context, limit int) []*intmodels.Context {
+	if limit > 0 && len(contexts) > limit {
+		return contexts[:limit]
+	}
+	return contexts
+}
+
 func ListContextsFiltered(filter ContextFilter) ([]*intmodels.Context, error) {
 	// Get all contexts
 	allContexts, err := ListContexts()
@@ -734,49 +777,16 @@ func ListContextsFiltered(filter ContextFilter) ([]*intmodels.Context, error) {
 		return nil, err
 	}
 
+	// Filter contexts
 	filtered := make([]*intmodels.Context, 0, len(allContexts))
-
-	// Apply filters
 	for _, ctx := range allContexts {
-		// Skip archived contexts unless explicitly requested
-		if ctx.IsArchived && !filter.ShowArchived && !filter.Archived {
-			continue
+		if matchesFilter(ctx, filter) {
+			filtered = append(filtered, ctx)
 		}
-
-		// If --archived flag, show ONLY archived
-		if filter.Archived && !ctx.IsArchived {
-			continue
-		}
-
-		// If --active-only, show ONLY active
-		if filter.ActiveOnly && !ctx.IsActive() {
-			continue
-		}
-
-		// Project filter (case-insensitive)
-		if filter.Project != "" {
-			projectName := ExtractProjectName(ctx.Name)
-			if !strings.EqualFold(projectName, filter.Project) {
-				continue
-			}
-		}
-
-		// Search filter (case-insensitive substring)
-		if filter.Search != "" {
-			if !strings.Contains(strings.ToLower(ctx.Name), strings.ToLower(filter.Search)) {
-				continue
-			}
-		}
-
-		filtered = append(filtered, ctx)
 	}
 
 	// Apply limit
-	if filter.Limit > 0 && len(filtered) > filter.Limit {
-		filtered = filtered[:filter.Limit]
-	}
-
-	return filtered, nil
+	return applyLimit(filtered, filter.Limit), nil
 }
 
 // AddTags adds tags to a context and returns the list of newly added tags
@@ -891,7 +901,7 @@ func GetAllTags() (map[string]int, error) {
 }
 
 // SetParent sets the parent context for a child context
-func SetParent(childName string, parentName string) error {
+func SetParent(childName, parentName string) error {
 	// Load child context with metadata
 	ctx, _, _, _, err := GetContextWithMetadata(childName)
 	if err != nil {

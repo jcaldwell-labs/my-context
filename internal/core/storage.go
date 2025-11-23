@@ -104,7 +104,7 @@ func WriteJSON(path string, v interface{}) error {
 }
 
 // AppendLog appends a line to a log file
-func AppendLog(path string, line string) error {
+func AppendLog(path, line string) error {
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
@@ -263,7 +263,7 @@ func CreateParentDirs(filePath string) error {
 }
 
 // WriteMarkdown writes markdown content to a file atomically
-func WriteMarkdown(path string, content string) error {
+func WriteMarkdown(path, content string) error {
 	// Create parent directories if they don't exist
 	parentDir := filepath.Dir(path)
 	if err := os.MkdirAll(parentDir, 0o755); err != nil {
@@ -279,37 +279,44 @@ func WriteMarkdown(path string, content string) error {
 	return os.Rename(tempPath, path)
 }
 
-// ReadNotes parses notes.log and returns structured data
-func ReadNotes(contextDir string) ([]struct {
-	Timestamp string
-	Content   string
-}, error) {
-	notesPath := filepath.Join(contextDir, "notes.log")
-	lines, err := ReadLog(notesPath)
+// parseTwoColumnLog is a helper function that parses log files with timestamp|value format
+func parseTwoColumnLog[T any](logPath string, createItem func(timestamp, value string) T) ([]T, error) {
+	lines, err := ReadLog(logPath)
 	if err != nil {
 		return nil, err
 	}
 
-	var notes []struct {
-		Timestamp string
-		Content   string
-	}
+	var items []T
 	for _, line := range lines {
 		if line == "" {
 			continue
 		}
 		parts := strings.SplitN(line, "|", 2)
 		if len(parts) == 2 {
-			notes = append(notes, struct {
-				Timestamp string
-				Content   string
-			}{
-				Timestamp: parts[0],
-				Content:   parts[1],
-			})
+			items = append(items, createItem(parts[0], parts[1]))
 		}
 	}
-	return notes, nil
+	return items, nil
+}
+
+// ReadNotes parses notes.log and returns structured data
+func ReadNotes(contextDir string) ([]struct {
+	Timestamp string
+	Content   string
+}, error) {
+	notesPath := filepath.Join(contextDir, "notes.log")
+	return parseTwoColumnLog(notesPath, func(timestamp, content string) struct {
+		Timestamp string
+		Content   string
+	} {
+		return struct {
+			Timestamp string
+			Content   string
+		}{
+			Timestamp: timestamp,
+			Content:   content,
+		}
+	})
 }
 
 // ReadFiles parses files.log and returns structured data
@@ -318,31 +325,18 @@ func ReadFiles(contextDir string) ([]struct {
 	Path      string
 }, error) {
 	filesPath := filepath.Join(contextDir, "files.log")
-	lines, err := ReadLog(filesPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var files []struct {
+	return parseTwoColumnLog(filesPath, func(timestamp, path string) struct {
 		Timestamp string
 		Path      string
-	}
-	for _, line := range lines {
-		if line == "" {
-			continue
+	} {
+		return struct {
+			Timestamp string
+			Path      string
+		}{
+			Timestamp: timestamp,
+			Path:      path,
 		}
-		parts := strings.SplitN(line, "|", 2)
-		if len(parts) == 2 {
-			files = append(files, struct {
-				Timestamp string
-				Path      string
-			}{
-				Timestamp: parts[0],
-				Path:      parts[1],
-			})
-		}
-	}
-	return files, nil
+	})
 }
 
 // ReadTouches parses touches.log and returns structured data

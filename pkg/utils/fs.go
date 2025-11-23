@@ -56,7 +56,7 @@ func HasFileChanged(path string, since time.Time) (bool, error) {
 }
 
 // ListFiles returns all files in a directory matching a pattern
-func ListFiles(dir string, pattern string) ([]string, error) {
+func ListFiles(dir, pattern string) ([]string, error) {
 	files, err := filepath.Glob(filepath.Join(dir, pattern))
 	if err != nil {
 		return nil, err

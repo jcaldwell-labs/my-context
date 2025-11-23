@@ -89,7 +89,7 @@ func runCommandWithInput(args ...string) error {
 }
 
 // runCommandFull executes a my-context command and returns stdout, stderr, and exit code
-func runCommandFull(binary string, args ...string) (stdoutStr string, stderrStr string, exitCode int) {
+func runCommandFull(binary string, args ...string) (stdoutStr, stderrStr string, exitCode int) {
 	cmd := exec.Command(binary, args...)
 
 	stdout, err := cmd.StdoutPipe()

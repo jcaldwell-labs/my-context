@@ -12,6 +12,70 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// getContextNameOrActive returns the specified context name or active context
+func getContextNameOrActive(args []string) (string, error) {
+	if len(args) > 0 {
+		return args[0], nil
+	}
+
+	state, err := core.GetActiveContext()
+	if err != nil {
+		return "", fmt.Errorf("failed to get active context: %w", err)
+	}
+	if !state.HasActiveContext() {
+		return "", fmt.Errorf("no active context. Start a context with: my-context start <name>")
+	}
+	return state.GetActiveContextName(), nil
+}
+
+// parseWatchInterval parses the interval duration string
+func parseWatchInterval(interval string) (time.Duration, error) {
+	if interval != "" {
+		return time.ParseDuration(interval)
+	}
+	return 5 * time.Second, nil
+}
+
+// parseWatchTimeout parses the timeout duration string
+func parseWatchTimeout(timeout string) (time.Duration, error) {
+	if timeout == "" || timeout == "infinite" {
+		return 0, nil
+	}
+	return time.ParseDuration(timeout)
+}
+
+// timeoutString returns a string representation of the timeout
+func timeoutString(d time.Duration) string {
+	if d == 0 {
+		return "none"
+	}
+	return d.String()
+}
+
+// printWatchStartMessage prints the watch start message
+func printWatchStartMessage(contextName string, newNotesOnly bool, pattern, execCommand string, watchInterval, watchTimeout time.Duration) {
+	fmt.Printf("Watching context '%s' for changes...\n", contextName)
+	if newNotesOnly {
+		fmt.Printf("Monitoring: new notes")
+		if pattern != "" {
+			fmt.Printf(" (pattern: %s)", pattern)
+		}
+		fmt.Println()
+	} else {
+		fmt.Println("Monitoring: any file changes")
+	}
+	if execCommand != "" {
+		fmt.Printf("On change, execute: %s\n", execCommand)
+	}
+	fmt.Printf("Check interval: %s\n", watchInterval)
+	if watchTimeout > 0 {
+		fmt.Printf("Timeout: %s\n", watchTimeout)
+	} else {
+		fmt.Println("Timeout: none (run until interrupted)")
+	}
+	fmt.Println("Press Ctrl+C to stop watching")
+}
+
 func NewWatchCmd(jsonOutput *bool) *cobra.Command {
 	var (
 		pattern      string
@@ -43,23 +107,13 @@ Examples:
   my-context watch --exec="notify-send 'Context updated'"`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var contextName string
-
-			// If no context specified, use active context
-			if len(args) == 0 {
-				state, err := core.GetActiveContext()
-				if err != nil {
-					return fmt.Errorf("failed to get active context: %w", err)
-				}
-				if !state.HasActiveContext() {
-					return fmt.Errorf("no active context. Start a context with: my-context start <name>")
-				}
-				contextName = state.GetActiveContextName()
-			} else {
-				contextName = args[0]
+			// Get context name
+			contextName, err := getContextNameOrActive(args)
+			if err != nil {
+				return err
 			}
 
-			// Get context directory (sanitized name)
+			// Get context directory
 			metaPath := core.GetMetaJSONPath(contextName)
 			contextDir := filepath.Dir(metaPath)
 
@@ -68,32 +122,15 @@ Examples:
 				return fmt.Errorf("context '%s' does not exist", contextName)
 			}
 
-			// Parse interval
-			var watchInterval time.Duration
-			if interval != "" {
-				var err error
-				watchInterval, err = time.ParseDuration(interval)
-				if err != nil {
-					return fmt.Errorf("invalid interval: %w", err)
-				}
-			} else {
-				watchInterval = 5 * time.Second // Default
+			// Parse interval and timeout
+			watchInterval, err := parseWatchInterval(interval)
+			if err != nil {
+				return fmt.Errorf("invalid interval: %w", err)
 			}
 
-			// Parse timeout
-			var watchTimeout time.Duration
-			if timeout != "" {
-				if timeout == "infinite" {
-					watchTimeout = 0 // No timeout
-				} else {
-					var err error
-					watchTimeout, err = time.ParseDuration(timeout)
-					if err != nil {
-						return fmt.Errorf("invalid timeout: %w", err)
-					}
-				}
-			} else {
-				watchTimeout = 0 // No timeout by default
+			watchTimeout, err := parseWatchTimeout(timeout)
+			if err != nil {
+				return fmt.Errorf("invalid timeout: %w", err)
 			}
 
 			// Create watch options
@@ -140,26 +177,7 @@ Examples:
 				}
 				fmt.Print(jsonStr)
 			} else {
-				fmt.Printf("Watching context '%s' for changes...\n", contextName)
-				if newNotesOnly {
-					fmt.Printf("Monitoring: new notes")
-					if pattern != "" {
-						fmt.Printf(" (pattern: %s)", pattern)
-					}
-					fmt.Println()
-				} else {
-					fmt.Println("Monitoring: any file changes")
-				}
-				if execCommand != "" {
-					fmt.Printf("On change, execute: %s\n", execCommand)
-				}
-				fmt.Printf("Check interval: %s\n", watchInterval)
-				if watchTimeout > 0 {
-					fmt.Printf("Timeout: %s\n", watchTimeout)
-				} else {
-					fmt.Println("Timeout: none (run until interrupted)")
-				}
-				fmt.Println("Press Ctrl+C to stop watching")
+				printWatchStartMessage(contextName, newNotesOnly, pattern, execCommand, watchInterval, watchTimeout)
 			}
 
 			// Wait for timeout or interruption
@@ -188,12 +206,4 @@ Examples:
 	cmd.Flags().StringVar(&timeout, "timeout", "", "Stop watching after this duration (default: run until interrupted)")
 
 	return cmd
-}
-
-// timeoutString returns a string representation of timeout duration
-func timeoutString(timeout time.Duration) string {
-	if timeout == 0 {
-		return "none"
-	}
-	return timeout.String()
 }

@@ -16,7 +16,7 @@ type Signal struct {
 }
 
 // NewSignal creates a new signal instance
-func NewSignal(name string, signalsDir string) *Signal {
+func NewSignal(name, signalsDir string) *Signal {
 	now := time.Now()
 	filename := fmt.Sprintf("%s.signal", name)
 	path := filepath.Join(signalsDir, filename)
