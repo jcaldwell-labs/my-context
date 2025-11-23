@@ -35,7 +35,7 @@ func showSingleContextTree(contextName string, jsonOutput *bool) error {
 }
 
 // showAllRootContexts shows all root contexts
-func showAllRootContexts(showAll bool, jsonOutput *bool) error {
+func showAllRootContexts(jsonOutput *bool) error {
 	roots, err := core.GetRootContexts()
 	if err != nil {
 		if *jsonOutput {
@@ -58,7 +58,7 @@ func showAllRootContexts(showAll bool, jsonOutput *bool) error {
 	}
 
 	// Build trees for all roots
-	var trees []*core.ContextTreeNode
+	trees := make([]*core.ContextTreeNode, 0, len(roots))
 	for _, rootName := range roots {
 		tree, err := core.GetContextTree(rootName)
 		if err != nil {
@@ -86,8 +86,6 @@ func showAllRootContexts(showAll bool, jsonOutput *bool) error {
 }
 
 func NewTreeCmd(jsonOutput *bool) *cobra.Command {
-	var showAll bool
-
 	cmd := &cobra.Command{
 		Use:   "tree [context]",
 		Short: "Show context hierarchy as a tree",
@@ -102,11 +100,9 @@ Examples:
 			if len(args) == 1 {
 				return showSingleContextTree(args[0], jsonOutput)
 			}
-			return showAllRootContexts(showAll, jsonOutput)
+			return showAllRootContexts(jsonOutput)
 		},
 	}
-
-	cmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show all contexts including orphans")
 
 	return cmd
 }

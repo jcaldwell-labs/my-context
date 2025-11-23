@@ -73,7 +73,8 @@ func TestSignalCreateCommand(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test creating a signal
-	_, stderr, exitCode := runCommand(binary, "signal", "create", "test-contract-signal")
+	stdout, stderr, exitCode := runCommand(binary, "signal", "create", "test-contract-signal")
+	_ = stdout // stdout will be used once signal command is implemented
 
 	// The command doesn't exist yet, so it should fail
 	assert.NotEqual(t, 0, exitCode, "Command should fail since signal command is not implemented yet")
@@ -90,7 +91,8 @@ func TestSignalListCommand(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test listing signals
-	_, stderr, exitCode := runCommand(binary, "signal", "list")
+	stdout, stderr, exitCode := runCommand(binary, "signal", "list")
+	_ = stdout // stdout will be used once signal command is implemented
 
 	// The command doesn't exist yet, so it should fail
 	assert.NotEqual(t, 0, exitCode, "Command should fail since signal command is not implemented yet")
@@ -108,7 +110,8 @@ func TestSignalWaitCommand(t *testing.T) {
 
 	// Test waiting for a signal with timeout
 	start := time.Now()
-	_, stderr, exitCode := runCommand(binary, "signal", "wait", "nonexistent-signal", "--timeout", "500ms")
+	stdout, stderr, exitCode := runCommand(binary, "signal", "wait", "nonexistent-signal", "--timeout", "500ms")
+	_ = stdout // stdout will be used once signal command is implemented
 	duration := time.Since(start)
 
 	// The command doesn't exist yet, so it should fail
@@ -130,7 +133,8 @@ func TestSignalClearCommand(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test clearing a signal
-	_, stderr, exitCode := runCommand(binary, "signal", "clear", "test-clear-signal")
+	stdout, stderr, exitCode := runCommand(binary, "signal", "clear", "test-clear-signal")
+	_ = stdout // stdout will be used once signal command is implemented
 
 	// The command doesn't exist yet, so it should fail
 	assert.NotEqual(t, 0, exitCode, "Command should fail since signal command is not implemented yet")
@@ -147,7 +151,8 @@ func TestSignalCommandHelp(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test signal command help
-	_, stderr, exitCode := runCommand(binary, "signal", "--help")
+	stdout, stderr, exitCode := runCommand(binary, "signal", "--help")
+	_ = stdout // stdout will be used once signal command is implemented
 
 	// The command doesn't exist yet, so it should fail
 	assert.NotEqual(t, 0, exitCode, "Command should fail since signal command is not implemented yet")
@@ -168,7 +173,8 @@ func TestSignalCommandInvalidArgs(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test signal command with no subcommand
-	_, stderr, exitCode := runCommand(binary, "signal")
+	stdout, stderr, exitCode := runCommand(binary, "signal")
+	_ = stdout // stdout will be used once signal command is implemented
 
 	// The command doesn't exist yet, so it should fail
 	assert.NotEqual(t, 0, exitCode, "Command should fail since signal command is not implemented yet")
@@ -185,7 +191,8 @@ func TestSignalCreateWithSpecialChars(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test creating a signal with special characters
-	_, stderr, exitCode := runCommand(binary, "signal", "create", "test_signal.with-dashes")
+	stdout, stderr, exitCode := runCommand(binary, "signal", "create", "test_signal.with-dashes")
+	_ = stdout // stdout will be used once signal command is implemented
 
 	// The command doesn't exist yet, so it should fail
 	assert.NotEqual(t, 0, exitCode, "Command should fail since signal command is not implemented yet")
@@ -202,7 +209,8 @@ func TestSignalWaitWithInvalidTimeout(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test waiting with invalid timeout
-	_, stderr, exitCode := runCommand(binary, "signal", "wait", "test-signal", "--timeout", "invalid")
+	stdout, stderr, exitCode := runCommand(binary, "signal", "wait", "test-signal", "--timeout", "invalid")
+	_ = stdout // stdout will be used once signal command is implemented
 
 	// The command doesn't exist yet, so it should fail
 	assert.NotEqual(t, 0, exitCode, "Command should fail since signal command is not implemented yet")

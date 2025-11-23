@@ -89,15 +89,15 @@ func runCommandWithInput(args ...string) error {
 }
 
 // runCommandFull executes a my-context command and returns stdout, stderr, and exit code
-func runCommandFull(binary string, args ...string) (stdoutStr, stderrStr string, exitCode int) {
+func runCommandFull(binary string, args ...string) (stdout, stderr string, exitCode int) {
 	cmd := exec.Command(binary, args...)
 
-	stdout, err := cmd.StdoutPipe()
+	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		return "", err.Error(), 1
 	}
 
-	stderr, err := cmd.StderrPipe()
+	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
 		return "", err.Error(), 1
 	}
@@ -109,14 +109,14 @@ func runCommandFull(binary string, args ...string) (stdoutStr, stderrStr string,
 	}
 
 	// Read output
-	outBytes, outErr := io.ReadAll(stdout)
-	errBytes, errErr := io.ReadAll(stderr)
+	outBytes, outErr := io.ReadAll(stdoutPipe)
+	errBytes, errErr := io.ReadAll(stderrPipe)
 
 	// Wait for completion
 	exitErr := cmd.Wait()
 
-	stdoutStr = string(outBytes)
-	stderrStr = string(errBytes)
+	stdout = string(outBytes)
+	stderr = string(errBytes)
 
 	exitCode = 0
 	if exitErr != nil {
@@ -129,10 +129,10 @@ func runCommandFull(binary string, args ...string) (stdoutStr, stderrStr string,
 
 	// Include any read errors in stderr
 	if outErr != nil {
-		stderrStr += "\nRead stdout error: " + outErr.Error()
+		stderr += "\nRead stdout error: " + outErr.Error()
 	}
 	if errErr != nil {
-		stderrStr += "\nRead stderr error: " + errErr.Error()
+		stderr += "\nRead stderr error: " + errErr.Error()
 	}
 
 	return

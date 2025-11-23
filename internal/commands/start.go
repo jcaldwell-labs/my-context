@@ -22,7 +22,7 @@ var startParent string
 var startLabels string
 
 // handleDuplicateContext handles the case where a context with the same name already exists
-func handleDuplicateContext(existingContext *models.Context, contextName string, force bool, jsonOutput *bool) (newName string, shouldResume bool, err error) {
+func handleDuplicateContext(existingContext *models.Context, contextName string, force bool) (newName string, shouldResume bool, err error) {
 	if force {
 		// Force flag - let CreateContext handle auto-suffixing
 		return contextName, false, nil
@@ -114,7 +114,7 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 			// Check for duplicate context name (smart resume)
 			existingContext, err := core.FindContextByName(contextName)
 			if err == nil && existingContext.Status == "stopped" {
-				newName, shouldResume, err := handleDuplicateContext(existingContext, contextName, startForce, jsonOutput)
+				newName, shouldResume, err := handleDuplicateContext(existingContext, contextName, startForce)
 				if err != nil {
 					if *jsonOutput {
 						jsonStr, _ := output.FormatJSONError("start", 3, err.Error())

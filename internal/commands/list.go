@@ -12,13 +12,13 @@ import (
 
 // filterByProject filters contexts by project name
 func filterByProject(contexts []*models.Context, projectFilter string) []*models.Context {
-	var contextNames []string
+	contextNames := make([]string, 0, len(contexts))
 	for _, ctx := range contexts {
 		contextNames = append(contextNames, ctx.Name)
 	}
 	filteredNames := core.FilterContextsByProject(contextNames, projectFilter)
 
-	var filtered []*models.Context
+	filtered := make([]*models.Context, 0, len(contexts))
 	for _, ctx := range contexts {
 		for _, name := range filteredNames {
 			if ctx.Name == name {
@@ -113,7 +113,7 @@ func applyFilters(contexts []*models.Context, projectFilter, searchTerm, tagFilt
 
 // buildContextSummaries builds context summaries for JSON output
 func buildContextSummaries(contexts []*models.Context) []*output.ContextSummary {
-	var summaries []*output.ContextSummary
+	summaries := make([]*output.ContextSummary, 0, len(contexts))
 	for _, ctx := range contexts {
 		notesLines, _ := core.ReadLog(core.GetNotesLogPath(ctx.Name))
 		filesLines, _ := core.ReadLog(core.GetFilesLogPath(ctx.Name))
