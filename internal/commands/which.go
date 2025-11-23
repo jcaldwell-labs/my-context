@@ -38,7 +38,8 @@ which context home is currently active.`,
 			envSet := envValue != ""
 
 			// Output
-			if *jsonOutput {
+			switch {
+			case *jsonOutput:
 				data := map[string]interface{}{
 					"context_home":         homePath,
 					"context_home_display": homeDisplay,
@@ -52,10 +53,10 @@ which context home is currently active.`,
 					return err
 				}
 				fmt.Print(jsonStr)
-			} else if shortOutput {
+			case shortOutput:
 				// Short output: just the path
 				fmt.Println(homeDisplay)
-			} else {
+			default:
 				// Full output
 				fmt.Printf("Context Home: %s\n\n", homeDisplay)
 

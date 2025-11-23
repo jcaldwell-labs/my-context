@@ -32,36 +32,7 @@ func TestSignalWorkflowIntegration(t *testing.T) {
 	assert.NotEqual(t, 0, exitCode, "Wait should fail - command not implemented")
 	assert.Contains(t, stderr, "unknown command")
 
-	// TODO: Once implemented, this full workflow should work:
-
-	/*
-		// Create a signal
-		stdout, stderr, exitCode = runCommand(binary, "signal", "create", "integration-test-signal")
-		assert.Equal(t, 0, exitCode)
-		assert.Contains(t, stdout, "created")
-
-		// List signals - should show our signal
-		stdout, stderr, exitCode = runCommand(binary, "signal", "list")
-		assert.Equal(t, 0, exitCode)
-		assert.Contains(t, stdout, "integration-test-signal")
-
-		// Wait for the signal should return immediately
-		start := time.Now()
-		stdout, stderr, exitCode = runCommand(binary, "signal", "wait", "integration-test-signal", "--timeout", "5s")
-		duration := time.Since(start)
-		assert.Equal(t, 0, exitCode)
-		assert.Less(t, duration, 100*time.Millisecond) // Should return quickly
-
-		// Clear the signal
-		stdout, stderr, exitCode = runCommand(binary, "signal", "clear", "integration-test-signal")
-		assert.Equal(t, 0, exitCode)
-		assert.Contains(t, stdout, "cleared")
-
-		// List signals - should be empty now
-		stdout, stderr, exitCode = runCommand(binary, "signal", "list")
-		assert.Equal(t, 0, exitCode)
-		assert.NotContains(t, stdout, "integration-test-signal")
-	*/
+	// TODO: Once implemented, verify the full workflow works
 }
 
 // TestSignalConcurrencyIntegration tests concurrent signal operations
@@ -89,26 +60,7 @@ func TestSignalConcurrencyIntegration(t *testing.T) {
 		})
 	}
 
-	// TODO: Once implemented, test concurrent operations:
-
-	/*
-		// Create signals concurrently
-		var wg sync.WaitGroup
-		for i := 0; i < 5; i++ {
-			wg.Add(1)
-			go func(id int) {
-				defer wg.Done()
-				stdout, stderr, exitCode := runCommand(binary, "signal", "create", fmt.Sprintf("concurrent-%d", id))
-				assert.Equal(t, 0, exitCode)
-			}(i)
-		}
-		wg.Wait()
-
-		// List should show all signals
-		stdout, stderr, exitCode := runCommand(binary, "signal", "list")
-		assert.Equal(t, 0, exitCode)
-		assert.Contains(t, stdout, "concurrent-")
-	*/
+	// TODO: Once implemented, test concurrent operations
 }
 
 // TestSignalTimeoutIntegration tests timeout behavior
@@ -123,18 +75,7 @@ func TestSignalTimeoutIntegration(t *testing.T) {
 	assert.NotEqual(t, 0, exitCode)
 	assert.Contains(t, stderr, "unknown command")
 
-	// TODO: Once implemented, test timeout:
-
-	/*
-		start := time.Now()
-		stdout, stderr, exitCode = runCommand(binary, "signal", "wait", "timeout-test-signal", "--timeout", "200ms")
-		duration := time.Since(start)
-
-		assert.Equal(t, 1, exitCode) // timeout exit code
-		assert.Contains(t, stderr, "timeout")
-		assert.Greater(t, duration, 150*time.Millisecond) // should wait most of timeout
-		assert.Less(t, duration, 300*time.Millisecond) // but not much longer
-	*/
+	// TODO: Once implemented, verify timeout behavior works correctly
 }
 
 // TestSignalErrorHandlingIntegration tests error scenarios
@@ -166,15 +107,5 @@ func TestSignalErrorHandlingIntegration(t *testing.T) {
 		})
 	}
 
-	// TODO: Once implemented, test specific error messages:
-
-	/*
-		for _, test := range errorTests {
-			t.Run(test.name, func(t *testing.T) {
-				stdout, stderr, exitCode := runCommand(binary, strings.Fields(test.args[0])...)
-				assert.Equal(t, 1, exitCode)
-				assert.Contains(t, stderr, test.errorMsg)
-			})
-		}
-	*/
+	// TODO: Once implemented, test specific error messages
 }

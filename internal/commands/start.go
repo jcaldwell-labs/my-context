@@ -172,11 +172,12 @@ func promptResume(ctx *models.Context) (bool, error) {
 	}
 
 	response = strings.ToLower(strings.TrimSpace(response))
-	if response == "y" || response == "yes" || response == "" {
+	switch response {
+	case "y", "yes", "":
 		return true, nil
-	} else if response == "n" || response == "no" {
+	case "n", "no":
 		return false, nil
-	} else {
+	default:
 		return false, fmt.Errorf("invalid response: %s (expected Y/n)", response)
 	}
 }

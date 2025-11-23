@@ -396,7 +396,7 @@ func GetContextWithMetadata(contextName string) (*pkgmodels.ContextWithMetadata,
 		return nil, nil, nil, nil, err
 	}
 
-	var notes []*intmodels.Note
+	notes := make([]*intmodels.Note, 0, len(notesLines))
 	for _, line := range notesLines {
 		if line == "" {
 			continue
@@ -413,7 +413,7 @@ func GetContextWithMetadata(contextName string) (*pkgmodels.ContextWithMetadata,
 		return nil, nil, nil, nil, err
 	}
 
-	var files []*intmodels.FileAssociation
+	files := make([]*intmodels.FileAssociation, 0, len(filesLines))
 	for _, line := range filesLines {
 		if line == "" {
 			continue
@@ -430,7 +430,7 @@ func GetContextWithMetadata(contextName string) (*pkgmodels.ContextWithMetadata,
 		return nil, nil, nil, nil, err
 	}
 
-	var touches []*intmodels.TouchEvent
+	touches := make([]*intmodels.TouchEvent, 0, len(touchesLines))
 	for _, line := range touchesLines {
 		if line == "" {
 			continue
@@ -459,7 +459,7 @@ func GetContext(contextName string) (*intmodels.Context, []*intmodels.Note, []*i
 		return nil, nil, nil, nil, err
 	}
 
-	var notes []*intmodels.Note
+	notes := make([]*intmodels.Note, 0, len(notesLines))
 	for _, line := range notesLines {
 		if line == "" {
 			continue
@@ -477,7 +477,7 @@ func GetContext(contextName string) (*intmodels.Context, []*intmodels.Note, []*i
 		return nil, nil, nil, nil, err
 	}
 
-	var files []*intmodels.FileAssociation
+	files := make([]*intmodels.FileAssociation, 0, len(filesLines))
 	for _, line := range filesLines {
 		if line == "" {
 			continue
@@ -495,7 +495,7 @@ func GetContext(contextName string) (*intmodels.Context, []*intmodels.Note, []*i
 		return nil, nil, nil, nil, err
 	}
 
-	var touches []*intmodels.TouchEvent
+	touches := make([]*intmodels.TouchEvent, 0, len(touchesLines))
 	for _, line := range touchesLines {
 		if line == "" {
 			continue
@@ -517,7 +517,7 @@ func ListContexts() ([]*intmodels.Context, error) {
 		return nil, err
 	}
 
-	var contexts []*intmodels.Context
+	contexts := make([]*intmodels.Context, 0, len(dirs))
 	for _, dir := range dirs {
 		var context intmodels.Context
 		if err := ReadJSON(GetMetaJSONPath(dir), &context); err != nil {
@@ -541,7 +541,7 @@ func GetTransitions() ([]*intmodels.ContextTransition, error) {
 		return nil, err
 	}
 
-	var transitions []*intmodels.ContextTransition
+	transitions := make([]*intmodels.ContextTransition, 0, len(lines))
 	for _, line := range lines {
 		if line == "" {
 			continue
@@ -565,12 +565,12 @@ func ExportContext(contextName string, outputPath string, asJSON bool) (string, 
 	}
 
 	// Convert to model types for export
-	var noteModels []intmodels.Note
+	noteModels := make([]intmodels.Note, 0, len(notes))
 	for _, n := range notes {
 		noteModels = append(noteModels, *n)
 	}
 
-	var fileModels []intmodels.FileAssociation
+	fileModels := make([]intmodels.FileAssociation, 0, len(files))
 	for _, f := range files {
 		fileModels = append(fileModels, *f)
 	}
@@ -626,7 +626,7 @@ func ExportAllContexts(outputDir string, asJSON bool) ([]string, error) {
 		ext = ".json"
 	}
 
-	var exportedPaths []string
+	exportedPaths := make([]string, 0, len(contexts))
 	for _, ctx := range contexts {
 		sanitized := SanitizeFilename(ctx.Name)
 		outputPath := filepath.Join(outputDir, sanitized+ext)
@@ -734,7 +734,7 @@ func ListContextsFiltered(filter ContextFilter) ([]*intmodels.Context, error) {
 		return nil, err
 	}
 
-	var filtered []*intmodels.Context
+	filtered := make([]*intmodels.Context, 0, len(allContexts))
 
 	// Apply filters
 	for _, ctx := range allContexts {

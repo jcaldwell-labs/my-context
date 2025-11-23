@@ -49,7 +49,8 @@ func NewResumeCmd(jsonOutput *bool) *cobra.Command {
 			var targetContext *models.Context
 
 			// Handle --last flag
-			if resumeLast {
+			switch {
+			case resumeLast:
 				targetContext, err = core.GetMostRecentStopped()
 				if err != nil {
 					if *jsonOutput {
@@ -59,7 +60,7 @@ func NewResumeCmd(jsonOutput *bool) *cobra.Command {
 					}
 					return err
 				}
-			} else if len(args) == 0 {
+			case len(args) == 0:
 				// No arguments and no --last flag
 				errMsg := "Must specify context name/pattern or use --last flag"
 				if *jsonOutput {
@@ -68,7 +69,7 @@ func NewResumeCmd(jsonOutput *bool) *cobra.Command {
 					return nil
 				}
 				return errors.New(errMsg)
-			} else {
+			default:
 				// Handle name/pattern argument
 				pattern := args[0]
 				contexts, err := core.FindContextsByPattern(pattern)
@@ -81,7 +82,8 @@ func NewResumeCmd(jsonOutput *bool) *cobra.Command {
 					return err
 				}
 
-				if len(contexts) == 0 {
+				switch len(contexts) {
+				case 0:
 					// No matches found
 					availableContexts, listErr := getAvailableStoppedContexts()
 					errMsg := fmt.Sprintf("No stopped contexts match pattern %q", pattern)
@@ -95,10 +97,10 @@ func NewResumeCmd(jsonOutput *bool) *cobra.Command {
 						return nil
 					}
 					return errors.New(errMsg)
-				} else if len(contexts) == 1 {
+				case 1:
 					// Single match - use it directly
 					targetContext = contexts[0]
-				} else {
+				default:
 					// Multiple matches - prompt for selection
 					targetContext, err = PromptSelection(contexts)
 					if err != nil {

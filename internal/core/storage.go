@@ -353,7 +353,7 @@ func ReadTouches(contextDir string) ([]struct{ Timestamp string }, error) {
 		return nil, err
 	}
 
-	var touches []struct{ Timestamp string }
+	touches := make([]struct{ Timestamp string }, 0, len(lines))
 	for _, line := range lines {
 		if line == "" {
 			continue

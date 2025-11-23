@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -14,7 +15,7 @@ func TestArchiveStoppedContext(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "stopped-context"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	runCommand("stop") // Ensure context is stopped
 
 	// Execute: Archive the context
@@ -44,7 +45,7 @@ func TestArchiveActiveContext(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "active-context"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	// Don't stop - leave it active
 
 	// Execute: Try to archive active context
@@ -86,7 +87,7 @@ func TestArchiveHidesFromDefaultList(t *testing.T) {
 
 	// Create and archive a context
 	contextName := "to-be-archived"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	runCommand("stop")
 	runCommand("archive", contextName)
 
@@ -109,7 +110,7 @@ func TestArchivedFlagShowsArchivedContexts(t *testing.T) {
 
 	// Create and archive a context
 	contextName := "archived-context"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	runCommand("stop")
 	runCommand("archive", contextName)
 
@@ -131,7 +132,7 @@ func TestArchivePreservesData(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "data-preservation-test"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 
 	// Add notes and files
 	runCommand("note", "Important note")
@@ -153,7 +154,7 @@ func TestArchivePreservesData(t *testing.T) {
 		t.Error("Notes file should still exist after archiving")
 	}
 
-	if string(preArchiveNotes) != string(postArchiveNotes) {
+	if !bytes.Equal(preArchiveNotes, postArchiveNotes) {
 		t.Error("Notes content should be preserved after archiving")
 	}
 }
@@ -164,7 +165,7 @@ func TestArchiveAlreadyArchived(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "already-archived"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	runCommand("stop")
 
 	// Archive once

@@ -236,11 +236,9 @@ func (w *Watcher) watchLoop() {
 	for {
 		select {
 		case <-ticker.C:
-			result := w.checkAndExecute()
-			if result.Error != nil {
-				// In a real implementation, you'd want to log this
-				// For now, we'll continue watching
-			}
+			_ = w.checkAndExecute()
+			// In a real implementation, you'd want to log errors
+			// For now, we'll continue watching
 
 		case <-w.stopCh:
 			return

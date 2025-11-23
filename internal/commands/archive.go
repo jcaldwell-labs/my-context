@@ -160,10 +160,7 @@ func collectContextsForBulkArchive() ([]*models.Context, error) {
 
 	// Apply pattern filter if specified
 	if archivePattern != "" {
-		contexts, err = filterContextsByPattern(contexts, archivePattern)
-		if err != nil {
-			return nil, err
-		}
+		contexts = filterContextsByPattern(contexts, archivePattern)
 	}
 
 	// Apply date filter if specified
@@ -179,9 +176,9 @@ func collectContextsForBulkArchive() ([]*models.Context, error) {
 }
 
 // filterContextsByPattern filters contexts using glob-style pattern matching
-func filterContextsByPattern(contexts []*models.Context, pattern string) ([]*models.Context, error) {
+func filterContextsByPattern(contexts []*models.Context, pattern string) []*models.Context {
 	// Reuse the pattern matching logic from resume command
-	var matches []*models.Context
+	matches := make([]*models.Context, 0, len(contexts))
 	patternParts := strings.Split(pattern, "*")
 
 	for _, ctx := range contexts {
@@ -190,7 +187,7 @@ func filterContextsByPattern(contexts []*models.Context, pattern string) ([]*mod
 		}
 	}
 
-	return matches, nil
+	return matches
 }
 
 // filterContextsByStopDate filters contexts stopped before the given time

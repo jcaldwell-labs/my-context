@@ -70,7 +70,7 @@ func (m *Manager) ListSignals() ([]models.SignalInfo, error) {
 		return nil, fmt.Errorf("failed to list signal files: %w", err)
 	}
 
-	var signals []models.SignalInfo
+	signals := make([]models.SignalInfo, 0, len(files))
 	for _, file := range files {
 		signal, err := models.LoadSignalFromFile(file)
 		if err != nil {

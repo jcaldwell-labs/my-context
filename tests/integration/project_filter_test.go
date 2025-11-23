@@ -18,7 +18,7 @@ func TestListProjectFilter(t *testing.T) {
 		"garden: Implementation",
 	}
 	for _, ctx := range contexts {
-		createTestContext(t, testDir, ctx)
+		createTestContext(t, ctx)
 		runCommand("stop")
 	}
 
@@ -65,7 +65,7 @@ func TestProjectExtractionMultipleColons(t *testing.T) {
 
 	// Create context with multiple colons
 	contextName := "project: Phase 1: Subphase A"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	runCommand("stop")
 
 	// Execute: Filter by project (should extract "project")
@@ -84,7 +84,7 @@ func TestProjectExtractionNoColon(t *testing.T) {
 
 	// Create standalone context (no colon)
 	standalone := "StandaloneContext"
-	createTestContext(t, testDir, standalone)
+	createTestContext(t, standalone)
 	runCommand("stop")
 
 	// Execute: Filter by full name
@@ -103,7 +103,7 @@ func TestProjectExtractionWhitespace(t *testing.T) {
 
 	// Create context with whitespace around colon
 	contextName := " project  :  description "
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 	runCommand("stop")
 
 	// Execute: Filter by trimmed project name
@@ -126,7 +126,7 @@ func TestProjectCaseInsensitive(t *testing.T) {
 		"Ps-Cli: Phase 2",
 	}
 	for _, ctx := range contexts {
-		createTestContext(t, testDir, ctx)
+		createTestContext(t, ctx)
 		runCommand("stop")
 	}
 

@@ -15,7 +15,7 @@ func TestExportSingleContextDefaultPath(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "test-export-context"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 
 	// Execute: Export the context
 	outputPath := filepath.Join(testDir, contextName+".md")
@@ -49,7 +49,7 @@ func TestExportWithCustomPath(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "test-custom-path"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 
 	// Execute: Export with custom path
 	customPath := filepath.Join(testDir, "exports", "my-export.md")
@@ -78,7 +78,7 @@ func TestExportAllFlag(t *testing.T) {
 	// Create multiple contexts
 	contexts := []string{"context-1", "context-2", "context-3"}
 	for _, name := range contexts {
-		createTestContext(t, testDir, name)
+		createTestContext(t, name)
 	}
 
 	// Execute: Export all
@@ -122,7 +122,7 @@ func TestExportMarkdownFormat(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "format-test"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 
 	// Add some notes and files to the context
 	runCommand("note", "Test note 1")
@@ -165,7 +165,7 @@ func TestExportJSONOutput(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	contextName := "json-test"
-	createTestContext(t, testDir, contextName)
+	createTestContext(t, contextName)
 
 	// Execute: Export as JSON
 	outputPath := filepath.Join(testDir, contextName+".json")

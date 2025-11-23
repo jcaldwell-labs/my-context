@@ -19,7 +19,7 @@ func buildTestBinary(t *testing.T) string {
 }
 
 // runCommand executes a my-context command and returns stdout, stderr, and exit code
-func runCommand(binary string, args ...string) (string, string, int) {
+func runCommand(binary string, args ...string) (stdoutStr string, stderrStr string, exitCode int) {
 	cmd := exec.Command(binary, args...)
 	stdout, stdoutErr := cmd.StdoutPipe()
 	if stdoutErr != nil {
@@ -44,10 +44,10 @@ func runCommand(binary string, args ...string) (string, string, int) {
 	// Wait for completion
 	exitErr := cmd.Wait()
 
-	stdoutStr := string(outBytes)
-	stderrStr := string(errBytes)
+	stdoutStr = string(outBytes)
+	stderrStr = string(errBytes)
 
-	exitCode := 0
+	exitCode = 0
 	if exitErr != nil {
 		if exit, ok := exitErr.(*exec.ExitError); ok {
 			exitCode = exit.ExitCode()
@@ -64,7 +64,7 @@ func runCommand(binary string, args ...string) (string, string, int) {
 		stderrStr += "\nRead stderr error: " + errErr.Error()
 	}
 
-	return stdoutStr, stderrStr, exitCode
+	return
 }
 
 // TestSignalCreateCommand tests the signal create command

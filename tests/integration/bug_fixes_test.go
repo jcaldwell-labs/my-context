@@ -11,7 +11,7 @@ func TestNoteDollarCharacterPreserved(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	// Create context and add note with $ character
-	createTestContext(t, testDir, "dollar-test")
+	createTestContext(t, "dollar-test")
 	noteContent := "Budget: $500-800"
 	err := runCommand("note", noteContent)
 	if err != nil {
@@ -38,7 +38,7 @@ func TestHistoryDisplaysNoneInsteadOfNull(t *testing.T) {
 	defer cleanupTestEnvironment(t, testDir)
 
 	// Create first context (no previous context)
-	createTestContext(t, testDir, "first-context")
+	createTestContext(t, "first-context")
 	runCommand("stop")
 
 	// Execute: View history
@@ -58,7 +58,7 @@ func TestSpecialCharactersInNotes(t *testing.T) {
 	testDir := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, testDir)
 
-	createTestContext(t, testDir, "special-chars-test")
+	createTestContext(t, "special-chars-test")
 
 	// Test various special characters
 	specialNotes := []string{
@@ -97,7 +97,7 @@ func TestNoteWithBackslash(t *testing.T) {
 	testDir := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, testDir)
 
-	createTestContext(t, testDir, "backslash-test")
+	createTestContext(t, "backslash-test")
 
 	// Windows path with backslashes
 	noteContent := `Path: C:\Users\username\file.txt`
@@ -120,7 +120,7 @@ func TestNoteWithUnicode(t *testing.T) {
 	testDir := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, testDir)
 
-	createTestContext(t, testDir, "unicode-test")
+	createTestContext(t, "unicode-test")
 
 	// Various Unicode characters
 	unicodeNotes := []string{

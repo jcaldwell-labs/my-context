@@ -89,7 +89,7 @@ func runCommandWithInput(args ...string) error {
 }
 
 // runCommandFull executes a my-context command and returns stdout, stderr, and exit code
-func runCommandFull(binary string, args ...string) (string, string, int) {
+func runCommandFull(binary string, args ...string) (stdoutStr string, stderrStr string, exitCode int) {
 	cmd := exec.Command(binary, args...)
 
 	stdout, err := cmd.StdoutPipe()
@@ -115,10 +115,10 @@ func runCommandFull(binary string, args ...string) (string, string, int) {
 	// Wait for completion
 	exitErr := cmd.Wait()
 
-	stdoutStr := string(outBytes)
-	stderrStr := string(errBytes)
+	stdoutStr = string(outBytes)
+	stderrStr = string(errBytes)
 
-	exitCode := 0
+	exitCode = 0
 	if exitErr != nil {
 		if exit, ok := exitErr.(*exec.ExitError); ok {
 			exitCode = exit.ExitCode()
@@ -135,7 +135,7 @@ func runCommandFull(binary string, args ...string) (string, string, int) {
 		stderrStr += "\nRead stderr error: " + errErr.Error()
 	}
 
-	return stdoutStr, stderrStr, exitCode
+	return
 }
 
 // setupTestEnvironment creates a temporary test directory
@@ -158,7 +158,7 @@ func cleanupTestEnvironment(t *testing.T, testDir string) {
 }
 
 // createTestContext creates a test context directory structure
-func createTestContext(t *testing.T, testDir, contextName string) {
+func createTestContext(t *testing.T, contextName string) {
 	t.Helper()
 	// This will fail until the actual implementation exists
 	err := runCommand("start", contextName)
