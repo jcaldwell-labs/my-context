@@ -88,34 +88,33 @@ func runCommandWithInput(args ...string) error {
 	return cmd.Run()
 }
 
-// runCommandFull executes a my-context command and returns stdout, stderr, and exit code
-func runCommandFull(binary string, args ...string) (stdout, stderr string, exitCode int) {
+// runCommandFull executes a my-context command and returns stderr and exit code
+func runCommandFull(binary string, args ...string) (stderr string, exitCode int) {
 	cmd := exec.Command(binary, args...)
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
-		return "", err.Error(), 1
+		return err.Error(), 1
 	}
 
 	stderrPipe, err := cmd.StderrPipe()
 	if err != nil {
-		return "", err.Error(), 1
+		return err.Error(), 1
 	}
 
 	// Start the command
 	err = cmd.Start()
 	if err != nil {
-		return "", err.Error(), 1
+		return err.Error(), 1
 	}
 
 	// Read output
-	outBytes, outErr := io.ReadAll(stdoutPipe)
+	_, outErr := io.ReadAll(stdoutPipe)
 	errBytes, errErr := io.ReadAll(stderrPipe)
 
 	// Wait for completion
 	exitErr := cmd.Wait()
 
-	stdout = string(outBytes)
 	stderr = string(errBytes)
 
 	exitCode = 0

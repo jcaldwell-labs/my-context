@@ -18,17 +18,17 @@ func TestSignalWorkflowIntegration(t *testing.T) {
 	// This tests that the integration points are ready for when the command is implemented
 
 	// Test 1: Try to create a signal
-	_, stderr, exitCode := runCommandFull(binary, "signal", "create", "integration-test-signal")
+	stderr, exitCode := runCommandFull(binary, "signal", "create", "integration-test-signal")
 	assert.NotEqual(t, 0, exitCode, "Create should fail - command not implemented")
 	assert.Contains(t, stderr, "unknown command")
 
 	// Test 2: Try to list signals
-	_, stderr, exitCode = runCommandFull(binary, "signal", "list")
+	stderr, exitCode = runCommandFull(binary, "signal", "list")
 	assert.NotEqual(t, 0, exitCode, "List should fail - command not implemented")
 	assert.Contains(t, stderr, "unknown command")
 
 	// Test 3: Try to wait for a signal
-	_, stderr, exitCode = runCommandFull(binary, "signal", "wait", "integration-test-signal", "--timeout", "1s")
+	stderr, exitCode = runCommandFull(binary, "signal", "wait", "integration-test-signal", "--timeout", "1s")
 	assert.NotEqual(t, 0, exitCode, "Wait should fail - command not implemented")
 	assert.Contains(t, stderr, "unknown command")
 
@@ -54,7 +54,7 @@ func TestSignalConcurrencyIntegration(t *testing.T) {
 
 	for _, cmd := range commands {
 		t.Run(cmd.name, func(t *testing.T) {
-			_, stderr, exitCode := runCommandFull(binary, cmd.args...)
+			stderr, exitCode := runCommandFull(binary, cmd.args...)
 			assert.NotEqual(t, 0, exitCode, "Command should fail - not implemented yet")
 			assert.Contains(t, stderr, "unknown command")
 		})
@@ -69,7 +69,7 @@ func TestSignalTimeoutIntegration(t *testing.T) {
 	defer func() { _ = exec.Command("rm", binary).Run() }()
 
 	// Test timeout behavior (when implemented)
-	_, stderr, exitCode := runCommandFull(binary, "signal", "wait", "timeout-test-signal", "--timeout", "200ms")
+	stderr, exitCode := runCommandFull(binary, "signal", "wait", "timeout-test-signal", "--timeout", "200ms")
 
 	// Should fail because command doesn't exist
 	assert.NotEqual(t, 0, exitCode)
@@ -101,7 +101,7 @@ func TestSignalErrorHandlingIntegration(t *testing.T) {
 	for _, test := range errorTests {
 		t.Run(test.name, func(t *testing.T) {
 			// For now, all should fail with "unknown command"
-			_, stderr, exitCode := runCommandFull(binary, test.args...)
+			stderr, exitCode := runCommandFull(binary, test.args...)
 			assert.NotEqual(t, 0, exitCode, "Command should fail - not implemented yet")
 			assert.Contains(t, stderr, "unknown command")
 		})
