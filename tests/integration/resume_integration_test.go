@@ -45,7 +45,7 @@ func TestResumeCommandIntegration(t *testing.T) {
 
 		// Resume using the CLI
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "resume", testName)
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err := cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to resume context: %v", err)
@@ -85,7 +85,7 @@ func TestResumeCommandIntegration(t *testing.T) {
 
 		// Resume --last should get the most recent (ctx2)
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "resume", "--last")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err := cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to resume --last: %v", err)
@@ -128,7 +128,7 @@ func TestResumeCommandIntegration(t *testing.T) {
 		// For integration testing, we'll just test that the command runs
 		// (full interactive testing would require more complex setup)
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "resume", "pattern-test-*")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		// Since this would prompt for input, we'll just check it doesn't error on the pattern
 		runErr := cmd.Run()
 		// We expect this to fail because it tries to read from stdin but gets no input
@@ -140,7 +140,7 @@ func TestResumeCommandIntegration(t *testing.T) {
 
 	t.Run("resume nonexistent context", func(t *testing.T) {
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "resume", "nonexistent-context")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		_, err := cmd.Output()
 		// Should fail with exit code
 		if err == nil {
@@ -159,7 +159,7 @@ func TestResumeCommandIntegration(t *testing.T) {
 
 		// Try to resume another context
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "resume", "some-other-context")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		_, err = cmd.Output()
 		if err == nil {
 			t.Error("Expected error when trying to resume while context is already active")
@@ -171,7 +171,7 @@ func TestResumeCommandIntegration(t *testing.T) {
 
 	t.Run("resume with no arguments and no --last", func(t *testing.T) {
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "resume")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		_, err := cmd.Output()
 		if err == nil {
 			t.Error("Expected error when resume called with no arguments")

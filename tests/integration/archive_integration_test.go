@@ -38,7 +38,7 @@ func TestArchiveBulkIntegration(t *testing.T) {
 
 		// Test pattern matching with --dry-run
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "archive", "--pattern", "feature-*", "--dry-run")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err := cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to run dry-run archive: %v", err)
@@ -86,7 +86,7 @@ func TestArchiveBulkIntegration(t *testing.T) {
 		// For now, just test that the command runs without error
 		cutoffDate := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "archive", "--completed-before", cutoffDate, "--dry-run")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		_, err = cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to run date-filtered archive: %v", err)
@@ -106,7 +106,7 @@ func TestArchiveBulkIntegration(t *testing.T) {
 
 		// Test --all-stopped with dry-run
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "archive", "--all-stopped", "--dry-run")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err := cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to run all-stopped archive: %v", err)
@@ -143,7 +143,7 @@ func TestArchiveBulkIntegration(t *testing.T) {
 
 		// Try to archive all stopped contexts (should fail due to limit)
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "archive", "--all-stopped", "--dry-run")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		_, err := cmd.Output()
 		// Should fail with exit code due to safety limit
 		if err == nil {
@@ -162,7 +162,7 @@ func TestArchiveBulkIntegration(t *testing.T) {
 
 		// Archive single context (old style, no flags)
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "archive", singleName)
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err := cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to archive single context: %v", err)
@@ -194,7 +194,7 @@ func TestArchiveBulkIntegration(t *testing.T) {
 
 		// Try to archive all stopped contexts (should skip active one)
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "archive", "--all-stopped", "--dry-run")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err := cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to run all-stopped archive with active context: %v", err)

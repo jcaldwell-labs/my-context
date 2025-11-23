@@ -42,7 +42,7 @@ func TestStopLifecycleAdvisorIntegration(t *testing.T) {
 
 		// Stop the context and check advisor output
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "stop")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err := cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to stop context: %v", err)
@@ -94,7 +94,7 @@ func TestStopLifecycleAdvisorIntegration(t *testing.T) {
 
 		// Stop and check for related context suggestions
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "stop")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err := cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to stop context: %v", err)
@@ -131,7 +131,7 @@ func TestStopLifecycleAdvisorIntegration(t *testing.T) {
 
 		// Stop and check for archive suggestion
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "stop")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err := cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to stop context: %v", err)
@@ -165,7 +165,7 @@ func TestStopLifecycleAdvisorIntegration(t *testing.T) {
 
 		// Stop and check for archive consideration (not strong suggestion)
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "stop")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err := cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to stop context: %v", err)
@@ -190,7 +190,7 @@ func TestStopLifecycleAdvisorIntegration(t *testing.T) {
 
 		// Stop and capture output
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "stop")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err := cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to stop context: %v", err)
@@ -215,7 +215,7 @@ func TestStopLifecycleAdvisorIntegration(t *testing.T) {
 
 		// Stop and check output
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "stop")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err := cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to stop isolated context: %v", err)
@@ -245,7 +245,7 @@ func TestStopLifecycleAdvisorIntegration(t *testing.T) {
 
 		// Stop with JSON flag - should not show advisor guidance
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "stop", "--json")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err := cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to stop context with JSON: %v", err)

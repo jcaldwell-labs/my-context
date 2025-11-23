@@ -29,7 +29,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 		// Start a context and work on it
 		ctx1Name := "e2e-project: feature-auth"
 		cmd := exec.Command("go", "run", "cmd/my-context/main.go", "start", ctx1Name)
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err := cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to start initial context: %v", err)
@@ -42,7 +42,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 
 		// Stop the context
 		cmd = exec.Command("go", "run", "cmd/my-context/main.go", "stop")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		if err := cmd.Run(); err != nil {
 			t.Fatalf("Failed to stop initial context: %v", err)
 		}
@@ -50,7 +50,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 		// === Test Smart Resume: Try to start same context name ===
 		// This should trigger smart resume prompt (but we'll use --force for testing)
 		cmd = exec.Command("go", "run", "cmd/my-context/main.go", "start", "--force", ctx1Name)
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err = cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to force start duplicate context: %v", err)
@@ -65,7 +65,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 		// Add notes to trigger warnings (need 50+ notes)
 		for i := 0; i < 55; i++ {
 			cmd = exec.Command("go", "run", "cmd/my-context/main.go", "note", "Integration test note", string(rune('A'+(i%26))))
-			cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 			if err := cmd.Run(); err != nil {
 				t.Fatalf("Failed to add note %d: %v", i+1, err)
 			}
@@ -74,7 +74,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 		// === Phase 4: Lifecycle Advisor ===
 		// Stop context and check advisor output
 		cmd = exec.Command("go", "run", "cmd/my-context/main.go", "stop")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err = cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to stop context with advisor: %v", err)
@@ -98,7 +98,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 		// === Phase 2B: Resume Command ===
 		// Test resume --last functionality
 		cmd = exec.Command("go", "run", "cmd/my-context/main.go", "resume", "--last")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err = cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to resume last context: %v", err)
@@ -119,14 +119,14 @@ func TestEndToEndWorkflow(t *testing.T) {
 
 		for _, ctxName := range relatedContexts {
 			cmd = exec.Command("go", "run", "cmd/my-context/main.go", "start", ctxName)
-			cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 			if err := cmd.Run(); err != nil {
 				t.Fatalf("Failed to start context %s: %v", ctxName, err)
 			}
 
 			// Stop each context
 			cmd = exec.Command("go", "run", "cmd/my-context/main.go", "stop")
-			cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 			if err := cmd.Run(); err != nil {
 				t.Fatalf("Failed to stop context %s: %v", ctxName, err)
 			}
@@ -135,7 +135,7 @@ func TestEndToEndWorkflow(t *testing.T) {
 		// === Phase 3: Bulk Archive ===
 		// Test bulk archive with pattern
 		cmd = exec.Command("go", "run", "cmd/my-context/main.go", "archive", "--pattern", "e2e-project:*", "--dry-run")
-		cmd.Dir = "/home/be-dev-agent/projects/my-context-dev"
+		cmd.Dir = getProjectRoot()
 		output, err = cmd.Output()
 		if err != nil {
 			t.Fatalf("Failed to run bulk archive dry-run: %v", err)

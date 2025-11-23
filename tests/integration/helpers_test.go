@@ -4,36 +4,88 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-// buildTestBinary builds the my-context binary for testing
+var (
+	testBinaryOnce sync.Once
+	testBinaryPath string
+	testBinaryErr  error
+	projectRoot    string
+)
+
+func init() {
+	// Find project root (where go.mod is located)
+	dir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	// Walk up the directory tree until we find go.mod
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			projectRoot = dir
+			break
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			panic("could not find project root (go.mod)")
+		}
+		dir = parent
+	}
+}
+
+// buildTestBinary builds the my-context binary for testing (once)
 func buildTestBinary(t *testing.T) string {
-	cmd := exec.Command("go", "build", "-o", "my-context-test", "./cmd/my-context/")
-	err := cmd.Run()
-	require.NoError(t, err, "Failed to build test binary")
-	return "./my-context-test"
+	testBinaryOnce.Do(func() {
+		// Build in a temporary directory
+		tmpDir, err := os.MkdirTemp("", "my-context-build-*")
+		if err != nil {
+			testBinaryErr = err
+			return
+		}
+		testBinaryPath = filepath.Join(tmpDir, "my-context-test")
+
+		cmd := exec.Command("go", "build", "-o", testBinaryPath, "./cmd/my-context/")
+		testBinaryErr = cmd.Run()
+	})
+
+	require.NoError(t, testBinaryErr, "Failed to build test binary")
+	return testBinaryPath
+}
+
+// getProjectRoot returns the project root directory
+func getProjectRoot() string {
+	return projectRoot
 }
 
 // runCommand executes a command and returns error (for simple test cases)
 func runCommand(args ...string) error {
-	// This is a placeholder that will be replaced with actual command execution
-	// For now, it will fail (which is expected for TDD)
-	return os.ErrNotExist
+	cmd := exec.Command("go", "run", "./cmd/my-context/main.go")
+	cmd.Args = append(cmd.Args, args...)
+	cmd.Dir = projectRoot
+	return cmd.Run()
 }
 
 // runCommandWithOutput executes a command and returns stdout and error
 func runCommandWithOutput(args ...string) (string, error) {
-	// Placeholder - will return empty until implementation exists
-	return "", os.ErrNotExist
+	cmd := exec.Command("go", "run", "./cmd/my-context/main.go")
+	cmd.Args = append(cmd.Args, args...)
+	cmd.Dir = projectRoot
+	output, err := cmd.CombinedOutput()
+	return string(output), err
 }
 
 // runCommandWithInput executes a command with stdin input
 func runCommandWithInput(args ...string) error {
-	// Placeholder
-	return os.ErrNotExist
+	cmd := exec.Command("go", "run", "./cmd/my-context/main.go")
+	cmd.Args = append(cmd.Args, args...)
+	cmd.Dir = projectRoot
+	return cmd.Run()
 }
 
 // runCommandFull executes a my-context command and returns stdout, stderr, and exit code
