@@ -102,6 +102,37 @@ my-context export "Feature: user authentication"
 
 https://github.com/jcaldwell-labs/my-context
 
+## Related jcaldwell-labs Projects
+
+my-context is part of the jcaldwell-labs organization. These sister projects share design philosophy and offer integration opportunities:
+
+### Terminal/TUI Applications
+- **my-grid** — ASCII canvas editor with vim-style navigation, zones, PTY support
+- **boxes-live** — Real-time ASCII box drawing with joystick support
+- **terminal-stars** — Starfield animation for terminals
+- **atari-style** — Retro visual effects and shaders for terminal apps
+- **smartterm-prototype** — Smart terminal with readline-like features
+
+### CLI Tools
+- **fintrack** — Personal finance tracking CLI (Go)
+- **tario** — Terminal-based platformer game (Go)
+
+### Game Engines & Meta
+- **adventure-engine-v2** — Multiplayer text adventure engine (C)
+- **capability-catalog** — Skill/capability definitions for AI agents
+
+### Cross-Project Synergies
+
+**my-context + capability-catalog**: my-context provides session memory that AI agents defined in capability-catalog can use to maintain context across coding sessions.
+
+**my-context + smartterm-prototype**: smartterm's readline-like features can integrate my-context commands for seamless context switching within terminal workflows.
+
+**atari-style + terminal-stars**: atari-style shaders can enhance terminal-stars visuals with CRT effects, scanlines, and color cycling.
+
+**my-grid + boxes-live**: my-grid's zone system can incorporate boxes-live's real-time drawing for interactive ASCII prototyping sessions.
+
+**fintrack + my-context**: Both share Go CLI architecture patterns (Cobra, plain-text storage) and could use unified context tracking for finance-related development work.
+
 ## License
 
 MIT License — Free for personal and commercial use.

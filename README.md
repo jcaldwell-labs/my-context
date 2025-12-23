@@ -222,6 +222,31 @@ See [.github/planning/ROADMAP.md](.github/planning/ROADMAP.md) for upcoming feat
 - **Issues:** [GitHub Issues](https://github.com/jcaldwell-labs/my-context/issues)
 - **Discussions:** [GitHub Discussions](https://github.com/jcaldwell-labs/my-context/discussions)
 
+## Related Projects
+
+my-context is part of the [jcaldwell-labs](https://github.com/jcaldwell-labs) organization. Sister projects you may find useful:
+
+**Terminal/TUI Applications:**
+| Project | Description | Synergy with my-context |
+|---------|-------------|-------------------------|
+| [my-grid](https://github.com/jcaldwell-labs/my-grid) | ASCII canvas editor with vim-style navigation | Track grid editing sessions and design decisions |
+| [boxes-live](https://github.com/jcaldwell-labs/boxes-live) | Real-time ASCII box drawing with joystick support | Document box layout iterations during prototyping |
+| [terminal-stars](https://github.com/jcaldwell-labs/terminal-stars) | Starfield animation for terminals | — |
+| [atari-style](https://github.com/jcaldwell-labs/atari-style) | Retro visual effects and shaders for terminal apps | — |
+| [smartterm-prototype](https://github.com/jcaldwell-labs/smartterm-prototype) | Smart terminal with readline-like features | Integrate my-context commands into smart workflows |
+
+**CLI Tools:**
+| Project | Description | Synergy with my-context |
+|---------|-------------|-------------------------|
+| [fintrack](https://github.com/jcaldwell-labs/fintrack) | Personal finance tracking CLI (Go) | Shared CLI patterns and Go architecture |
+| [tario](https://github.com/jcaldwell-labs/tario) | Terminal-based platformer game (Go) | — |
+
+**Game Engines & Agents:**
+| Project | Description | Synergy with my-context |
+|---------|-------------|-------------------------|
+| [adventure-engine-v2](https://github.com/jcaldwell-labs/adventure-engine-v2) | Multiplayer text adventure engine (C) | Track game development sessions and world-building notes |
+| [capability-catalog](https://github.com/jcaldwell-labs/capability-catalog) | Skill/capability definitions for AI agents | my-context provides session memory for agent workflows |
+
 ## License
 
 [MIT License](LICENSE) — Free for personal and commercial use.
