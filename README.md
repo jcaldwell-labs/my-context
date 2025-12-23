@@ -1,311 +1,169 @@
 # My-Context
 
-> **🔧 DEVELOPMENT BRANCH**
-> This is the **development reference branch** showing the full development process and internal tooling.
-> **Looking for the clean public version?** → See [main branch](https://github.com/jcaldwell1066/my-context/tree/main)
+[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go](https://img.shields.io/badge/Go-1.24+-00ADD8.svg)](https://golang.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+> *Track what you're working on, not just what you've done.*
 
 A cross-platform CLI tool for managing developer work contexts with notes, file associations, and timestamps.
 
-## About This Branch
+## Why My-Context?
 
-This `dev` branch contains the complete development environment including:
+Most developers context-switch constantly but lose track of *why* they made decisions, *what* files were involved, and *when* they stopped mid-task. My-context solves this by creating lightweight, timestamped work journals that follow you across sessions.
 
-- **Spec Kit Workflow** (`.specify/`) - Feature specification and planning tools
-- **SDLC Documentation** (`SDLC.md`, `IMPLEMENTATION.md`) - Development process
-- **Feature Specifications** (`specs/`) - Complete spec-driven development artifacts
-- **Development Automation** (`scripts/`) - Build, deploy, and release automation
-- **Internal Tooling** (`.claude/`, `.cursor/`) - AI-assisted development commands
-- **Sprint Retrospectives** - Lessons learned and process improvements
-- **Constitution & Governance** - Project principles and decision-making
+**Key benefits:**
+- **Instant context capture** — Start tracking in one command, add notes as you go
+- **Automatic transitions** — Switching contexts stops the previous one automatically
+- **Plain text storage** — All data stored as human-readable files you can grep, version control, or edit
+- **Zero lock-in** — No database, no cloud dependency, no vendor tie-in
+- **Cross-platform** — Works identically on Windows, Linux, macOS, and WSL
 
-**Use this branch to:**
-- Understand how the project was developed
-- See Spec Kit workflow in action
-- Reference SDLC best practices
-- Learn from sprint retrospectives
-- Use automation scripts for your own projects
+**Perfect for:**
+- Developers who context-switch frequently between tasks
+- Teams wanting lightweight decision documentation
+- Anyone who's asked "what was I doing on that ticket last week?"
+- Pomodoro/time-boxing practitioners tracking work sessions
+- AI-assisted coding workflows that need session memory
 
-## Features
-
-- 🚀 **Simple Context Management**: Start, stop, and switch between work contexts effortlessly
-- 📝 **Notes & Timestamps**: Capture decisions and track activity within each context
-- 📁 **File Associations**: Link relevant files to contexts for easy reference
-- 🔄 **Automatic Transitions**: Previous context stops automatically when starting a new one
-- 📊 **History Tracking**: Full audit trail of all context switches
-- 🚨 **Signal Coordination**: Event-driven coordination between team members and processes
-- 👀 **Context Watching**: Monitor contexts for changes and execute commands automatically
-- 🏷️ **Context Metadata**: Enhanced context organization with created-by, parent, and labels
-- 💾 **Plain Text Storage**: All data stored as human-readable text files
-- 🌐 **Cross-Platform**: Works on Windows, Linux, and macOS
-- 🔧 **Unix Philosophy**: Composable commands with text I/O
-
-## Installation
-
-### Quick Install (Recommended)
-
-**One-liner install** (Linux, macOS, WSL):
-```bash
-# Coming soon - check releases page for now
-# curl -sSL https://raw.githubusercontent.com/YOUR-USERNAME/my-context/main/scripts/curl-install.sh | bash
-```
-
-### Pre-built Binaries
-
-Download binaries from the [releases page](https://github.com/YOUR-USERNAME/my-context/releases):
-
-- **Windows**: `my-context-windows-amd64.exe`
-- **Linux**: `my-context-linux-amd64`
-- **macOS Intel**: `my-context-darwin-amd64`
-- **macOS ARM (M1/M2)**: `my-context-darwin-arm64`
-
-**Installation scripts**:
-- Linux/macOS/WSL: `./scripts/install.sh`
-- Windows (cmd.exe): `scripts\install.bat`
-- Windows (PowerShell): `.\scripts\install.ps1`
-
-### Building from Source
-
-**Requirements**: Go 1.21 or later
+## Demo
 
 ```bash
-# Clone the repository
-git clone https://github.com/YOUR-USERNAME/my-context.git
-cd my-context
+# Start working on a feature
+$ my-context start "Implement user auth"
+Context started: Implement_user_auth
 
-# Build for current platform
-go build -o my-context ./cmd/my-context/
+# Capture decisions as you go
+$ my-context note "Using JWT tokens for stateless auth"
+$ my-context note "Added refresh token rotation"
 
-# Or build all platforms
-./scripts/build-all.sh
+# Associate relevant files
+$ my-context file src/auth/jwt.go
+$ my-context file tests/auth_test.go
 
-# Install to ~/.local/bin (Unix) or %USERPROFILE%\bin (Windows)
-./scripts/install.sh
+# Urgent bug? Just start a new context
+$ my-context start "Hotfix: login timeout"
+# Previous context automatically stopped
+
+# Review what you worked on
+$ my-context show
 ```
-
-**Build options**:
-- Single platform: `go build -o my-context ./cmd/my-context/`
-- All platforms: `./scripts/build-all.sh` (outputs to `bin/`)
-- Static linking: Binaries are statically linked (CGO_ENABLED=0) with zero runtime dependencies
-
-### Troubleshooting
-
-If you encounter installation issues, please open an issue on GitHub.
 
 ## Quick Start
 
+### Install
+
+**Linux/macOS/WSL (one-liner):**
 ```bash
-# Start a new context
-my-context start "Working on login feature"
+curl -sSL https://raw.githubusercontent.com/jcaldwell-labs/my-context/main/scripts/curl-install.sh | bash
+```
 
-# Add notes
-my-context note "Fixed authentication bug"
-my-context note "Updated tests"
+**Or download binaries** from [Releases](https://github.com/jcaldwell-labs/my-context/releases):
+- `my-context-linux-amd64` — Linux (x86_64)
+- `my-context-darwin-amd64` — macOS Intel
+- `my-context-darwin-arm64` — macOS Apple Silicon
+- `my-context-windows-amd64.exe` — Windows
 
-# Associate files
-my-context file src/auth/login.go
-my-context file tests/auth/login_test.go
+**Build from source:**
+```bash
+git clone https://github.com/jcaldwell-labs/my-context.git
+cd my-context
+go build -o my-context ./cmd/my-context/
+```
 
-# Record activity
-my-context touch
+### Your First Context
 
-# View current context
+```bash
+# 1. Start a context
+my-context start "My first task"
+
+# 2. Add a note
+my-context note "Getting started with my-context"
+
+# 3. See your context
 my-context show
 
-# List all contexts
+# 4. List all contexts
 my-context list
-
-# View transition history
-my-context history
-
-# Stop current context
-my-context stop
 ```
 
-## Commands
+## Features
 
-All commands support both full names and single-letter aliases.
+### Core Context Management
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `start <name>` | `s` | Create and activate a new context |
+| `stop` | `p` | Stop the active context |
+| `show` | `w` | Display current context details |
+| `list` | `l` | List all contexts with filters |
+| `history` | `h` | Show context transition history |
 
-### `start <name>` (alias: `s`)
-Create and activate a new context. If a context is already active, it will be stopped automatically.
+### Notes & Files
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `note <text>` | `n` | Add timestamped note to active context |
+| `file <path>` | `f` | Associate file with active context |
+| `touch` | `t` | Record activity timestamp |
 
+### Organization (Sprint 2+)
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `export <name>` | `e` | Export context to markdown/JSON |
+| `archive <name>` | `a` | Archive completed contexts |
+| `delete <name>` | `d` | Permanently remove a context |
+
+### Advanced Features
+
+**Project Grouping:**
 ```bash
-my-context start "Bug fix #123"
-my-context s "Quick patch"
+my-context start "Phase 1" --project myapp
+my-context list --project myapp
 ```
 
-**Duplicate Names**: If a context with the same name exists, a suffix (_2, _3, etc.) is automatically appended.
-
-### `start <name>` - Enhanced (Sprint 2)
-
-**New: `--project` flag**
+**Filtering & Search:**
 ```bash
-# Create context with project prefix
-my-context start "Phase 1" --project ps-cli
-# Creates: "ps-cli: Phase 1"
-
-# Quickly group related contexts
-my-context start "Planning" --project garden
-my-context start "Implementation" --project garden
-```
-
-### `stop` (alias: `p`)
-Stop the currently active context without starting a new one.
-
-```bash
-my-context stop
-```
-
-### `note <text>` (alias: `n`)
-Add a timestamped note to the active context.
-
-```bash
-my-context note "Identified the root cause"
-my-context n "Refactored error handling"
-```
-
-### `file <path>` (alias: `f`)
-Associate a file path with the active context. Paths are normalized automatically.
-
-```bash
-my-context file src/main.go
-my-context f /absolute/path/to/file.txt
-```
-
-### `touch` (alias: `t`)
-Record a timestamp indicating activity without detailed notes.
-
-```bash
-my-context touch
-```
-
-### `show` (alias: `w`)
-Display details about the currently active context.
-
-```bash
-my-context show
-```
-
-Output includes:
-- Context name and status
-- Start time and duration
-- All notes with timestamps
-- Associated files
-- Touch event count
-
-### `list` (alias: `l`) - Enhanced (Sprint 2)
-
-**New filtering options**:
-```bash
-# Default: show 10 most recent
-my-context list
-
-# Show all contexts
-my-context list --all
-
-# Custom limit
 my-context list --limit 5
-
-# Filter by project (case-insensitive)
-my-context list --project ps-cli
-
-# Search by substring
-my-context list --search "Phase"
-
-# Show only archived contexts
-my-context list --archived
-
-# Show only active context
-my-context list --active-only
-
-# Combine filters
-my-context list --project garden --limit 3
-```
-
-### `export <name>` (alias: `e`) - New in Sprint 2
-
-Export context data to markdown or JSON for sharing and documentation.
-
-```bash
-# Export single context (creates {name}.md)
-my-context export "ps-cli: Phase 1"
-
-# Export to custom path
-my-context export "Phase 1" --to reports/phase-1.md
-
-# Export all contexts
-my-context export --all --to exports/
-
-# Export as JSON
-my-context export "Phase 1" --json --to data.json
-```
-
-**Export format** (Markdown):
-- Context metadata (start/end times, duration)
-- All notes with timestamps
-- File associations
-- Touch activity
-- Archive status
-
-### `archive <name>` - New in Sprint 2
-
-Mark a context as archived. Archived contexts are hidden from default `list` output but preserved.
-
-```bash
-# Archive a stopped context
-my-context archive "old-project: Phase 1"
-
-# View archived contexts
+my-context list --search "auth"
 my-context list --archived
 ```
 
-**Requirements**:
-- Context must be stopped (cannot archive active context)
-- Data is preserved (only metadata flag changed)
-
-### `delete <name>` - New in Sprint 2
-
-Permanently delete a context directory.
-
-```bash
-# Delete with confirmation prompt
-my-context delete "old-context"
-
-# Skip confirmation
-my-context delete "old-context" --force
-```
-
-**Safety features**:
-- Cannot delete active context
-- Confirmation prompt (unless `--force`)
-- Exit code 2 on user cancellation
-- `transitions.log` is preserved (historical transitions remain)
-
-### `list` (legacy alias)
-List all contexts (active and stopped) with their status.
-
-```bash
-my-context list
-```
-
-### `history` (alias: `h`)
-Show the chronological transition log of all context switches.
-
-```bash
-my-context history
-```
-
-## JSON Output
-
-All commands support `--json` flag for machine-readable output:
-
+**JSON Output:**
 ```bash
 my-context show --json | jq .
-my-context list --json | jq '.data.contexts | length'
+```
+
+## Use Cases
+
+### Daily Development Workflow
+```bash
+# Morning: start your day
+my-context start "Sprint 42 - User dashboard"
+my-context note "Planning: add charts, fix pagination"
+
+# As you work
+my-context note "Charts library: chose recharts over chart.js"
+my-context file src/components/Dashboard.tsx
+
+# Context switch happens
+my-context start "Code review: PR #234"
+# Previous context auto-stopped with timestamp
+```
+
+### Git Integration
+```bash
+# In .git/hooks/post-commit
+my-context note "Committed: $(git log -1 --pretty=%B)"
+```
+
+### End-of-Day Review
+```bash
+my-context list --limit 10
+my-context export "Sprint 42 - User dashboard"
 ```
 
 ## Data Storage
 
-All context data is stored in `~/.my-context/` (or `$MY_CONTEXT_HOME` if set):
+All data stored in `~/.my-context/` as plain text:
 
 ```
 ~/.my-context/
@@ -318,134 +176,52 @@ All context data is stored in `~/.my-context/` (or `$MY_CONTEXT_HOME` if set):
     └── touch.log           # Activity timestamps
 ```
 
-All files are plain text and can be:
-- ✅ Viewed with standard tools (`cat`, `grep`, `less`)
-- ✅ Version controlled with git
-- ✅ Backed up with simple file copy
-- ✅ Edited manually if needed
+Override location: `export MY_CONTEXT_HOME=/custom/path`
 
-## Environment Variables
+## Documentation
 
-- `MY_CONTEXT_HOME`: Override the default context storage directory
+- **[Getting Started Guide](docs/guides/GETTING-STARTED.md)** — Full installation and first steps
+- **[Triggers Tutorial](docs/tutorials/TRIGGERS-TUTORIAL.md)** — Automation with signals and watches
+- **[Troubleshooting](docs/guides/TROUBLESHOOTING.md)** — Common issues and solutions
+- **[CLAUDE.md](CLAUDE.md)** — Architecture and development guide
 
-```bash
-export MY_CONTEXT_HOME=/custom/path
-my-context start "Test"
-```
+## Comparison
 
-## Use Cases
-
-### Track Work Sessions
-```bash
-my-context start "Sprint planning"
-my-context note "Discussed user stories for Q1"
-my-context note "Priority: authentication refactor"
-my-context stop
-```
-
-### Context Switching
-```bash
-my-context start "Feature development"
-# ... work on feature ...
-
-# Urgent bug report comes in
-my-context start "Hotfix bug #456"
-# Previous context automatically stopped
-```
-
-### Git Integration
-```bash
-# In git hooks (.git/hooks/post-commit)
-my-context note "Committed: $(git log -1 --pretty=%B)"
-```
-
-### End-of-Day Review
-```bash
-# See what you worked on today
-my-context list
-my-context history
-```
-
-## Tutorials & Guides
-
-### **📚 [Personal Productivity with Triggers Tutorial](docs/TRIGGERS-TUTORIAL.md)**
-
-Learn how to automate your workflow with signals and watches:
-- Get notified when you complete milestones
-- Receive warnings when contexts get too large
-- Automate end-of-day cleanup
-- Integrate with Pomodoro timers
-- Create smart context lifecycle automation
-
-**Perfect for**: Anyone wanting to level up their productivity with automation
-
-## Advanced Usage
-
-### Backup Your Contexts
-```bash
-tar czf contexts-backup.tar.gz ~/.my-context/
-```
-
-### Version Control Your Context Data
-```bash
-cd ~/.my-context
-git init
-git add .
-git commit -m "Context snapshot"
-```
-
-### Search Notes
-```bash
-grep -r "bug" ~/.my-context/*/notes.log
-```
-
-### Shell Integration
-Add to `.bashrc` or `.zshrc`:
-
-```bash
-# Show current context in prompt
-export PS1='[$(my-context show --json 2>/dev/null | jq -r ".data.context.name // \"no context\"")]$ '
-
-# Quick aliases
-alias cn='my-context note'
-alias cf='my-context file'
-alias cs='my-context show'
-```
-
-## Development
-
-### Build
-```bash
-go build -o my-context ./cmd/my-context/
-```
-
-### Test
-```bash
-go test ./...
-```
-
-### Cross-Platform Build
-```bash
-./scripts/build.sh
-```
-
-## Architecture
-
-- **Models** (`internal/models/`): Data structures for contexts, notes, files, etc.
-- **Core** (`internal/core/`): Business logic for context operations
-- **Commands** (`internal/commands/`): CLI command implementations
-- **Output** (`internal/output/`): Human-readable and JSON formatters
+| Feature | my-context | git stash | tmux sessions | note apps |
+|---------|-----------|-----------|---------------|-----------|
+| Context tracking | Yes | No | No | Manual |
+| Automatic transitions | Yes | No | No | No |
+| File associations | Yes | Yes (staged) | No | Manual |
+| Timestamped notes | Yes | No | No | Yes |
+| Plain text storage | Yes | Binary | N/A | Varies |
+| Cross-platform | Yes | Yes | Unix only | Varies |
+| CLI-first | Yes | Yes | Yes | No |
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-Key principles:
-1. Follow the Unix philosophy: Do one thing well
-2. Keep it simple: No unnecessary complexity
-3. Test first: TDD approach required
-4. Plain text: All storage must remain human-readable
+**Development:**
+```bash
+go build -o my-context ./cmd/my-context/
+go test ./...
+```
+
+**Key principles:**
+1. Unix philosophy — Do one thing well
+2. Plain text — All storage human-readable
+3. Test-first — TDD approach required
+4. Cross-platform — Windows, Linux, macOS
+
+## Roadmap
+
+See [.github/planning/ROADMAP.md](.github/planning/ROADMAP.md) for upcoming features.
+
+## Community
+
+- **Issues:** [GitHub Issues](https://github.com/jcaldwell-labs/my-context/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/jcaldwell-labs/my-context/discussions)
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+[MIT License](LICENSE) — Free for personal and commercial use.

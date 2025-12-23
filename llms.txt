@@ -1,0 +1,107 @@
+# my-context
+
+> Track what you're working on, not just what you've done.
+
+A cross-platform CLI tool for managing developer work contexts with notes, file associations, and timestamps. Built in Go, designed for the Unix philosophy.
+
+## What it does
+
+my-context creates lightweight, timestamped work journals that track your development activities across sessions. Unlike git stash (files only) or note apps (manual), my-context automatically manages context transitions while capturing decisions, associated files, and timestamps in plain text.
+
+## Core capabilities
+
+- **Context tracking**: Start/stop named work sessions with automatic transitions
+- **Timestamped notes**: Capture decisions and progress as you work
+- **File associations**: Link source files to contexts for later reference
+- **Project grouping**: Organize contexts by project with filters and search
+- **Export**: Generate markdown summaries for documentation or sharing
+- **Plain text storage**: All data stored as human-readable files in ~/.my-context/
+
+## Quick start
+
+```bash
+# Install
+curl -sSL https://raw.githubusercontent.com/jcaldwell-labs/my-context/main/scripts/curl-install.sh | bash
+
+# Or build from source
+git clone https://github.com/jcaldwell-labs/my-context.git && cd my-context
+go build -o my-context ./cmd/my-context/
+```
+
+## Common commands
+
+```bash
+# Start a work context
+my-context start "Feature: user authentication"
+
+# Add notes as you work
+my-context note "Chose JWT over sessions for stateless auth"
+my-context note "Added refresh token rotation"
+
+# Associate relevant files
+my-context file src/auth/jwt.go
+
+# Switch contexts (previous auto-stops)
+my-context start "Hotfix: login timeout"
+
+# View current context
+my-context show
+
+# List recent contexts
+my-context list --limit 5
+
+# Export context to markdown
+my-context export "Feature: user authentication"
+```
+
+## Command reference
+
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `start <name>` | `s` | Create and activate a new context |
+| `stop` | `p` | Stop the active context |
+| `note <text>` | `n` | Add timestamped note |
+| `file <path>` | `f` | Associate file with context |
+| `show` | `w` | Display current context |
+| `list` | `l` | List contexts (supports --project, --search, --limit) |
+| `history` | `h` | Show transition history |
+| `export <name>` | `e` | Export to markdown/JSON |
+| `archive <name>` | `a` | Archive completed context |
+| `delete <name>` | `d` | Permanently remove context |
+
+## Use cases
+
+1. **Daily development workflow** — Track what you worked on each day with automatic timestamps
+2. **Context switching** — Seamlessly switch between tasks while preserving state
+3. **Decision documentation** — Capture why choices were made as you code
+4. **Sprint reviews** — Export contexts to markdown for retrospectives
+5. **AI-assisted coding** — Provide session memory for coding agents
+
+## Architecture
+
+```
+~/.my-context/
+├── state.json              # Active context pointer
+├── transitions.log         # Transition history
+└── Context_Name/           # Per-context directory
+    ├── meta.json           # Context metadata
+    ├── notes.log           # Timestamped notes
+    ├── files.log           # File associations
+    └── touch.log           # Activity timestamps
+```
+
+## Technical details
+
+- **Language**: Go 1.24+
+- **Dependencies**: Minimal (cobra for CLI)
+- **Storage**: Plain text (JSON + log files)
+- **Platforms**: Windows, Linux, macOS, WSL
+- **Binary size**: ~5MB statically linked
+
+## Repository
+
+https://github.com/jcaldwell-labs/my-context
+
+## License
+
+MIT License — Free for personal and commercial use.

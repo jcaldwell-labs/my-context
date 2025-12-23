@@ -1,0 +1,74 @@
+# [project-name]
+
+> Tagline describing the project in one sentence.
+
+Brief description of what the project does, its purpose, and core value proposition (2-3 sentences).
+
+## What it does
+
+- Core capability 1
+- Core capability 2
+- Core capability 3
+- Core capability 4
+
+## Quick start
+
+```bash
+# Installation
+[installation command]
+
+# Or build from source
+git clone https://github.com/org/project.git && cd project
+[build command]
+```
+
+## Common commands
+
+```bash
+# Most common operation 1
+command example
+
+# Most common operation 2
+command example
+
+# Most common operation 3
+command example
+```
+
+## Command reference
+
+| Command | Description |
+|---------|-------------|
+| `command1` | What it does |
+| `command2` | What it does |
+| `command3` | What it does |
+
+## Use cases
+
+1. **Use case 1** — Brief description
+2. **Use case 2** — Brief description
+3. **Use case 3** — Brief description
+
+## Architecture
+
+```
+# Directory structure or system diagram
+project/
+├── component1/     # Description
+├── component2/     # Description
+└── component3/     # Description
+```
+
+## Technical details
+
+- **Language**: [Language] [Version]
+- **Dependencies**: [Key dependencies]
+- **Platforms**: [Supported platforms]
+
+## Repository
+
+https://github.com/org/project
+
+## License
+
+[License Type] — Usage terms.
