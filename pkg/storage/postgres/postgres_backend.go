@@ -11,6 +11,7 @@ import (
 
 	"github.com/jefferycaldwell/my-context-copilot/pkg/models"
 	"github.com/jefferycaldwell/my-context-copilot/pkg/storage"
+	"github.com/jefferycaldwell/my-context-copilot/pkg/utils"
 )
 
 // Backend implements storage.Backend for PostgreSQL
@@ -96,13 +97,16 @@ func (b *Backend) Init() error {
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
+		db.Close() // Clean up on error
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	b.db = db
 
-	// Create schema
+	// Create schema (includes security validation)
 	if err := b.createSchema(); err != nil {
+		db.Close() // Clean up on error to prevent resource leak
+		b.db = nil
 		return fmt.Errorf("failed to create schema: %w", err)
 	}
 
@@ -141,6 +145,13 @@ func (b *Backend) GetDB() *sql.DB {
 
 // createSchema creates the database schema if it doesn't exist
 func (b *Backend) createSchema() error {
+	// Security: Validate schema name before using in SQL to prevent SQL injection.
+	// The schema name comes from user input via MY_CONTEXT_HOME=db:partition-name
+	// and is sanitized by SanitizePartitionName(), but we add defense-in-depth here.
+	if !utils.IsValidPostgresIdentifier(b.schema) {
+		return fmt.Errorf("invalid schema name %q: must contain only letters, digits, and underscores", b.schema)
+	}
+
 	// Create schema if it doesn't exist (skip for public schema)
 	if b.schema != "public" {
 		_, err := b.db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", b.schema))
@@ -1076,6 +1087,11 @@ func (b *Backend) ListContextsAcrossPartitions() (map[string][]*models.ContextWi
 	result := make(map[string][]*models.ContextWithMetadata)
 
 	for _, partition := range partitions {
+		// Security: Validate partition name before using in SQL (defense-in-depth)
+		if !utils.IsValidPostgresIdentifier(partition) {
+			continue // Skip invalid partition names
+		}
+
 		// Query contexts from this partition
 		query := fmt.Sprintf(`
 			SELECT
@@ -1150,6 +1166,11 @@ func (b *Backend) SearchContextsAcrossPartitions(query string) (map[string][]*mo
 	result := make(map[string][]*models.ContextWithMetadata)
 
 	for _, partition := range partitions {
+		// Security: Validate partition name before using in SQL (defense-in-depth)
+		if !utils.IsValidPostgresIdentifier(partition) {
+			continue // Skip invalid partition names
+		}
+
 		// Search contexts in this partition using full-text search
 		searchQuery := fmt.Sprintf(`
 			SELECT

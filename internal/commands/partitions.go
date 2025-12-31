@@ -7,8 +7,12 @@ import (
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
+	"github.com/jefferycaldwell/my-context-copilot/pkg/utils"
 	"github.com/spf13/cobra"
 )
+
+// Note: Schema names from pg_tables are trusted database values, but we validate
+// them before using in dynamic SQL as defense-in-depth against SQL injection.
 
 // PartitionInfo holds information about a partition
 type PartitionInfo struct {
@@ -159,6 +163,12 @@ func listPartitions(backend interface{}) ([]PartitionInfo, error) {
 
 		if err := rows.Scan(&schema, &tableCount); err != nil {
 			return nil, fmt.Errorf("failed to scan partition row: %w", err)
+		}
+
+		// Security: Validate schema name before using in dynamic SQL (defense-in-depth)
+		// Schema names come from pg_tables which is trusted, but we validate anyway
+		if !utils.IsValidPostgresIdentifier(schema) {
+			continue // Skip invalid schema names
 		}
 
 		// For each schema, get context count, active context, and last activity

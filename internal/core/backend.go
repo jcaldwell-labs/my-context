@@ -62,7 +62,12 @@ func GetPostgresConnectionString() (string, error) {
 			return appendSearchPath(dbURL, schema), nil
 		}
 
-		// Fall back to default localhost connection (backward compatible)
+		// Fall back to default localhost connection for local development.
+		// WARNING: These are development-only defaults. In production, always
+		// set DATABASE_URL with proper credentials. These defaults exist for:
+		// - Local Docker development (postgres-dev container)
+		// - Quick testing without configuration
+		// Do NOT use these credentials in production environments.
 		connStr := fmt.Sprintf(
 			"host=localhost port=5432 user=devuser password=devpassword dbname=dev_state sslmode=disable search_path=%s",
 			schema,
@@ -71,7 +76,8 @@ func GetPostgresConnectionString() (string, error) {
 		return connStr, nil
 	}
 
-	return "", fmt.Errorf("not a database backend")
+	return "", fmt.Errorf("MY_CONTEXT_HOME=%q is not recognized as a database backend. "+
+		"Expected: 'db', 'db:<partition>', 'postgres://...', or a file path", home)
 }
 
 // appendSearchPath adds search_path parameter to a connection string
