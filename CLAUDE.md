@@ -122,6 +122,191 @@ core.SetActiveContext():
 output.PrintContext() displays result
 ```
 
+## Database Backend and Partitioning (v3.0.0)
+
+### Overview
+Version 3.0.0 introduces PostgreSQL backend support with partition capabilities, providing 10-400x performance improvement over file-based storage.
+
+### Backend Selection
+Set via `MY_CONTEXT_HOME` environment variable:
+
+**File-Based (Default)**:
+```bash
+export MY_CONTEXT_HOME=~/.my-context  # Or any directory path
+```
+
+**Database (Single Partition)**:
+```bash
+export MY_CONTEXT_HOME=db              # Default PostgreSQL (public schema)
+export MY_CONTEXT_HOME=database        # Same as 'db'
+export MY_CONTEXT_HOME=pg              # Same as 'db'
+```
+
+**Database (Multiple Partitions)** - NEW:
+```bash
+export MY_CONTEXT_HOME=db:adventure-engine    # Partition for adventure-engine project
+export MY_CONTEXT_HOME=db:payment-service     # Partition for payment-service project
+export MY_CONTEXT_HOME=db:scrum               # Partition for scrum contexts
+```
+
+### Partition Architecture
+
+**Design Philosophy**:
+- Each partition = isolated workspace with its own contexts, notes, files, and state
+- Partition names are auto-sanitized to valid PostgreSQL schema names
+- Each partition uses a separate PostgreSQL schema in the same database
+- Backward compatible: `db` alone uses `public` schema
+
+**Partition Naming Rules**:
+- Input: Any string (e.g., "Adventure Engine!", "payment-service-v2")
+- Auto-sanitized to PostgreSQL schema names:
+  - Lowercase conversion
+  - Hyphens/spaces → underscores
+  - Special chars removed
+  - Prefix `p_` if starts with number
+- Examples:
+  - `adventure-engine` → `adventure_engine`
+  - `My Project!` → `my_project`
+  - `123test` → `p_123test`
+
+**Per-Partition Isolation**:
+- Independent active context (each partition tracks its own active context)
+- Separate context counts
+- Isolated state management
+- Cross-partition queries available via flags
+
+### Partition-Aware Commands
+
+**View Current Partition**:
+```bash
+my-context which
+# Output shows:
+#   Backend: PostgreSQL database
+#   Partition: adventure-engine
+#   Schema: adventure_engine
+```
+
+**List All Partitions**:
+```bash
+my-context partitions               # Show all partitions with stats
+my-context partitions --json        # JSON output
+my-context p                        # Alias
+```
+
+**Cross-Partition Queries**:
+```bash
+my-context list --all-partitions            # List contexts across all partitions
+my-context list --partition=scrum           # List contexts from specific partition
+```
+
+### Code Architecture
+
+**Backend Detection** (`internal/core/backend.go`):
+- `DetectBackendType()` - Recognizes `db:partition` syntax
+- `ExtractPartition()` - Extracts partition name from env var
+- `SanitizePartitionName()` - Converts to valid PostgreSQL schema name
+- `GetPartitionSchema()` - Returns current schema name
+- `GetPostgresConnectionString()` - Sets `search_path` parameter
+
+**PostgreSQL Backend** (`pkg/storage/postgres/postgres_backend.go`):
+- `schema` field - Tracks active schema (partition)
+- `partition` field - Friendly partition name for display
+- `createSchema()` - Creates partition schema dynamically (CREATE SCHEMA IF NOT EXISTS)
+- `GetDB()` - Exposes database connection for cross-partition queries
+- Cross-partition methods:
+  - `ListAllPartitions()` - Returns all my-context schemas
+  - `ListContextsAcrossPartitions()` - Queries all partitions
+  - `SearchContextsAcrossPartitions()` - Full-text search across partitions
+
+**Storage Interface** (`pkg/storage/storage_interface.go`):
+- Core interface remains unchanged
+- Cross-partition methods are PostgreSQL-specific (not in interface)
+- Allows graceful feature detection via type assertion
+
+**Commands**:
+- `internal/commands/partitions.go` - New command for partition management
+- `internal/commands/which.go` - Updated to show partition info
+- `internal/commands/list.go` - Extended with `--all-partitions`, `--partition` flags
+
+### Database Schema Structure
+
+```
+Database: dev_state
+├── Schema: public (MY_CONTEXT_HOME=db)
+│   ├── contexts
+│   ├── context_notes
+│   ├── context_files
+│   └── state
+├── Schema: adventure_engine (MY_CONTEXT_HOME=db:adventure-engine)
+│   ├── contexts
+│   ├── context_notes
+│   ├── context_files
+│   └── state
+├── Schema: payment_service (MY_CONTEXT_HOME=db:payment-service)
+│   ├── contexts
+│   ├── context_notes
+│   ├── context_files
+│   └── state
+└── Schema: scrum (MY_CONTEXT_HOME=db:scrum)
+    ├── contexts
+    ├── context_notes
+    ├── context_files
+    └── state
+```
+
+### Testing
+
+**Unit Tests** (`tests/unit/partition_test.go`):
+- `TestExtractPartition()` - Partition name extraction
+- `TestSanitizePartitionName()` - Name sanitization rules
+- `TestGetPartitionSchema()` - Schema name resolution
+- `TestDetectBackendType()` - Backend type detection
+- `TestGetPostgresConnectionString()` - Connection string generation
+
+**Run Tests**:
+```bash
+go test ./tests/unit/partition_test.go -v
+```
+
+### Migration from Single Partition
+
+**Existing Data**: Contexts created with `MY_CONTEXT_HOME=db` remain in `public` schema and continue to work.
+
+**Organizing into Partitions**:
+1. Export contexts from public schema: `my-context export <context> --to <file>.md`
+2. Switch partition: `export MY_CONTEXT_HOME=db:new-partition`
+3. Re-create contexts in new partition
+4. (Optional) Delete from public schema if no longer needed
+
+### Common Use Cases
+
+**Multi-Project Developer**:
+```bash
+# Work on adventure-engine
+export MY_CONTEXT_HOME=db:adventure-engine
+my-context start "Feature X"
+
+# Switch to payment-service
+export MY_CONTEXT_HOME=db:payment-service
+my-context start "Bug fix Y"
+
+# View all partitions
+my-context partitions
+```
+
+**Scrum Master**:
+```bash
+# Separate partition for scrum ceremonies
+export MY_CONTEXT_HOME=db:scrum
+my-context start "Sprint 25 Planning"
+```
+
+**Search Across All Projects**:
+```bash
+export MY_CONTEXT_HOME=db  # Any partition
+my-context list --all-partitions --search "payment"
+```
+
 ## Development Workflow (Specification-Driven)
 
 ### Feature Development Process
@@ -223,6 +408,38 @@ Each feature lives in `specs/###-feature-name/`:
 **Test-First**: Never implement features without writing failing tests first. This is a hard requirement per constitution.
 
 **Log Files**: Empty log files are valid. Return empty slices, not errors, when log files don't exist.
+
+## Security Review Checklist (Database Code)
+
+Before creating PRs that involve database operations, complete this checklist:
+
+### SQL Injection Prevention
+- [ ] **No dynamic SQL with user input**: Use parameterized queries (`$1`, `$2`) for values
+- [ ] **Validate identifiers**: Use `utils.IsValidPostgresIdentifier()` before using schema/table names in `fmt.Sprintf`
+- [ ] **Grep check**: Run `grep -n "fmt.Sprintf.*SELECT\|fmt.Sprintf.*INSERT\|fmt.Sprintf.*UPDATE\|fmt.Sprintf.*DELETE\|fmt.Sprintf.*CREATE" pkg/ internal/` to find dynamic SQL
+
+### Resource Management
+- [ ] **Error path cleanup**: If `Init()` or similar allocates resources, ensure error paths clean them up
+- [ ] **Check for leaks**: Every `sql.Open()` should have corresponding `Close()` in error and success paths
+- [ ] **Connection pools**: Set `SetMaxOpenConns`, `SetMaxIdleConns` for production use
+
+### Credentials & Secrets
+- [ ] **No hardcoded production credentials**: Dev-only defaults must be documented with warnings
+- [ ] **Environment variable priority**: External config (DATABASE_URL) should override defaults
+- [ ] **Grep check**: Run `grep -rn "password\|secret\|token\|key" --include="*.go" | grep -v "_test.go"` to audit
+
+### Files & Artifacts
+- [ ] **No backup files**: Check `git status` for `.bak`, `.tmp`, `.orig` files before commit
+- [ ] **No test artifacts**: Ensure test databases, temp files aren't committed
+
+### Documentation
+- [ ] **Interface godocs**: Public interfaces must have contract documentation
+- [ ] **Security notes**: Document any security-sensitive code paths
+
+### Testing
+- [ ] **Unit tests for new features**: Especially environment variable handling
+- [ ] **Negative tests**: Test invalid inputs, SQL injection attempts
+- [ ] **Run tests**: `go test ./tests/unit/... -v` before creating PR
 
 ## Dependencies
 

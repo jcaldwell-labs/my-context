@@ -76,6 +76,42 @@ func runSingleArchive(args []string) error {
 
 	contextName := args[0]
 
+	// Check if using database backend
+	if core.IsUsingDatabase() {
+		backend, err := core.GetBackend()
+		if err != nil {
+			return fmt.Errorf("failed to get backend: %w", err)
+		}
+		defer backend.Close()
+
+		// Check if context exists
+		ctx, err := backend.GetContext(contextName)
+		if err != nil {
+			return fmt.Errorf("context not found: %s", contextName)
+		}
+
+		// Check if already archived
+		if ctx.IsArchived {
+			return fmt.Errorf("context %q is already archived", contextName)
+		}
+
+		// Prevent archiving active context
+		activeContext, _ := backend.GetActiveContext()
+		if activeContext == ctx.Name {
+			return fmt.Errorf("cannot archive active context %q - stop it first", contextName)
+		}
+
+		// Archive the context
+		err = backend.ArchiveContext(contextName)
+		if err != nil {
+			return fmt.Errorf("failed to archive: %w", err)
+		}
+
+		fmt.Printf("✓ Archived context: %s\n", contextName)
+		return nil
+	}
+
+	// File-based backend (existing code)
 	// Check if context exists
 	ctx, _, _, _, err := core.GetContext(contextName)
 	if err != nil {

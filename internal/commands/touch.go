@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
@@ -17,6 +18,56 @@ func NewTouchCmd(jsonOutput *bool) *cobra.Command {
 		Long:    `Record a timestamp in the currently active context to indicate activity without detailed notes.`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Check if using database backend
+			if core.IsUsingDatabase() {
+				backend, err := core.GetBackend()
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("touch", 2, fmt.Sprintf("failed to get backend: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to get backend: %w", err)
+				}
+				defer backend.Close()
+
+				// Get active context
+				contextName, err := backend.GetActiveContext()
+				if err != nil || contextName == "" {
+					errMsg := "No active context. Start a context with: my-context start <name>"
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("touch", 1, errMsg)
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return errors.New(errMsg)
+				}
+
+				// Add touch to database
+				timestamp := time.Now().Format(time.RFC3339)
+				err = backend.AddTouch(contextName, timestamp)
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("touch", 2, fmt.Sprintf("failed to add touch: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to add touch: %w", err)
+				}
+
+				// Output
+				if *jsonOutput {
+					data := map[string]interface{}{"context": contextName, "timestamp": timestamp}
+					jsonStr, _ := output.FormatJSON("touch", map[string]interface{}{"data": data})
+					fmt.Print(jsonStr)
+				} else {
+					fmt.Printf("Touch recorded in context: %s\n", contextName)
+				}
+
+				return nil
+			}
+
+			// File-based backend (existing code)
 			// Get active context
 			state, err := core.GetActiveContext()
 			if err != nil {

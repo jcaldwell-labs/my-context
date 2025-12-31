@@ -37,6 +37,55 @@ Examples:
 
 			contextName := args[0]
 
+			// Check if using database backend
+			if core.IsUsingDatabase() {
+				backend, err := core.GetBackend()
+				if err != nil {
+					return fmt.Errorf("failed to get backend: %w", err)
+				}
+				defer backend.Close()
+
+				// Check if context exists
+				ctx, err := backend.GetContext(contextName)
+				if err != nil {
+					return fmt.Errorf("context not found: %s", contextName)
+				}
+
+				// Prevent deleting active context
+				activeContext, _ := backend.GetActiveContext()
+				if activeContext == ctx.Name {
+					return fmt.Errorf("cannot delete active context %q - stop it first", contextName)
+				}
+
+				// Confirmation prompt (unless --force)
+				if !force {
+					fmt.Printf("⚠️  WARNING: This will permanently delete context %q and all its data.\n", contextName)
+					fmt.Printf("Are you sure? (yes/no): ")
+
+					reader := bufio.NewReader(os.Stdin)
+					response, err := reader.ReadString('\n')
+					if err != nil {
+						return fmt.Errorf("failed to read confirmation: %w", err)
+					}
+
+					response = strings.TrimSpace(strings.ToLower(response))
+					if response != "yes" && response != "y" {
+						fmt.Println("Delete cancelled.")
+						return nil
+					}
+				}
+
+				// Delete from database
+				err = backend.DeleteContext(contextName)
+				if err != nil {
+					return fmt.Errorf("failed to delete: %w", err)
+				}
+
+				fmt.Printf("✓ Deleted context: %s\n", contextName)
+				return nil
+			}
+
+			// File-based backend (existing code)
 			// Check if context exists
 			ctx, _, _, _, err := core.GetContext(contextName)
 			if err != nil {

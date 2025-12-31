@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/jefferycaldwell/my-context-copilot/internal/models"
@@ -18,6 +19,91 @@ func NewStopCmd(jsonOutput *bool) *cobra.Command {
 		Long:    `Stop the currently active context without starting a new one.`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Check if using database backend
+			if core.IsUsingDatabase() {
+				backend, err := core.GetBackend()
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("stop", 2, fmt.Sprintf("failed to get backend: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to get backend: %w", err)
+				}
+				defer backend.Close()
+
+				// Get active context
+				contextName, err := backend.GetActiveContext()
+				if err != nil || contextName == "" {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSON("stop", map[string]interface{}{
+							"message": "No active context",
+						})
+						fmt.Print(jsonStr)
+					} else {
+						fmt.Println("No active context")
+					}
+					return nil
+				}
+
+				// Get context details
+				dbCtx, _ := backend.GetContext(contextName)
+
+				// Update context to stopped
+				endTime := time.Now()
+				dbCtx.Status = "stopped"
+				dbCtx.EndTime = &endTime
+
+				err = backend.UpdateContext(dbCtx)
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("stop", 2, fmt.Sprintf("failed to update context: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to update context: %w", err)
+				}
+
+				// Clear active context
+				err = backend.ClearActiveContext()
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("stop", 2, fmt.Sprintf("failed to clear active context: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to clear active context: %w", err)
+				}
+
+				// Convert to internal model for output
+				context := &models.Context{
+					Name:      dbCtx.Name,
+					StartTime: dbCtx.StartTime,
+					EndTime:   &endTime,
+					Status:    "stopped",
+				}
+
+				// Output (simplified, skipping lifecycle guidance for database backend)
+				if *jsonOutput {
+					durationSeconds := int(context.Duration().Seconds())
+					data := output.StopData{
+						ContextName:     context.Name,
+						StartTime:       context.StartTime,
+						EndTime:         endTime,
+						DurationSeconds: durationSeconds,
+					}
+					jsonStr, _ := output.FormatJSON("stop", map[string]interface{}{"data": data})
+					fmt.Print(jsonStr)
+				} else {
+					fmt.Printf("Stopped context: %s (duration: %s)\n",
+						context.Name,
+						output.FormatDuration(context.Duration()))
+				}
+
+				return nil
+			}
+
+			// File-based backend (existing code)
 			context, err := core.StopContext()
 			if err != nil {
 				if *jsonOutput {
