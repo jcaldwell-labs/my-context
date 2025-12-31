@@ -37,6 +37,17 @@ which context home is currently active.`,
 			envValue := os.Getenv("MY_CONTEXT_HOME")
 			envSet := envValue != ""
 
+			// Check if using database backend and get partition info
+			usingDatabase := core.IsUsingDatabase()
+			var partitionName, schemaName string
+			if usingDatabase {
+				partitionName = core.ExtractPartition()
+				schemaName = core.GetPartitionSchema()
+				if partitionName == "" {
+					partitionName = "(default)"
+				}
+			}
+
 			// Output
 			switch {
 			case *jsonOutput:
@@ -47,6 +58,11 @@ which context home is currently active.`,
 					"active_context":       activeContext,
 					"env_set":              envSet,
 					"env_value":            envValue,
+					"using_database":       usingDatabase,
+				}
+				if usingDatabase {
+					data["partition"] = partitionName
+					data["schema"] = schemaName
 				}
 				jsonStr, err := output.FormatJSON("which", map[string]interface{}{"data": data})
 				if err != nil {
@@ -71,10 +87,17 @@ which context home is currently active.`,
 
 				fmt.Println()
 				fmt.Println("Details:")
-				fmt.Printf("  Location: %s\n", homePath)
+				if usingDatabase {
+					fmt.Printf("  Backend: PostgreSQL database\n")
+					fmt.Printf("  Partition: %s\n", partitionName)
+					fmt.Printf("  Schema: %s\n", schemaName)
+				} else {
+					fmt.Printf("  Backend: File-based storage\n")
+					fmt.Printf("  Location: %s\n", homePath)
+					fmt.Printf("  State file: %s/state.json\n", homePath)
+				}
 				fmt.Printf("  Contexts: %d\n", contextCount)
 				fmt.Printf("  Active: %s\n", activeContext)
-				fmt.Printf("  State file: %s/state.json\n", homePath)
 			}
 
 			return nil

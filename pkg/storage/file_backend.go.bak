@@ -1,0 +1,38 @@
+package storage
+
+import (
+	"github.com/jefferycaldwell/my-context-copilot/internal/core"
+)
+
+// FileBackend implements storage using the existing file-based system
+// This wraps the current internal/core functions
+type FileBackend struct {
+	contextHome string
+}
+
+// NewFileBackend creates a new file-based backend
+func NewFileBackend(contextHome string) *FileBackend {
+	return &FileBackend{
+		contextHome: contextHome,
+	}
+}
+
+// ListContexts returns all contexts from file storage
+func (fb *FileBackend) ListContexts() ([]string, error) {
+	return core.ListContextDirs()
+}
+
+// GetActiveContext returns the currently active context name
+func (fb *FileBackend) GetActiveContext() (string, error) {
+	state, err := core.GetActiveContext()
+	if err != nil {
+		return "", err
+	}
+	if !state.HasActiveContext() {
+		return "", nil
+	}
+	return state.GetActiveContextName(), nil
+}
+
+// TODO: Implement remaining methods as needed
+// For now, this demonstrates the pattern
