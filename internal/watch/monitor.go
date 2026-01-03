@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kballard/go-shellquote"
+
 	"github.com/jefferycaldwell/my-context-copilot/pkg/utils"
 )
 
@@ -285,22 +287,31 @@ func (w *Watcher) checkAndExecute() Result {
 	}
 }
 
-// executeCommand runs the specified command
-func (w *Watcher) executeCommand(cmd string) error {
-	if strings.TrimSpace(cmd) == "" {
+// executeCommand runs the specified command safely without shell injection.
+// SECURITY: This uses shellquote to parse the command string and executes
+// directly without a shell, preventing command injection attacks.
+// Note: Shell features like pipes, redirects, and command chaining are not
+// supported. Users should create shell scripts for complex commands.
+func (w *Watcher) executeCommand(cmdStr string) error {
+	if strings.TrimSpace(cmdStr) == "" {
 		return fmt.Errorf("empty command")
 	}
 
-	// Use shell to properly handle quotes, pipes, redirects, variables, etc.
-	var shellCmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		shellCmd = exec.Command("cmd", "/C", cmd)
-	} else {
-		shellCmd = exec.Command("sh", "-c", cmd)
+	// Parse command safely - prevents injection by avoiding shell interpretation
+	parts, err := shellquote.Split(cmdStr)
+	if err != nil {
+		return fmt.Errorf("invalid command syntax: %w", err)
 	}
 
+	if len(parts) == 0 {
+		return fmt.Errorf("empty command after parsing")
+	}
+
+	// Execute directly WITHOUT shell - no injection possible
+	cmd := exec.Command(parts[0], parts[1:]...)
+
 	// Capture and display output so user sees exec command results
-	output, err := shellCmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
 	if len(output) > 0 {
 		fmt.Print(string(output))
 	}
