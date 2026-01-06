@@ -21,13 +21,13 @@ func DetectBackendType() BackendType {
 
 	// Check for database connection strings
 	if strings.HasPrefix(home, "postgresql://") ||
-	   strings.HasPrefix(home, "postgres://") ||
-	   home == "db" ||
-	   home == "database" ||
-	   home == "pg" ||
-	   strings.HasPrefix(home, "db:") ||
-	   strings.HasPrefix(home, "database:") ||
-	   strings.HasPrefix(home, "pg:") {
+		strings.HasPrefix(home, "postgres://") ||
+		home == "db" ||
+		home == "database" ||
+		home == "pg" ||
+		strings.HasPrefix(home, "db:") ||
+		strings.HasPrefix(home, "database:") ||
+		strings.HasPrefix(home, "pg:") {
 		return BackendTypePostgres
 	}
 
@@ -53,9 +53,9 @@ func GetPostgresConnectionString() (string, error) {
 
 	// For shorthand syntax (db, db:partition), check DATABASE_URL first
 	if home == "db" || home == "database" || home == "pg" ||
-	   strings.HasPrefix(home, "db:") ||
-	   strings.HasPrefix(home, "database:") ||
-	   strings.HasPrefix(home, "pg:") {
+		strings.HasPrefix(home, "db:") ||
+		strings.HasPrefix(home, "database:") ||
+		strings.HasPrefix(home, "pg:") {
 
 		// Try DATABASE_URL environment variable first
 		if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
