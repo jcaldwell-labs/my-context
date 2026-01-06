@@ -58,14 +58,28 @@ func extractSchemaFromConnStr(connStr string) string {
 	return "public"
 }
 
-// splitConnStr splits connection string by spaces, respecting quoted values
+// splitConnStr splits connection string by spaces, respecting quoted values.
+// Handles escaped quotes in PostgreSQL connection strings:
+// - Doubled single quotes (”) are treated as escaped quotes within a value
+// - Example: key='value”s data' contains the value: value's data
 func splitConnStr(connStr string) []string {
 	var parts []string
 	var current string
 	inQuote := false
+	runes := []rune(connStr)
 
-	for _, char := range connStr {
+	for i := 0; i < len(runes); i++ {
+		char := runes[i]
+
 		if char == '\'' {
+			// Check for escaped quote (doubled single quote)
+			if inQuote && i+1 < len(runes) && runes[i+1] == '\'' {
+				// Escaped quote - add both quotes and skip the next one
+				current += "''"
+				i++
+				continue
+			}
+			// Toggle quote state
 			inQuote = !inQuote
 			current += string(char)
 		} else if char == ' ' && !inQuote {
@@ -406,13 +420,13 @@ func (b *Backend) ListContexts() ([]*models.ContextWithMetadata, error) {
 	var contexts []*models.ContextWithMetadata
 	for rows.Next() {
 		var (
-			name              string
-			status            string
-			startedAt         time.Time
-			stoppedAt         sql.NullTime
-			project           sql.NullString
-			completionStatus  sql.NullString
-			metadataJSON      []byte
+			name             string
+			status           string
+			startedAt        time.Time
+			stoppedAt        sql.NullTime
+			project          sql.NullString
+			completionStatus sql.NullString
+			metadataJSON     []byte
 		)
 
 		err := rows.Scan(
