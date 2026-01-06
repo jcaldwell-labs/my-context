@@ -8,6 +8,7 @@ import (
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
 	"github.com/jefferycaldwell/my-context-copilot/pkg/utils"
+	"github.com/lib/pq"
 	"github.com/spf13/cobra"
 )
 
@@ -176,32 +177,33 @@ func listPartitions(backend interface{}) ([]PartitionInfo, error) {
 			Schema: schema,
 		}
 
-		// Get context count
-		countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s.contexts", schema)
+		// Get context count using pq.QuoteIdentifier for safe schema quoting
+		countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s.contexts", pq.QuoteIdentifier(schema))
 		if err := db.QueryRow(countQuery).Scan(&info.ContextCount); err != nil {
 			// Skip if we can't read this schema
 			continue
 		}
 
-		// Get active context
+		// Get active context using pq.QuoteIdentifier for safe schema quoting
 		activeQuery := fmt.Sprintf(`
 			SELECT value->>'name'
 			FROM %s.state
 			WHERE key = 'active_context'
-		`, schema)
+		`, pq.QuoteIdentifier(schema))
 		var activeContext sql.NullString
 		if err := db.QueryRow(activeQuery).Scan(&activeContext); err == nil && activeContext.Valid {
 			info.ActiveContext = activeContext.String
 		}
 
 		// Get last activity (most recent context update or touch)
+		// Use pq.QuoteIdentifier for safe schema quoting
 		activityQuery := fmt.Sprintf(`
 			SELECT GREATEST(
 				COALESCE(MAX(updated_at), '1970-01-01'::timestamptz),
 				COALESCE(MAX(last_touch_at), '1970-01-01'::timestamptz)
 			) as last_activity
 			FROM %s.contexts
-		`, schema)
+		`, pq.QuoteIdentifier(schema))
 		var lastActivity sql.NullTime
 		if err := db.QueryRow(activityQuery).Scan(&lastActivity); err == nil && lastActivity.Valid {
 			info.LastActivity = lastActivity.Time

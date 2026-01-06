@@ -51,33 +51,26 @@ func GetPostgresConnectionString() (string, error) {
 		return appendSearchPath(home, schema), nil
 	}
 
-	// For shorthand syntax (db, db:partition), check DATABASE_URL first
+	// For shorthand syntax (db, db:partition), require DATABASE_URL
 	if home == "db" || home == "database" || home == "pg" ||
 		strings.HasPrefix(home, "db:") ||
 		strings.HasPrefix(home, "database:") ||
 		strings.HasPrefix(home, "pg:") {
 
-		// Try DATABASE_URL environment variable first
+		// Use DATABASE_URL environment variable
 		if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
 			return appendSearchPath(dbURL, schema), nil
 		}
 
-		// Fall back to default localhost connection for local development.
-		// WARNING: These are development-only defaults. In production, always
-		// set DATABASE_URL with proper credentials. These defaults exist for:
-		// - Local Docker development (postgres-dev container)
-		// - Quick testing without configuration
-		// Do NOT use these credentials in production environments.
-		connStr := fmt.Sprintf(
-			"host=localhost port=5432 user=devuser password=devpassword dbname=dev_state sslmode=disable search_path=%s",
-			schema,
-		)
-
-		return connStr, nil
+		// No DATABASE_URL provided: fail fast instead of using hardcoded credentials.
+		// This avoids accidentally connecting with insecure development defaults
+		// in production environments.
+		return "", fmt.Errorf("DATABASE_URL environment variable must be set when using MY_CONTEXT_HOME=%q. "+
+			"Example: export DATABASE_URL='host=localhost port=5432 user=myuser dbname=mydb sslmode=disable'", home)
 	}
 
 	return "", fmt.Errorf("MY_CONTEXT_HOME=%q is not recognized as a database backend. "+
-		"Expected: 'db', 'db:<partition>', 'postgres://...', or a file path", home)
+		"Use 'db', 'db:<partition>', 'postgres://...', or a directory path for file storage", home)
 }
 
 // appendSearchPath adds search_path parameter to a connection string

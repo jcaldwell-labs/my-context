@@ -5,9 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 
 	"github.com/jefferycaldwell/my-context-copilot/pkg/models"
 	"github.com/jefferycaldwell/my-context-copilot/pkg/storage"
@@ -106,6 +107,12 @@ func (b *Backend) Init() error {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 
+	// Configure connection pool for CLI tool usage.
+	// Conservative defaults to avoid connection exhaustion.
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(30 * time.Minute)
+
 	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -167,8 +174,9 @@ func (b *Backend) createSchema() error {
 	}
 
 	// Create schema if it doesn't exist (skip for public schema)
+	// Use pq.QuoteIdentifier for safe schema quoting in addition to validation
 	if b.schema != "public" {
-		_, err := b.db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", b.schema))
+		_, err := b.db.Exec(fmt.Sprintf("CREATE SCHEMA IF NOT EXISTS %s", pq.QuoteIdentifier(b.schema)))
 		if err != nil {
 			return fmt.Errorf("failed to create schema %s: %w", b.schema, err)
 		}
@@ -377,7 +385,9 @@ func (b *Backend) GetContext(name string) (*models.ContextWithMetadata, error) {
 	// Parse metadata JSON
 	var metadata models.ContextMetadata
 	if len(metadataJSON) > 0 {
-		_ = json.Unmarshal(metadataJSON, &metadata)
+		if err := json.Unmarshal(metadataJSON, &metadata); err != nil {
+			return nil, fmt.Errorf("failed to parse context metadata: %w", err)
+		}
 	}
 
 	// Build context object
@@ -445,8 +455,10 @@ func (b *Backend) ListContexts() ([]*models.ContextWithMetadata, error) {
 		// Parse metadata JSON
 		var metadata models.ContextMetadata
 		if len(metadataJSON) > 0 {
-			// Try to unmarshal, but don't fail if it's malformed
-			_ = json.Unmarshal(metadataJSON, &metadata)
+			if err := json.Unmarshal(metadataJSON, &metadata); err != nil {
+				// Log error but continue - don't fail entire list for one bad record
+				fmt.Fprintf(os.Stderr, "warning: failed to parse metadata for context %s: %v\n", name, err)
+			}
 		}
 
 		// Map to ContextWithMetadata
@@ -639,8 +651,7 @@ func (b *Backend) GetNotes(contextName string) ([]storage.Note, error) {
 
 // GetNotesByTimestamp retrieves notes within a time range
 func (b *Backend) GetNotesByTimestamp(contextName string, after, before time.Time) ([]storage.Note, error) {
-	// TODO: Implement
-	return nil, nil
+	return nil, fmt.Errorf("GetNotesByTimestamp: not implemented")
 }
 
 // AddFile adds a file reference to a context
@@ -730,8 +741,7 @@ func (b *Backend) GetFiles(contextName string) ([]storage.File, error) {
 
 // GetFilesByTimestamp retrieves files within a time range
 func (b *Backend) GetFilesByTimestamp(contextName string, after, before time.Time) ([]storage.File, error) {
-	// TODO: Implement
-	return nil, nil
+	return nil, fmt.Errorf("GetFilesByTimestamp: not implemented")
 }
 
 // AddTouch records a context access
@@ -762,26 +772,22 @@ func (b *Backend) AddTouch(contextName, timestamp string) error {
 
 // GetTouches retrieves all touches for a context
 func (b *Backend) GetTouches(contextName string) ([]storage.Touch, error) {
-	// TODO: Implement
-	return nil, nil
+	return nil, fmt.Errorf("GetTouches: not implemented")
 }
 
 // LogTransition logs a context transition
 func (b *Backend) LogTransition(transition *storage.Transition) error {
-	// TODO: Implement
-	return nil
+	return fmt.Errorf("LogTransition: not implemented")
 }
 
 // GetTransitions retrieves recent transitions
 func (b *Backend) GetTransitions(limit int) ([]storage.Transition, error) {
-	// TODO: Implement
-	return nil, nil
+	return nil, fmt.Errorf("GetTransitions: not implemented")
 }
 
 // GetTransitionsByContext retrieves transitions for a specific context
 func (b *Backend) GetTransitionsByContext(contextName string) ([]storage.Transition, error) {
-	// TODO: Implement
-	return nil, nil
+	return nil, fmt.Errorf("GetTransitionsByContext: not implemented")
 }
 
 // GetActiveContext retrieves the currently active context
@@ -892,7 +898,10 @@ func (b *Backend) GetContextsByLabel(label string) ([]*models.ContextWithMetadat
 
 		var metadata models.ContextMetadata
 		if len(metadataJSON) > 0 {
-			_ = json.Unmarshal(metadataJSON, &metadata)
+			if err := json.Unmarshal(metadataJSON, &metadata); err != nil {
+				// Log error but continue - don't fail entire list for one bad record
+				fmt.Fprintf(os.Stderr, "warning: failed to parse metadata for context %s: %v\n", name, err)
+			}
 		}
 
 		ctx := &models.ContextWithMetadata{
@@ -959,7 +968,10 @@ func (b *Backend) GetContextsByParent(parent string) ([]*models.ContextWithMetad
 
 		var metadata models.ContextMetadata
 		if len(metadataJSON) > 0 {
-			_ = json.Unmarshal(metadataJSON, &metadata)
+			if err := json.Unmarshal(metadataJSON, &metadata); err != nil {
+				// Log error but continue - don't fail entire list for one bad record
+				fmt.Fprintf(os.Stderr, "warning: failed to parse metadata for context %s: %v\n", name, err)
+			}
 		}
 
 		ctx := &models.ContextWithMetadata{
@@ -986,8 +998,7 @@ func (b *Backend) GetContextsByParent(parent string) ([]*models.ContextWithMetad
 
 // SearchContextsByName searches contexts by name
 func (b *Backend) SearchContextsByName(query string) ([]*models.ContextWithMetadata, error) {
-	// TODO: Implement
-	return nil, nil
+	return nil, fmt.Errorf("SearchContextsByName: not implemented")
 }
 
 // SearchNotes searches notes across all contexts
@@ -1043,14 +1054,12 @@ func (b *Backend) GetContextCount() (int, error) {
 
 // GetContextStats retrieves statistics for a single context
 func (b *Backend) GetContextStats(contextName string) (storage.ContextStats, error) {
-	// TODO: Implement
-	return storage.ContextStats{}, nil
+	return storage.ContextStats{}, fmt.Errorf("GetContextStats: not implemented")
 }
 
 // GetGlobalStats retrieves global statistics
 func (b *Backend) GetGlobalStats() (storage.GlobalStats, error) {
-	// TODO: Implement
-	return storage.GlobalStats{}, nil
+	return storage.GlobalStats{}, fmt.Errorf("GetGlobalStats: not implemented")
 }
 
 // Cross-Partition Query Methods
@@ -1106,7 +1115,7 @@ func (b *Backend) ListContextsAcrossPartitions() (map[string][]*models.ContextWi
 			continue // Skip invalid partition names
 		}
 
-		// Query contexts from this partition
+		// Query contexts from this partition using pq.QuoteIdentifier for safe schema quoting
 		query := fmt.Sprintf(`
 			SELECT
 				name,
@@ -1118,7 +1127,7 @@ func (b *Backend) ListContextsAcrossPartitions() (map[string][]*models.ContextWi
 				metadata
 			FROM %s.contexts
 			ORDER BY started_at DESC
-		`, partition)
+		`, pq.QuoteIdentifier(partition))
 
 		rows, err := b.db.Query(query)
 		if err != nil {
@@ -1145,7 +1154,10 @@ func (b *Backend) ListContextsAcrossPartitions() (map[string][]*models.ContextWi
 
 			var metadata models.ContextMetadata
 			if len(metadataJSON) > 0 {
-				_ = json.Unmarshal(metadataJSON, &metadata)
+				if err := json.Unmarshal(metadataJSON, &metadata); err != nil {
+					// Log error but continue - don't fail entire list for one bad record
+					fmt.Fprintf(os.Stderr, "warning: failed to parse metadata for context %s: %v\n", name, err)
+				}
 			}
 
 			ctx := &models.ContextWithMetadata{
@@ -1185,7 +1197,7 @@ func (b *Backend) SearchContextsAcrossPartitions(query string) (map[string][]*mo
 			continue // Skip invalid partition names
 		}
 
-		// Search contexts in this partition using full-text search
+		// Search contexts in this partition using full-text search and pq.QuoteIdentifier for safe schema quoting
 		searchQuery := fmt.Sprintf(`
 			SELECT
 				name,
@@ -1198,7 +1210,7 @@ func (b *Backend) SearchContextsAcrossPartitions(query string) (map[string][]*mo
 			FROM %s.contexts
 			WHERE to_tsvector('english', name) @@ plainto_tsquery('english', $1)
 			ORDER BY started_at DESC
-		`, partition)
+		`, pq.QuoteIdentifier(partition))
 
 		rows, err := b.db.Query(searchQuery, query)
 		if err != nil {
@@ -1225,7 +1237,10 @@ func (b *Backend) SearchContextsAcrossPartitions(query string) (map[string][]*mo
 
 			var metadata models.ContextMetadata
 			if len(metadataJSON) > 0 {
-				_ = json.Unmarshal(metadataJSON, &metadata)
+				if err := json.Unmarshal(metadataJSON, &metadata); err != nil {
+					// Log error but continue - don't fail entire list for one bad record
+					fmt.Fprintf(os.Stderr, "warning: failed to parse metadata for context %s: %v\n", name, err)
+				}
 			}
 
 			ctx := &models.ContextWithMetadata{
