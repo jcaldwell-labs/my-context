@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
+	"github.com/jefferycaldwell/my-context-copilot/internal/models"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -18,6 +19,112 @@ func NewShowCmd(jsonOutput *bool) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var contextName string
 
+			// Check if using database backend
+			if core.IsUsingDatabase() {
+				backend, err := core.GetBackend()
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("show", 2, fmt.Sprintf("failed to get backend: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to get backend: %w", err)
+				}
+				defer backend.Close()
+
+				// Get context name
+				if len(args) > 0 {
+					contextName = args[0]
+				} else {
+					// Get active context from database
+					contextName, err = backend.GetActiveContext()
+					if err != nil || contextName == "" {
+						errMsg := "No active context"
+						if *jsonOutput {
+							jsonStr, _ := output.FormatJSONError("show", 1, errMsg)
+							fmt.Print(jsonStr)
+						} else {
+							fmt.Println(errMsg)
+							fmt.Println("Start one with: my-context start <name>")
+						}
+						return nil
+					}
+				}
+
+				// Get context from database
+				dbCtx, err := backend.GetContext(contextName)
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("show", 2, fmt.Sprintf("context not found: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("context not found: %w", err)
+				}
+
+				// Get notes and files from database
+				dbNotes, _ := backend.GetNotes(contextName)
+				dbFiles, _ := backend.GetFiles(contextName)
+
+				// Convert to internal models
+				context := &models.Context{
+					Name:      dbCtx.Name,
+					StartTime: dbCtx.StartTime,
+					EndTime:   dbCtx.EndTime,
+					Status:    dbCtx.Status,
+				}
+
+				var notes []*models.Note
+				for _, n := range dbNotes {
+					notes = append(notes, &models.Note{
+						Timestamp:   n.Timestamp,
+						TextContent: n.Content,
+					})
+				}
+
+				var files []*models.FileAssociation
+				for _, f := range dbFiles {
+					files = append(files, &models.FileAssociation{
+						Timestamp: f.Timestamp,
+						FilePath:  f.Path,
+					})
+				}
+
+				// Output
+				if *jsonOutput {
+					data := map[string]interface{}{
+						"context": dbCtx,
+						"notes":   notes,
+						"files":   files,
+						"touches": []*models.TouchEvent{},
+					}
+					jsonStr, err := output.FormatJSON("show", map[string]interface{}{"data": data})
+					if err != nil {
+						return err
+					}
+					fmt.Print(jsonStr)
+				} else {
+					// Build display string for database mode with partition info
+					partition := core.ExtractPartition()
+					var homeDisplay string
+					if partition != "" {
+						homeDisplay = fmt.Sprintf("db:%s", partition)
+					} else {
+						homeDisplay = "db"
+					}
+
+					// Get context count for this partition
+					contextCount, _ := backend.GetContextCount()
+
+					// Print header with partition and count
+					output.PrintContextHomeHeader(homeDisplay, contextCount)
+					fmt.Print(output.FormatContext(context, notes, files, []*models.TouchEvent{}))
+				}
+
+				return nil
+			}
+
+			// File-based backend (existing code)
 			// If context name provided as argument, use it
 			if len(args) > 0 {
 				contextName = args[0]

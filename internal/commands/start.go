@@ -111,6 +111,11 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 				contextName = strings.TrimSpace(startProject) + ": " + strings.TrimSpace(contextName)
 			}
 
+			// Check if using database backend
+			if core.IsUsingDatabase() {
+				return startWithDatabaseBackend(contextName, startCreatedBy, startParent, startLabels, jsonOutput)
+			}
+
 			// Check for duplicate context name (smart resume)
 			existingContext, err := core.FindContextByName(contextName)
 			if err == nil && existingContext.Status == "stopped" {
@@ -275,6 +280,80 @@ func resumeExistingContext(ctx *models.Context, jsonOutput *bool) error {
 			fmt.Printf("Stopped context: %s\n", previousContext)
 		}
 		fmt.Printf("Resumed context: %s\n", ctx.Name)
+	}
+
+	return nil
+}
+
+// startWithDatabaseBackend creates a new context using the PostgreSQL backend
+func startWithDatabaseBackend(contextName, createdBy, parent, labelsStr string, jsonOutput *bool) error {
+	backend, err := core.GetBackend()
+	if err != nil {
+		if *jsonOutput {
+			jsonStr, _ := output.FormatJSONError("start", 2, fmt.Sprintf("failed to get backend: %v", err))
+			fmt.Print(jsonStr)
+			return nil
+		}
+		return fmt.Errorf("failed to get backend: %w", err)
+	}
+	defer backend.Close()
+
+	// Parse labels
+	var labels []string
+	if labelsStr != "" {
+		labels = strings.Split(strings.ReplaceAll(labelsStr, " ", ""), ",")
+	}
+
+	// Get current active context (if any)
+	previousContext, _ := backend.GetActiveContext()
+
+	// Create new context
+	now := time.Now()
+	newCtx := &pkgmodels.ContextWithMetadata{
+		Name:       contextName,
+		StartTime:  now,
+		Status:     "active",
+		IsArchived: false,
+		Metadata: pkgmodels.ContextMetadata{
+			CreatedBy: createdBy,
+			Parent:    parent,
+			Labels:    labels,
+		},
+	}
+
+	err = backend.CreateContext(newCtx)
+	if err != nil {
+		if *jsonOutput {
+			jsonStr, _ := output.FormatJSONError("start", 2, fmt.Sprintf("failed to create context: %v", err))
+			fmt.Print(jsonStr)
+			return nil
+		}
+		return fmt.Errorf("failed to create context: %w", err)
+	}
+
+	// Output
+	if *jsonOutput {
+		data := output.StartData{
+			ContextName:  contextName,
+			OriginalName: contextName,
+			WasDuplicate: false,
+		}
+		if previousContext != "" {
+			data.PreviousContext = &previousContext
+		}
+		jsonStr, err := output.FormatJSON("start", map[string]interface{}{"data": data})
+		if err != nil {
+			return err
+		}
+		fmt.Print(jsonStr)
+	} else {
+		fmt.Printf("Context Home: db\n\n")
+
+		if previousContext != "" {
+			fmt.Printf("Stopped context: %s\n", previousContext)
+		}
+
+		fmt.Printf("✓ Started: %s\n", contextName)
 	}
 
 	return nil

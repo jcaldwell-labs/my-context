@@ -104,3 +104,35 @@ func ReadFileSafe(path string) ([]byte, error) {
 	}
 	return data, nil
 }
+
+// IsValidPostgresIdentifier validates that a string is a safe PostgreSQL identifier.
+// This is a security check to prevent SQL injection when using dynamic schema names.
+//
+// Rules enforced:
+//   - Non-empty string
+//   - First character: ASCII letter (a-z, A-Z) or underscore
+//   - Subsequent characters: ASCII letters, digits (0-9), or underscore
+//   - Maximum length of 63 characters (PostgreSQL limit)
+//
+// This is intentionally conservative - it rejects quoted identifiers and
+// special characters even though PostgreSQL might accept them when properly quoted.
+func IsValidPostgresIdentifier(name string) bool {
+	if name == "" || len(name) > 63 {
+		return false
+	}
+
+	for i, ch := range name {
+		// Letters and underscore are always allowed
+		if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_' {
+			continue
+		}
+		// Digits are allowed, but not as the first character
+		if i > 0 && ch >= '0' && ch <= '9' {
+			continue
+		}
+		// Any other character is not allowed
+		return false
+	}
+
+	return true
+}

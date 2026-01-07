@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
@@ -28,6 +29,56 @@ func NewNoteCmd(jsonOutput *bool) *cobra.Command {
 				noteText += arg
 			}
 
+			// Check if using database backend
+			if core.IsUsingDatabase() {
+				backend, err := core.GetBackend()
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("note", 2, fmt.Sprintf("failed to get backend: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to get backend: %w", err)
+				}
+				defer backend.Close()
+
+				// Get active context
+				contextName, err := backend.GetActiveContext()
+				if err != nil || contextName == "" {
+					errMsg := "No active context. Start a context with: my-context start <name>"
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("note", 1, errMsg)
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return errors.New(errMsg)
+				}
+
+				// Add note to database
+				timestamp := time.Now().Format(time.RFC3339)
+				err = backend.AddNote(contextName, timestamp, noteText)
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("note", 2, fmt.Sprintf("failed to add note: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to add note: %w", err)
+				}
+
+				// Output
+				if *jsonOutput {
+					data := map[string]interface{}{"note": noteText, "timestamp": timestamp}
+					jsonStr, _ := output.FormatJSON("note", map[string]interface{}{"data": data})
+					fmt.Print(jsonStr)
+				} else {
+					fmt.Printf("✓ Note added to %s\n", contextName)
+				}
+
+				return nil
+			}
+
+			// File-based backend (existing code)
 			// Get active context
 			state, err := core.GetActiveContext()
 			if err != nil {

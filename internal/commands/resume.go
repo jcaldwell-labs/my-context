@@ -56,6 +56,12 @@ func NewResumeCmd(jsonOutput *bool) *cobra.Command {
 		Long:    `Resume a previously stopped context by name, pattern, or --last flag.`,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Check if using database backend
+			if core.IsUsingDatabase() {
+				return resumeWithDatabaseBackend(args, resumeLast, jsonOutput)
+			}
+
+			// File-based backend (existing code)
 			// Check if we have an active context
 			state, err := core.GetActiveContext()
 			if err != nil {
@@ -174,4 +180,131 @@ func getAvailableStoppedContexts() ([]string, error) {
 	}
 
 	return stopped, nil
+}
+
+// resumeWithDatabaseBackend resumes a context using the PostgreSQL backend
+func resumeWithDatabaseBackend(args []string, useLast bool, jsonOutput *bool) error {
+	backend, err := core.GetBackend()
+	if err != nil {
+		if *jsonOutput {
+			jsonStr, _ := output.FormatJSONError("resume", 2, fmt.Sprintf("failed to get backend: %v", err))
+			fmt.Print(jsonStr)
+			return nil
+		}
+		return fmt.Errorf("failed to get backend: %w", err)
+	}
+	defer backend.Close()
+
+	// Check if there's already an active context
+	activeContext, _ := backend.GetActiveContext()
+	if activeContext != "" {
+		errMsg := fmt.Sprintf("Cannot resume: context %q is already active", activeContext)
+		if *jsonOutput {
+			jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
+			fmt.Print(jsonStr)
+			return nil
+		}
+		return errors.New(errMsg)
+	}
+
+	var contextName string
+
+	if useLast {
+		// Get most recent stopped context
+		contexts, err := backend.ListContexts()
+		if err != nil || len(contexts) == 0 {
+			errMsg := "No stopped contexts found"
+			if *jsonOutput {
+				jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
+				fmt.Print(jsonStr)
+				return nil
+			}
+			return errors.New(errMsg)
+		}
+
+		// Find first stopped context
+		for _, ctx := range contexts {
+			if ctx.Status == "stopped" {
+				contextName = ctx.Name
+				break
+			}
+		}
+
+		if contextName == "" {
+			errMsg := "No stopped contexts found"
+			if *jsonOutput {
+				jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
+				fmt.Print(jsonStr)
+				return nil
+			}
+			return errors.New(errMsg)
+		}
+	} else if len(args) == 0 {
+		errMsg := "Must specify context name or use --last flag"
+		if *jsonOutput {
+			jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
+			fmt.Print(jsonStr)
+			return nil
+		}
+		return errors.New(errMsg)
+	} else {
+		contextName = args[0]
+	}
+
+	// Get the context
+	ctx, err := backend.GetContext(contextName)
+	if err != nil {
+		if *jsonOutput {
+			jsonStr, _ := output.FormatJSONError("resume", 2, fmt.Sprintf("context not found: %v", err))
+			fmt.Print(jsonStr)
+			return nil
+		}
+		return fmt.Errorf("context not found: %w", err)
+	}
+
+	if ctx.Status == "active" {
+		errMsg := fmt.Sprintf("Context %q is already active", contextName)
+		if *jsonOutput {
+			jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
+			fmt.Print(jsonStr)
+			return nil
+		}
+		return errors.New(errMsg)
+	}
+
+	// Resume the context (clear end time, set to active)
+	ctx.Status = "active"
+	ctx.EndTime = nil
+
+	err = backend.UpdateContext(ctx)
+	if err != nil {
+		if *jsonOutput {
+			jsonStr, _ := output.FormatJSONError("resume", 2, fmt.Sprintf("failed to update context: %v", err))
+			fmt.Print(jsonStr)
+			return nil
+		}
+		return fmt.Errorf("failed to update context: %w", err)
+	}
+
+	err = backend.SetActiveContext(contextName)
+	if err != nil {
+		if *jsonOutput {
+			jsonStr, _ := output.FormatJSONError("resume", 2, fmt.Sprintf("failed to set active: %v", err))
+			fmt.Print(jsonStr)
+			return nil
+		}
+		return fmt.Errorf("failed to set active: %w", err)
+	}
+
+	// Output
+	if *jsonOutput {
+		data := map[string]interface{}{"context_name": contextName, "status": "resumed"}
+		jsonStr, _ := output.FormatJSON("resume", map[string]interface{}{"data": data})
+		fmt.Print(jsonStr)
+	} else {
+		fmt.Printf("Context Home: db\n\n")
+		fmt.Printf("✓ Resumed: %s\n", contextName)
+	}
+
+	return nil
 }

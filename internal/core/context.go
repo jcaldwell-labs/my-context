@@ -19,6 +19,43 @@ func CreateContextWithMetadata(name, createdBy, parent string, labels []string) 
 		return nil, "", err
 	}
 
+	// Check if using database backend
+	if IsUsingDatabase() {
+		return createContextWithMetadataDB(name, createdBy, parent, labels)
+	}
+
+	// File-based implementation (existing logic)
+	return createContextWithMetadataFile(name, createdBy, parent, labels)
+}
+
+// createContextWithMetadataDB creates a context using the database backend
+func createContextWithMetadataDB(name string, createdBy string, parent string, labels []string) (*pkgmodels.ContextWithMetadata, string, error) {
+	// Get backend
+	backend, err := GetBackend()
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to get backend: %w", err)
+	}
+	defer backend.Close()
+
+	// Get current active context (if any)
+	previousContextName, err := backend.GetActiveContext()
+	if err != nil && err.Error() != "no active context" {
+		return nil, "", fmt.Errorf("failed to get active context: %w", err)
+	}
+
+	// Create new context with metadata
+	context := pkgmodels.NewContextWithMetadata(name, createdBy, parent, labels)
+
+	// Create context in database (this handles stopping active context, inserting new one, and setting as active)
+	if err := backend.CreateContext(context); err != nil {
+		return nil, "", fmt.Errorf("failed to create context: %w", err)
+	}
+
+	return context, previousContextName, nil
+}
+
+// createContextWithMetadataFile creates a context using file-based storage
+func createContextWithMetadataFile(name string, createdBy string, parent string, labels []string) (*pkgmodels.ContextWithMetadata, string, error) {
 	// Sanitize the name for directory use
 	sanitizedName := SanitizeContextName(name)
 
@@ -370,6 +407,79 @@ func AddTouch() (*intmodels.TouchEvent, error) {
 
 // GetContextWithMetadata reads a context with metadata and all associated data
 func GetContextWithMetadata(contextName string) (*pkgmodels.ContextWithMetadata, []*intmodels.Note, []*intmodels.FileAssociation, []*intmodels.TouchEvent, error) {
+	// Check if using database backend
+	if IsUsingDatabase() {
+		return getContextWithMetadataDB(contextName)
+	}
+
+	// File-based implementation (existing logic)
+	return getContextWithMetadataFile(contextName)
+}
+
+// getContextWithMetadataDB retrieves a context from the database backend
+func getContextWithMetadataDB(contextName string) (*pkgmodels.ContextWithMetadata, []*intmodels.Note, []*intmodels.FileAssociation, []*intmodels.TouchEvent, error) {
+	// Get backend
+	backend, err := GetBackend()
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("failed to get backend: %w", err)
+	}
+	defer backend.Close()
+
+	// Get context from database
+	context, err := backend.GetContext(contextName)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("failed to get context: %w", err)
+	}
+
+	// Get notes from database
+	storageNotes, err := backend.GetNotes(contextName)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("failed to get notes: %w", err)
+	}
+
+	// Convert storage.Note to intmodels.Note
+	notes := make([]*intmodels.Note, 0, len(storageNotes))
+	for _, sn := range storageNotes {
+		notes = append(notes, &intmodels.Note{
+			Timestamp:   sn.Timestamp,
+			TextContent: sn.Content,
+		})
+	}
+
+	// Get files from database
+	storageFiles, err := backend.GetFiles(contextName)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("failed to get files: %w", err)
+	}
+
+	// Convert storage.File to intmodels.FileAssociation
+	files := make([]*intmodels.FileAssociation, 0, len(storageFiles))
+	for _, sf := range storageFiles {
+		files = append(files, &intmodels.FileAssociation{
+			Timestamp: sf.Timestamp,
+			FilePath:  sf.Path,
+		})
+	}
+
+	// Get touches from database
+	storageTouches, err := backend.GetTouches(contextName)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("failed to get touches: %w", err)
+	}
+
+	// Convert storage.Touch to intmodels.TouchEvent
+	touches := make([]*intmodels.TouchEvent, 0, len(storageTouches))
+	for _, st := range storageTouches {
+		touches = append(touches, &intmodels.TouchEvent{
+			Timestamp: st.Timestamp,
+		})
+	}
+
+	return context, notes, files, touches, nil
+}
+
+// getContextWithMetadataFile reads a context from file-based storage
+func getContextWithMetadataFile(contextName string) (*pkgmodels.ContextWithMetadata, []*intmodels.Note, []*intmodels.FileAssociation, []*intmodels.TouchEvent, error) {
 	// Read meta.json
 	var context pkgmodels.ContextWithMetadata
 	if err := ReadJSON(GetMetaJSONPath(contextName), &context); err != nil {
@@ -1036,4 +1146,69 @@ func GetRootContexts() ([]string, error) {
 	}
 
 	return roots, nil
+}
+
+// ContextCounts holds count statistics for a context
+type ContextCounts struct {
+	NoteCount  int
+	FileCount  int
+	TouchCount int
+}
+
+// GetContextCounts returns note, file, and touch counts for a context
+// Handles both file-based and database-backed storage
+func GetContextCounts(contextName string) (ContextCounts, error) {
+	counts := ContextCounts{}
+
+	// Check if using database backend
+	if IsUsingDatabase() {
+		// Query database for counts
+		backend, err := GetBackend()
+		if err != nil {
+			return counts, fmt.Errorf("failed to get backend: %w", err)
+		}
+		defer backend.Close()
+
+		// Get notes
+		notes, err := backend.GetNotes(contextName)
+		if err != nil {
+			return counts, fmt.Errorf("failed to get notes: %w", err)
+		}
+		counts.NoteCount = len(notes)
+
+		// Get files
+		files, err := backend.GetFiles(contextName)
+		if err != nil {
+			return counts, fmt.Errorf("failed to get files: %w", err)
+		}
+		counts.FileCount = len(files)
+
+		// Get touches
+		touches, err := backend.GetTouches(contextName)
+		if err != nil {
+			return counts, fmt.Errorf("failed to get touches: %w", err)
+		}
+		counts.TouchCount = len(touches)
+	} else {
+		// Use file-based storage (existing behavior)
+		notesLines, err := ReadLog(GetNotesLogPath(contextName))
+		if err != nil {
+			return counts, fmt.Errorf("failed to read notes: %w", err)
+		}
+		counts.NoteCount = len(notesLines)
+
+		filesLines, err := ReadLog(GetFilesLogPath(contextName))
+		if err != nil {
+			return counts, fmt.Errorf("failed to read files: %w", err)
+		}
+		counts.FileCount = len(filesLines)
+
+		touchesLines, err := ReadLog(GetTouchLogPath(contextName))
+		if err != nil {
+			return counts, fmt.Errorf("failed to read touches: %w", err)
+		}
+		counts.TouchCount = len(touchesLines)
+	}
+
+	return counts, nil
 }
