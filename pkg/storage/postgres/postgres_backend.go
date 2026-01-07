@@ -164,6 +164,47 @@ func (b *Backend) GetDB() *sql.DB {
 	return b.db
 }
 
+// scanContextRow scans a context row from the database and returns a ContextWithMetadata.
+// This helper reduces code duplication across listing functions.
+func scanContextRow(scanner interface{ Scan(...any) error }) (*models.ContextWithMetadata, error) {
+	var (
+		name             string
+		status           string
+		startedAt        time.Time
+		stoppedAt        sql.NullTime
+		project          sql.NullString
+		completionStatus sql.NullString
+		metadataJSON     []byte
+	)
+
+	err := scanner.Scan(&name, &status, &startedAt, &stoppedAt, &project, &completionStatus, &metadataJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	var metadata models.ContextMetadata
+	if len(metadataJSON) > 0 {
+		if err := json.Unmarshal(metadataJSON, &metadata); err != nil {
+			// Log error but continue - don't fail for one bad record
+			fmt.Fprintf(os.Stderr, "warning: failed to parse metadata for context %s: %v\n", name, err)
+		}
+	}
+
+	ctx := &models.ContextWithMetadata{
+		Name:       name,
+		StartTime:  startedAt,
+		Status:     status,
+		IsArchived: completionStatus.Valid && completionStatus.String == "archived",
+		Metadata:   metadata,
+	}
+
+	if stoppedAt.Valid {
+		ctx.EndTime = &stoppedAt.Time
+	}
+
+	return ctx, nil
+}
+
 // createSchema creates the database schema if it doesn't exist
 func (b *Backend) createSchema() error {
 	// Security: Validate schema name before using in SQL to prevent SQL injection.
@@ -429,51 +470,10 @@ func (b *Backend) ListContexts() ([]*models.ContextWithMetadata, error) {
 
 	var contexts []*models.ContextWithMetadata
 	for rows.Next() {
-		var (
-			name             string
-			status           string
-			startedAt        time.Time
-			stoppedAt        sql.NullTime
-			project          sql.NullString
-			completionStatus sql.NullString
-			metadataJSON     []byte
-		)
-
-		err := rows.Scan(
-			&name,
-			&status,
-			&startedAt,
-			&stoppedAt,
-			&project,
-			&completionStatus,
-			&metadataJSON,
-		)
+		ctx, err := scanContextRow(rows)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan context row: %w", err)
 		}
-
-		// Parse metadata JSON
-		var metadata models.ContextMetadata
-		if len(metadataJSON) > 0 {
-			if err := json.Unmarshal(metadataJSON, &metadata); err != nil {
-				// Log error but continue - don't fail entire list for one bad record
-				fmt.Fprintf(os.Stderr, "warning: failed to parse metadata for context %s: %v\n", name, err)
-			}
-		}
-
-		// Map to ContextWithMetadata
-		ctx := &models.ContextWithMetadata{
-			Name:       name,
-			StartTime:  startedAt,
-			Status:     status,
-			IsArchived: completionStatus.Valid && completionStatus.String == "archived",
-			Metadata:   metadata,
-		}
-
-		if stoppedAt.Valid {
-			ctx.EndTime = &stoppedAt.Time
-		}
-
 		contexts = append(contexts, ctx)
 	}
 
@@ -565,6 +565,8 @@ func (b *Backend) ArchiveContext(name string) error {
 }
 
 // AddNote adds a note to a context
+//
+//nolint:dupl // AddNote and AddFile have similar structure but operate on different tables
 func (b *Backend) AddNote(contextName, timestamp, content string) error {
 	// Parse timestamp
 	noteTime, err := time.Parse(time.RFC3339, timestamp)
@@ -655,6 +657,8 @@ func (b *Backend) GetNotesByTimestamp(contextName string, after, before time.Tim
 }
 
 // AddFile adds a file reference to a context
+//
+//nolint:dupl // AddFile and AddNote have similar structure but operate on different tables
 func (b *Backend) AddFile(contextName, timestamp, path string) error {
 	// Parse timestamp
 	addTime, err := time.Parse(time.RFC3339, timestamp)
@@ -856,6 +860,8 @@ func (b *Backend) ClearActiveContext() error {
 }
 
 // GetContextsByLabel retrieves contexts with a specific label
+//
+//nolint:dupl // GetContextsByLabel and GetContextsByParent share query structure but filter differently
 func (b *Backend) GetContextsByLabel(label string) ([]*models.ContextWithMetadata, error) {
 	// Use JSONB containment operator to find contexts with this label
 	// Cast to text explicitly to avoid type inference issues
@@ -881,41 +887,10 @@ func (b *Backend) GetContextsByLabel(label string) ([]*models.ContextWithMetadat
 
 	var contexts []*models.ContextWithMetadata
 	for rows.Next() {
-		var (
-			name             string
-			status           string
-			startedAt        time.Time
-			stoppedAt        sql.NullTime
-			project          sql.NullString
-			completionStatus sql.NullString
-			metadataJSON     []byte
-		)
-
-		err := rows.Scan(&name, &status, &startedAt, &stoppedAt, &project, &completionStatus, &metadataJSON)
+		ctx, err := scanContextRow(rows)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan context: %w", err)
 		}
-
-		var metadata models.ContextMetadata
-		if len(metadataJSON) > 0 {
-			if err := json.Unmarshal(metadataJSON, &metadata); err != nil {
-				// Log error but continue - don't fail entire list for one bad record
-				fmt.Fprintf(os.Stderr, "warning: failed to parse metadata for context %s: %v\n", name, err)
-			}
-		}
-
-		ctx := &models.ContextWithMetadata{
-			Name:       name,
-			StartTime:  startedAt,
-			Status:     status,
-			IsArchived: completionStatus.Valid && completionStatus.String == "archived",
-			Metadata:   metadata,
-		}
-
-		if stoppedAt.Valid {
-			ctx.EndTime = &stoppedAt.Time
-		}
-
 		contexts = append(contexts, ctx)
 	}
 
@@ -927,6 +902,8 @@ func (b *Backend) GetContextsByLabel(label string) ([]*models.ContextWithMetadat
 }
 
 // GetContextsByParent retrieves child contexts of a parent
+//
+//nolint:dupl // GetContextsByParent and GetContextsByLabel share query structure but filter differently
 func (b *Backend) GetContextsByParent(parent string) ([]*models.ContextWithMetadata, error) {
 	// Query contexts where metadata.parent = parent
 	query := `
@@ -951,41 +928,10 @@ func (b *Backend) GetContextsByParent(parent string) ([]*models.ContextWithMetad
 
 	var contexts []*models.ContextWithMetadata
 	for rows.Next() {
-		var (
-			name             string
-			status           string
-			startedAt        time.Time
-			stoppedAt        sql.NullTime
-			project          sql.NullString
-			completionStatus sql.NullString
-			metadataJSON     []byte
-		)
-
-		err := rows.Scan(&name, &status, &startedAt, &stoppedAt, &project, &completionStatus, &metadataJSON)
+		ctx, err := scanContextRow(rows)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan context: %w", err)
 		}
-
-		var metadata models.ContextMetadata
-		if len(metadataJSON) > 0 {
-			if err := json.Unmarshal(metadataJSON, &metadata); err != nil {
-				// Log error but continue - don't fail entire list for one bad record
-				fmt.Fprintf(os.Stderr, "warning: failed to parse metadata for context %s: %v\n", name, err)
-			}
-		}
-
-		ctx := &models.ContextWithMetadata{
-			Name:       name,
-			StartTime:  startedAt,
-			Status:     status,
-			IsArchived: completionStatus.Valid && completionStatus.String == "archived",
-			Metadata:   metadata,
-		}
-
-		if stoppedAt.Valid {
-			ctx.EndTime = &stoppedAt.Time
-		}
-
 		contexts = append(contexts, ctx)
 	}
 
@@ -1137,41 +1083,11 @@ func (b *Backend) ListContextsAcrossPartitions() (map[string][]*models.ContextWi
 
 		var contexts []*models.ContextWithMetadata
 		for rows.Next() {
-			var (
-				name             string
-				status           string
-				startedAt        time.Time
-				stoppedAt        sql.NullTime
-				project          sql.NullString
-				completionStatus sql.NullString
-				metadataJSON     []byte
-			)
-
-			if err := rows.Scan(&name, &status, &startedAt, &stoppedAt, &project, &completionStatus, &metadataJSON); err != nil {
+			ctx, err := scanContextRow(rows)
+			if err != nil {
 				rows.Close()
 				continue
 			}
-
-			var metadata models.ContextMetadata
-			if len(metadataJSON) > 0 {
-				if err := json.Unmarshal(metadataJSON, &metadata); err != nil {
-					// Log error but continue - don't fail entire list for one bad record
-					fmt.Fprintf(os.Stderr, "warning: failed to parse metadata for context %s: %v\n", name, err)
-				}
-			}
-
-			ctx := &models.ContextWithMetadata{
-				Name:       name,
-				StartTime:  startedAt,
-				Status:     status,
-				IsArchived: completionStatus.Valid && completionStatus.String == "archived",
-				Metadata:   metadata,
-			}
-
-			if stoppedAt.Valid {
-				ctx.EndTime = &stoppedAt.Time
-			}
-
 			contexts = append(contexts, ctx)
 		}
 		rows.Close()
@@ -1220,41 +1136,11 @@ func (b *Backend) SearchContextsAcrossPartitions(query string) (map[string][]*mo
 
 		var contexts []*models.ContextWithMetadata
 		for rows.Next() {
-			var (
-				name             string
-				status           string
-				startedAt        time.Time
-				stoppedAt        sql.NullTime
-				project          sql.NullString
-				completionStatus sql.NullString
-				metadataJSON     []byte
-			)
-
-			if err := rows.Scan(&name, &status, &startedAt, &stoppedAt, &project, &completionStatus, &metadataJSON); err != nil {
+			ctx, err := scanContextRow(rows)
+			if err != nil {
 				rows.Close()
 				continue
 			}
-
-			var metadata models.ContextMetadata
-			if len(metadataJSON) > 0 {
-				if err := json.Unmarshal(metadataJSON, &metadata); err != nil {
-					// Log error but continue - don't fail entire list for one bad record
-					fmt.Fprintf(os.Stderr, "warning: failed to parse metadata for context %s: %v\n", name, err)
-				}
-			}
-
-			ctx := &models.ContextWithMetadata{
-				Name:       name,
-				StartTime:  startedAt,
-				Status:     status,
-				IsArchived: completionStatus.Valid && completionStatus.String == "archived",
-				Metadata:   metadata,
-			}
-
-			if stoppedAt.Valid {
-				ctx.EndTime = &stoppedAt.Time
-			}
-
 			contexts = append(contexts, ctx)
 		}
 		rows.Close()

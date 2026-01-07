@@ -10,10 +10,10 @@ import (
 
 func TestExtractPartition(t *testing.T) {
 	tests := []struct {
-		name          string
-		envValue      string
-		expected      string
-		description   string
+		name        string
+		envValue    string
+		expected    string
+		description string
 	}{
 		{
 			name:        "db:partition syntax",
@@ -270,28 +270,34 @@ func TestDetectBackendType(t *testing.T) {
 }
 
 func TestGetPostgresConnectionString(t *testing.T) {
+	// Test with DATABASE_URL set (required since we removed hardcoded defaults)
+	const testDatabaseURL = "host=localhost port=5432 user=testuser dbname=testdb"
+
 	tests := []struct {
 		name             string
 		envValue         string
+		databaseURL      string
 		expectedContains []string
 		shouldError      bool
 		description      string
 	}{
 		{
-			name:     "db default",
-			envValue: "db",
+			name:        "db default with DATABASE_URL",
+			envValue:    "db",
+			databaseURL: testDatabaseURL,
 			expectedContains: []string{
 				"host=localhost",
 				"port=5432",
-				"dbname=dev_state",
+				"dbname=testdb",
 				"search_path=public",
 			},
 			shouldError: false,
-			description: "Should return default connection with public schema",
+			description: "Should return DATABASE_URL with public schema",
 		},
 		{
-			name:     "db:partition",
-			envValue: "db:adventure-engine",
+			name:        "db:partition with DATABASE_URL",
+			envValue:    "db:adventure-engine",
+			databaseURL: testDatabaseURL,
 			expectedContains: []string{
 				"host=localhost",
 				"search_path=adventure_engine",
@@ -300,8 +306,9 @@ func TestGetPostgresConnectionString(t *testing.T) {
 			description: "Should set search_path to sanitized partition name",
 		},
 		{
-			name:     "database:partition with special chars",
-			envValue: "database:My Project!",
+			name:        "database:partition with special chars",
+			envValue:    "database:My Project!",
+			databaseURL: testDatabaseURL,
 			expectedContains: []string{
 				"search_path=my_project",
 			},
@@ -311,6 +318,7 @@ func TestGetPostgresConnectionString(t *testing.T) {
 		{
 			name:        "file path",
 			envValue:    "/home/user/.my-context",
+			databaseURL: testDatabaseURL,
 			shouldError: true,
 			description: "Should error for non-database backend",
 		},
@@ -318,11 +326,16 @@ func TestGetPostgresConnectionString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set environment variable
+			// Set environment variables
 			os.Setenv("MY_CONTEXT_HOME", tt.envValue)
 			defer os.Unsetenv("MY_CONTEXT_HOME")
-			// Clear DATABASE_URL to test default behavior
-			os.Unsetenv("DATABASE_URL")
+
+			if tt.databaseURL != "" {
+				os.Setenv("DATABASE_URL", tt.databaseURL)
+				defer os.Unsetenv("DATABASE_URL")
+			} else {
+				os.Unsetenv("DATABASE_URL")
+			}
 
 			// Test connection string generation
 			connStr, err := core.GetPostgresConnectionString()
@@ -416,18 +429,8 @@ func TestGetPostgresConnectionStringWithDATABASE_URL(t *testing.T) {
 			},
 			description: "Full postgres:// URL in MY_CONTEXT_HOME should take precedence",
 		},
-		{
-			name:          "Fallback to localhost when DATABASE_URL not set",
-			myContextHome: "db",
-			databaseURL:   "", // Not set
-			expectedContains: []string{
-				"host=localhost",
-				"user=devuser",
-				"password=devpassword",
-				"dbname=dev_state",
-			},
-			description: "Should fall back to localhost defaults when DATABASE_URL is empty",
-		},
+		// Note: "Error when DATABASE_URL not set" test case moved to separate test
+		// TestGetPostgresConnectionStringRequiresDATABASE_URL to properly test error case
 		{
 			name:          "DATABASE_URL with existing search_path preserved",
 			myContextHome: "db",
@@ -483,90 +486,134 @@ func TestGetPostgresConnectionStringWithDATABASE_URL(t *testing.T) {
 	}
 }
 
+// TestGetPostgresConnectionStringRequiresDATABASE_URL tests that DATABASE_URL is required
+// when using shorthand syntax (db, db:partition)
+func TestGetPostgresConnectionStringRequiresDATABASE_URL(t *testing.T) {
+	// Save and restore environment
+	origHome := os.Getenv("MY_CONTEXT_HOME")
+	origDBURL := os.Getenv("DATABASE_URL")
+	defer func() {
+		if origHome != "" {
+			os.Setenv("MY_CONTEXT_HOME", origHome)
+		} else {
+			os.Unsetenv("MY_CONTEXT_HOME")
+		}
+		if origDBURL != "" {
+			os.Setenv("DATABASE_URL", origDBURL)
+		} else {
+			os.Unsetenv("DATABASE_URL")
+		}
+	}()
+
+	tests := []struct {
+		name          string
+		myContextHome string
+	}{
+		{name: "db shorthand", myContextHome: "db"},
+		{name: "database shorthand", myContextHome: "database"},
+		{name: "pg shorthand", myContextHome: "pg"},
+		{name: "db with partition", myContextHome: "db:mypartition"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv("MY_CONTEXT_HOME", tt.myContextHome)
+			os.Unsetenv("DATABASE_URL")
+
+			connStr, err := core.GetPostgresConnectionString()
+
+			assert.Error(t, err, "Should return error when DATABASE_URL is not set")
+			assert.Empty(t, connStr, "Connection string should be empty on error")
+			assert.Contains(t, err.Error(), "DATABASE_URL",
+				"Error should mention DATABASE_URL requirement")
+		})
+	}
+}
+
 // TestIsValidPostgresIdentifier tests the SQL injection prevention function
 func TestIsValidPostgresIdentifier(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		expected bool
+		name        string
+		input       string
+		expected    bool
 		description string
 	}{
 		{
-			name:     "valid simple name",
-			input:    "public",
-			expected: true,
+			name:        "valid simple name",
+			input:       "public",
+			expected:    true,
 			description: "Simple lowercase name should be valid",
 		},
 		{
-			name:     "valid with underscore",
-			input:    "my_schema",
-			expected: true,
+			name:        "valid with underscore",
+			input:       "my_schema",
+			expected:    true,
 			description: "Name with underscore should be valid",
 		},
 		{
-			name:     "valid with numbers",
-			input:    "schema123",
-			expected: true,
+			name:        "valid with numbers",
+			input:       "schema123",
+			expected:    true,
 			description: "Name with numbers (not first) should be valid",
 		},
 		{
-			name:     "valid starting with underscore",
-			input:    "_private",
-			expected: true,
+			name:        "valid starting with underscore",
+			input:       "_private",
+			expected:    true,
 			description: "Name starting with underscore should be valid",
 		},
 		{
-			name:     "valid uppercase",
-			input:    "MySchema",
-			expected: true,
+			name:        "valid uppercase",
+			input:       "MySchema",
+			expected:    true,
 			description: "Mixed case should be valid",
 		},
 		{
-			name:     "invalid starting with number",
-			input:    "123schema",
-			expected: false,
+			name:        "invalid starting with number",
+			input:       "123schema",
+			expected:    false,
 			description: "Name starting with number should be invalid",
 		},
 		{
-			name:     "invalid with hyphen",
-			input:    "my-schema",
-			expected: false,
+			name:        "invalid with hyphen",
+			input:       "my-schema",
+			expected:    false,
 			description: "Name with hyphen should be invalid (SQL injection vector)",
 		},
 		{
-			name:     "invalid with space",
-			input:    "my schema",
-			expected: false,
+			name:        "invalid with space",
+			input:       "my schema",
+			expected:    false,
 			description: "Name with space should be invalid",
 		},
 		{
-			name:     "invalid with semicolon",
-			input:    "schema;DROP TABLE",
-			expected: false,
+			name:        "invalid with semicolon",
+			input:       "schema;DROP TABLE",
+			expected:    false,
 			description: "SQL injection attempt should be invalid",
 		},
 		{
-			name:     "invalid with quotes",
-			input:    "schema'--",
-			expected: false,
+			name:        "invalid with quotes",
+			input:       "schema'--",
+			expected:    false,
 			description: "SQL injection with quotes should be invalid",
 		},
 		{
-			name:     "invalid empty",
-			input:    "",
-			expected: false,
+			name:        "invalid empty",
+			input:       "",
+			expected:    false,
 			description: "Empty string should be invalid",
 		},
 		{
-			name:     "invalid too long",
-			input:    "this_is_a_very_long_schema_name_that_exceeds_postgresql_63_char_limit_for_identifiers",
-			expected: false,
+			name:        "invalid too long",
+			input:       "this_is_a_very_long_schema_name_that_exceeds_postgresql_63_char_limit_for_identifiers",
+			expected:    false,
 			description: "Name exceeding 63 chars should be invalid",
 		},
 		{
-			name:     "valid exactly 63 chars",
-			input:    "a23456789012345678901234567890123456789012345678901234567890123",
-			expected: true,
+			name:        "valid exactly 63 chars",
+			input:       "a23456789012345678901234567890123456789012345678901234567890123",
+			expected:    true,
 			description: "Name with exactly 63 chars should be valid",
 		},
 	}
