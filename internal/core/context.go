@@ -438,7 +438,7 @@ func getContextWithMetadataDB(contextName string) (*pkgmodels.ContextWithMetadat
 	}
 
 	// Convert storage.Note to intmodels.Note
-	var notes []*intmodels.Note
+	notes := make([]*intmodels.Note, 0, len(storageNotes))
 	for _, sn := range storageNotes {
 		notes = append(notes, &intmodels.Note{
 			Timestamp:   sn.Timestamp,
@@ -453,7 +453,7 @@ func getContextWithMetadataDB(contextName string) (*pkgmodels.ContextWithMetadat
 	}
 
 	// Convert storage.File to intmodels.FileAssociation
-	var files []*intmodels.FileAssociation
+	files := make([]*intmodels.FileAssociation, 0, len(storageFiles))
 	for _, sf := range storageFiles {
 		files = append(files, &intmodels.FileAssociation{
 			Timestamp: sf.Timestamp,
@@ -468,7 +468,7 @@ func getContextWithMetadataDB(contextName string) (*pkgmodels.ContextWithMetadat
 	}
 
 	// Convert storage.Touch to intmodels.TouchEvent
-	var touches []*intmodels.TouchEvent
+	touches := make([]*intmodels.TouchEvent, 0, len(storageTouches))
 	for _, st := range storageTouches {
 		touches = append(touches, &intmodels.TouchEvent{
 			Timestamp: st.Timestamp,

@@ -317,7 +317,7 @@ func (b *Backend) CreateContext(ctx *models.ContextWithMetadata) error {
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck // Rollback is safe to ignore; commit success/failure is what matters
 
 	// Stop any currently active context
 	_, err = tx.Exec(`
@@ -589,7 +589,7 @@ func (b *Backend) AddNote(contextName, timestamp, content string) error {
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck // Rollback is safe to ignore; commit success/failure is what matters
 
 	// Insert note
 	_, err = tx.Exec(`
@@ -681,7 +681,7 @@ func (b *Backend) AddFile(contextName, timestamp, path string) error {
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck // Rollback is safe to ignore; commit success/failure is what matters
 
 	// Insert file reference
 	_, err = tx.Exec(`

@@ -89,7 +89,7 @@ Examples:
 }
 
 // exportWithDatabaseBackend exports context from PostgreSQL backend
-func exportWithDatabaseBackend(args []string, exportAll bool, exportToPath string, asJSON bool) error {
+func exportWithDatabaseBackend(args []string, exportAll bool, exportToPath string, _ bool) error {
 	backend, err := core.GetBackend()
 	if err != nil {
 		return fmt.Errorf("failed to get backend: %w", err)
@@ -166,7 +166,7 @@ func exportWithDatabaseBackend(args []string, exportAll bool, exportToPath strin
 	}
 
 	// Write to file
-	err = os.WriteFile(outputPath, []byte(content), 0644)
+	err = os.WriteFile(outputPath, []byte(content), 0o644) //nolint:gosec // G306: 0644 is intentional for user-readable export files
 	if err != nil {
 		return fmt.Errorf("failed to write export file: %w", err)
 	}
