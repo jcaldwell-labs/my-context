@@ -1,10 +1,10 @@
 package unit
 
 import (
-	"os"
 	"testing"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
+	"github.com/jefferycaldwell/my-context-copilot/pkg/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,9 +61,8 @@ func TestExtractPartition(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set environment variable
-			os.Setenv("MY_CONTEXT_HOME", tt.envValue)
-			defer os.Unsetenv("MY_CONTEXT_HOME")
+			// Use t.Setenv for automatic cleanup and parallel safety
+			t.Setenv("MY_CONTEXT_HOME", tt.envValue)
 
 			// Test extraction
 			result := core.ExtractPartition()
@@ -178,9 +177,8 @@ func TestGetPartitionSchema(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set environment variable
-			os.Setenv("MY_CONTEXT_HOME", tt.envValue)
-			defer os.Unsetenv("MY_CONTEXT_HOME")
+			// Use t.Setenv for automatic cleanup and parallel safety
+			t.Setenv("MY_CONTEXT_HOME", tt.envValue)
 
 			// Test get schema
 			result := core.GetPartitionSchema()
@@ -254,13 +252,9 @@ func TestDetectBackendType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set environment variable
-			if tt.envValue != "" {
-				os.Setenv("MY_CONTEXT_HOME", tt.envValue)
-				defer os.Unsetenv("MY_CONTEXT_HOME")
-			} else {
-				os.Unsetenv("MY_CONTEXT_HOME")
-			}
+			// Use t.Setenv for automatic cleanup and parallel safety
+			// Note: t.Setenv sets empty string for unset case, which is functionally equivalent
+			t.Setenv("MY_CONTEXT_HOME", tt.envValue)
 
 			// Test backend detection
 			result := core.DetectBackendType()
@@ -326,16 +320,9 @@ func TestGetPostgresConnectionString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set environment variables
-			os.Setenv("MY_CONTEXT_HOME", tt.envValue)
-			defer os.Unsetenv("MY_CONTEXT_HOME")
-
-			if tt.databaseURL != "" {
-				os.Setenv("DATABASE_URL", tt.databaseURL)
-				defer os.Unsetenv("DATABASE_URL")
-			} else {
-				os.Unsetenv("DATABASE_URL")
-			}
+			// Use t.Setenv for automatic cleanup and parallel safety
+			t.Setenv("MY_CONTEXT_HOME", tt.envValue)
+			t.Setenv("DATABASE_URL", tt.databaseURL)
 
 			// Test connection string generation
 			connStr, err := core.GetPostgresConnectionString()
@@ -455,17 +442,9 @@ func TestGetPostgresConnectionStringWithDATABASE_URL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Set MY_CONTEXT_HOME
-			os.Setenv("MY_CONTEXT_HOME", tt.myContextHome)
-			defer os.Unsetenv("MY_CONTEXT_HOME")
-
-			// Set or unset DATABASE_URL
-			if tt.databaseURL != "" {
-				os.Setenv("DATABASE_URL", tt.databaseURL)
-				defer os.Unsetenv("DATABASE_URL")
-			} else {
-				os.Unsetenv("DATABASE_URL")
-			}
+			// Use t.Setenv for automatic cleanup and parallel safety
+			t.Setenv("MY_CONTEXT_HOME", tt.myContextHome)
+			t.Setenv("DATABASE_URL", tt.databaseURL)
 
 			// Test connection string generation
 			connStr, err := core.GetPostgresConnectionString()
@@ -489,22 +468,6 @@ func TestGetPostgresConnectionStringWithDATABASE_URL(t *testing.T) {
 // TestGetPostgresConnectionStringRequiresDATABASE_URL tests that DATABASE_URL is required
 // when using shorthand syntax (db, db:partition)
 func TestGetPostgresConnectionStringRequiresDATABASE_URL(t *testing.T) {
-	// Save and restore environment
-	origHome := os.Getenv("MY_CONTEXT_HOME")
-	origDBURL := os.Getenv("DATABASE_URL")
-	defer func() {
-		if origHome != "" {
-			os.Setenv("MY_CONTEXT_HOME", origHome)
-		} else {
-			os.Unsetenv("MY_CONTEXT_HOME")
-		}
-		if origDBURL != "" {
-			os.Setenv("DATABASE_URL", origDBURL)
-		} else {
-			os.Unsetenv("DATABASE_URL")
-		}
-	}()
-
 	tests := []struct {
 		name          string
 		myContextHome string
@@ -517,8 +480,9 @@ func TestGetPostgresConnectionStringRequiresDATABASE_URL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			os.Setenv("MY_CONTEXT_HOME", tt.myContextHome)
-			os.Unsetenv("DATABASE_URL")
+			// Use t.Setenv for automatic cleanup and parallel safety
+			t.Setenv("MY_CONTEXT_HOME", tt.myContextHome)
+			t.Setenv("DATABASE_URL", "") // Explicitly set to empty
 
 			connStr, err := core.GetPostgresConnectionString()
 
@@ -620,29 +584,8 @@ func TestIsValidPostgresIdentifier(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Import utils for the function
-			result := isValidPostgresIdentifier(tt.input)
+			result := utils.IsValidPostgresIdentifier(tt.input)
 			assert.Equal(t, tt.expected, result, tt.description)
 		})
 	}
-}
-
-// isValidPostgresIdentifier is a local copy for testing
-// (mirrors pkg/utils.IsValidPostgresIdentifier)
-func isValidPostgresIdentifier(name string) bool {
-	if name == "" || len(name) > 63 {
-		return false
-	}
-
-	for i, ch := range name {
-		if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_' {
-			continue
-		}
-		if i > 0 && ch >= '0' && ch <= '9' {
-			continue
-		}
-		return false
-	}
-
-	return true
 }

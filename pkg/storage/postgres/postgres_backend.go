@@ -61,8 +61,8 @@ func extractSchemaFromConnStr(connStr string) string {
 
 // splitConnStr splits connection string by spaces, respecting quoted values.
 // Handles escaped quotes in PostgreSQL connection strings:
-// - Doubled single quotes (”) are treated as escaped quotes within a value
-// - Example: key='value”s data' contains the value: value's data
+// - Doubled single quotes ('') are treated as escaped quotes within a value
+// - Example: key='value''s data' contains the value: value's data
 func splitConnStr(connStr string) []string {
 	var parts []string
 	var current string

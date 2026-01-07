@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -77,10 +78,12 @@ func GetPostgresConnectionString() (string, error) {
 func appendSearchPath(connStr, schema string) string {
 	// Handle URL-style connection strings (postgres://...)
 	if strings.HasPrefix(connStr, "postgres://") || strings.HasPrefix(connStr, "postgresql://") {
+		// URL-encode the schema name for URL-style connection strings
+		encodedSchema := url.QueryEscape(schema)
 		if strings.Contains(connStr, "?") {
-			return connStr + "&search_path=" + schema
+			return connStr + "&search_path=" + encodedSchema
 		}
-		return connStr + "?search_path=" + schema
+		return connStr + "?search_path=" + encodedSchema
 	}
 
 	// Handle key=value style connection strings
