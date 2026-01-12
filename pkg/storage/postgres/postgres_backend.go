@@ -166,6 +166,7 @@ func (b *Backend) GetDB() *sql.DB {
 
 // scanContextRow scans a context row from the database and returns a ContextWithMetadata.
 // This helper reduces code duplication across listing functions.
+// Expects columns: name, status, started_at, stopped_at, project, completion_status, metadata, touch_count, last_touch_at
 func scanContextRow(scanner interface{ Scan(...any) error }) (*models.ContextWithMetadata, error) {
 	var (
 		name             string
@@ -175,9 +176,11 @@ func scanContextRow(scanner interface{ Scan(...any) error }) (*models.ContextWit
 		project          sql.NullString
 		completionStatus sql.NullString
 		metadataJSON     []byte
+		touchCount       int
+		lastTouchAt      sql.NullTime
 	)
 
-	err := scanner.Scan(&name, &status, &startedAt, &stoppedAt, &project, &completionStatus, &metadataJSON)
+	err := scanner.Scan(&name, &status, &startedAt, &stoppedAt, &project, &completionStatus, &metadataJSON, &touchCount, &lastTouchAt)
 	if err != nil {
 		return nil, err
 	}
@@ -196,10 +199,15 @@ func scanContextRow(scanner interface{ Scan(...any) error }) (*models.ContextWit
 		Status:     status,
 		IsArchived: completionStatus.Valid && completionStatus.String == "archived",
 		Metadata:   metadata,
+		TouchCount: touchCount,
 	}
 
 	if stoppedAt.Valid {
 		ctx.EndTime = &stoppedAt.Time
+	}
+
+	if lastTouchAt.Valid {
+		ctx.LastTouchAt = &lastTouchAt.Time
 	}
 
 	return ctx, nil
@@ -468,7 +476,9 @@ func (b *Backend) ListContexts() ([]*models.ContextWithMetadata, error) {
 			stopped_at,
 			project,
 			completion_status,
-			metadata
+			metadata,
+			touch_count,
+			last_touch_at
 		FROM contexts
 		ORDER BY started_at DESC
 	`
@@ -884,7 +894,9 @@ func (b *Backend) GetContextsByLabel(label string) ([]*models.ContextWithMetadat
 			stopped_at,
 			project,
 			completion_status,
-			metadata
+			metadata,
+			touch_count,
+			last_touch_at
 		FROM contexts
 		WHERE metadata->'labels' ? $1::text
 		ORDER BY started_at DESC
@@ -925,7 +937,9 @@ func (b *Backend) GetContextsByParent(parent string) ([]*models.ContextWithMetad
 			stopped_at,
 			project,
 			completion_status,
-			metadata
+			metadata,
+			touch_count,
+			last_touch_at
 		FROM contexts
 		WHERE metadata->>'parent' = $1
 		ORDER BY started_at DESC
@@ -1081,7 +1095,9 @@ func (b *Backend) ListContextsAcrossPartitions() (map[string][]*models.ContextWi
 				stopped_at,
 				project,
 				completion_status,
-				metadata
+				metadata,
+				touch_count,
+				last_touch_at
 			FROM %s.contexts
 			ORDER BY started_at DESC
 		`, pq.QuoteIdentifier(partition))
@@ -1133,7 +1149,9 @@ func (b *Backend) SearchContextsAcrossPartitions(query string) (map[string][]*mo
 				stopped_at,
 				project,
 				completion_status,
-				metadata
+				metadata,
+				touch_count,
+				last_touch_at
 			FROM %s.contexts
 			WHERE to_tsvector('english', name) @@ plainto_tsquery('english', $1)
 			ORDER BY started_at DESC
