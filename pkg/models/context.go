@@ -51,6 +51,9 @@ type ContextWithMetadata struct {
 	SubdirectoryPath string          `json:"subdirectory_path,omitempty"`
 	IsArchived       bool            `json:"is_archived"`
 	Metadata         ContextMetadata `json:"metadata,omitempty"`
+	// Touch tracking (populated by database backend)
+	TouchCount  int        `json:"touch_count,omitempty"`
+	LastTouchAt *time.Time `json:"last_touch_at,omitempty"`
 }
 
 // NewContextWithMetadata creates a new context with metadata

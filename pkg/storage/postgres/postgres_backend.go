@@ -61,8 +61,8 @@ func extractSchemaFromConnStr(connStr string) string {
 
 // splitConnStr splits connection string by spaces, respecting quoted values.
 // Handles escaped quotes in PostgreSQL connection strings:
-// - Doubled single quotes ('') are treated as escaped quotes within a value
-// - Example: key='value''s data' contains the value: value's data
+// - Doubled single quotes (”) are treated as escaped quotes within a value
+// - Example: key='value”s data' contains the value: value's data
 func splitConnStr(connStr string) []string {
 	var parts []string
 	var current string
@@ -391,7 +391,9 @@ func (b *Backend) GetContext(name string) (*models.ContextWithMetadata, error) {
 			stopped_at,
 			project,
 			completion_status,
-			metadata
+			metadata,
+			touch_count,
+			last_touch_at
 		FROM contexts
 		WHERE name = $1
 	`
@@ -404,6 +406,8 @@ func (b *Backend) GetContext(name string) (*models.ContextWithMetadata, error) {
 		project          sql.NullString
 		completionStatus sql.NullString
 		metadataJSON     []byte
+		touchCount       int
+		lastTouchAt      sql.NullTime
 	)
 
 	err := b.db.QueryRow(query, name).Scan(
@@ -414,6 +418,8 @@ func (b *Backend) GetContext(name string) (*models.ContextWithMetadata, error) {
 		&project,
 		&completionStatus,
 		&metadataJSON,
+		&touchCount,
+		&lastTouchAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -438,10 +444,15 @@ func (b *Backend) GetContext(name string) (*models.ContextWithMetadata, error) {
 		Status:     status,
 		IsArchived: completionStatus.Valid && completionStatus.String == "archived",
 		Metadata:   metadata,
+		TouchCount: touchCount,
 	}
 
 	if stoppedAt.Valid {
 		ctx.EndTime = &stoppedAt.Time
+	}
+
+	if lastTouchAt.Valid {
+		ctx.LastTouchAt = &lastTouchAt.Time
 	}
 
 	return ctx, nil

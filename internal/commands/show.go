@@ -90,13 +90,27 @@ func NewShowCmd(jsonOutput *bool) *cobra.Command {
 					})
 				}
 
+				// Build touch events from database touch count and last touch time
+				// We create synthetic touch events to match the expected display format
+				var touches []*models.TouchEvent
+				if dbCtx.TouchCount > 0 && dbCtx.LastTouchAt != nil {
+					// Create synthetic touch events - one per touch count
+					// All with the last touch timestamp (we don't track individual times in DB)
+					for i := 0; i < dbCtx.TouchCount; i++ {
+						touches = append(touches, &models.TouchEvent{
+							Timestamp: *dbCtx.LastTouchAt,
+						})
+					}
+				}
+
 				// Output
 				if *jsonOutput {
 					data := map[string]interface{}{
-						"context": dbCtx,
-						"notes":   notes,
-						"files":   files,
-						"touches": []*models.TouchEvent{},
+						"context":     dbCtx,
+						"notes":       notes,
+						"files":       files,
+						"touches":     touches,
+						"touch_count": dbCtx.TouchCount,
 					}
 					jsonStr, err := output.FormatJSON("show", map[string]interface{}{"data": data})
 					if err != nil {
@@ -118,7 +132,7 @@ func NewShowCmd(jsonOutput *bool) *cobra.Command {
 
 					// Print header with partition and count
 					output.PrintContextHomeHeader(homeDisplay, contextCount)
-					fmt.Print(output.FormatContext(context, notes, files, []*models.TouchEvent{}))
+					fmt.Print(output.FormatContext(context, notes, files, touches))
 				}
 
 				return nil
