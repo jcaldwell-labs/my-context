@@ -4,15 +4,16 @@
 [![Go](https://img.shields.io/badge/Go-1.24+-00ADD8.svg)](https://golang.org/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-> *Track what you're working on, not just what you've done.*
+> _Track what you're working on, not just what you've done._
 
 A cross-platform CLI tool for managing developer work contexts with notes, file associations, and timestamps.
 
 ## Why My-Context?
 
-Most developers context-switch constantly but lose track of *why* they made decisions, *what* files were involved, and *when* they stopped mid-task. My-context solves this by creating lightweight, timestamped work journals that follow you across sessions.
+Most developers context-switch constantly but lose track of _why_ they made decisions, _what_ files were involved, and _when_ they stopped mid-task. My-context solves this by creating lightweight, timestamped work journals that follow you across sessions.
 
 **Key benefits:**
+
 - **Instant context capture** — Start tracking in one command, add notes as you go
 - **Automatic transitions** — Switching contexts stops the previous one automatically
 - **Plain text storage** — All data stored as human-readable files you can grep, version control, or edit
@@ -20,6 +21,7 @@ Most developers context-switch constantly but lose track of *why* they made deci
 - **Cross-platform** — Works identically on Windows, Linux, macOS, and WSL
 
 **Perfect for:**
+
 - Developers who context-switch frequently between tasks
 - Teams wanting lightweight decision documentation
 - Anyone who's asked "what was I doing on that ticket last week?"
@@ -54,17 +56,20 @@ $ my-context show
 ### Install
 
 **Linux/macOS/WSL (one-liner):**
+
 ```bash
 curl -sSL https://raw.githubusercontent.com/jcaldwell-labs/my-context/main/scripts/curl-install.sh | bash
 ```
 
 **Or download binaries** from [Releases](https://github.com/jcaldwell-labs/my-context/releases):
+
 - `my-context-linux-amd64` — Linux (x86_64)
 - `my-context-darwin-amd64` — macOS Intel
 - `my-context-darwin-arm64` — macOS Apple Silicon
 - `my-context-windows-amd64.exe` — Windows
 
 **Build from source:**
+
 ```bash
 git clone https://github.com/jcaldwell-labs/my-context.git
 cd my-context
@@ -90,37 +95,42 @@ my-context list
 ## Features
 
 ### Core Context Management
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `start <name>` | `s` | Create and activate a new context |
-| `stop` | `p` | Stop the active context |
-| `show` | `w` | Display current context details |
-| `list` | `l` | List all contexts with filters |
-| `history` | `h` | Show context transition history |
+
+| Command        | Alias | Description                       |
+| -------------- | ----- | --------------------------------- |
+| `start <name>` | `s`   | Create and activate a new context |
+| `stop`         | `p`   | Stop the active context           |
+| `show`         | `w`   | Display current context details   |
+| `list`         | `l`   | List all contexts with filters    |
+| `history`      | `h`   | Show context transition history   |
 
 ### Notes & Files
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `note <text>` | `n` | Add timestamped note to active context |
-| `file <path>` | `f` | Associate file with active context |
-| `touch` | `t` | Record activity timestamp |
+
+| Command       | Alias | Description                            |
+| ------------- | ----- | -------------------------------------- |
+| `note <text>` | `n`   | Add timestamped note to active context |
+| `file <path>` | `f`   | Associate file with active context     |
+| `touch`       | `t`   | Record activity timestamp              |
 
 ### Organization (Sprint 2+)
-| Command | Alias | Description |
-|---------|-------|-------------|
-| `export <name>` | `e` | Export context to markdown/JSON |
-| `archive <name>` | `a` | Archive completed contexts |
-| `delete <name>` | `d` | Permanently remove a context |
+
+| Command          | Alias | Description                     |
+| ---------------- | ----- | ------------------------------- |
+| `export <name>`  | `e`   | Export context to markdown/JSON |
+| `archive <name>` | `a`   | Archive completed contexts      |
+| `delete <name>`  | `d`   | Permanently remove a context    |
 
 ### Advanced Features
 
 **Project Grouping:**
+
 ```bash
 my-context start "Phase 1" --project myapp
 my-context list --project myapp
 ```
 
 **Filtering & Search:**
+
 ```bash
 my-context list --limit 5
 my-context list --search "auth"
@@ -128,6 +138,7 @@ my-context list --archived
 ```
 
 **JSON Output:**
+
 ```bash
 my-context show --json | jq .
 ```
@@ -135,6 +146,7 @@ my-context show --json | jq .
 ## Use Cases
 
 ### Daily Development Workflow
+
 ```bash
 # Morning: start your day
 my-context start "Sprint 42 - User dashboard"
@@ -150,12 +162,14 @@ my-context start "Code review: PR #234"
 ```
 
 ### Git Integration
+
 ```bash
 # In .git/hooks/post-commit
 my-context note "Committed: $(git log -1 --pretty=%B)"
 ```
 
 ### End-of-Day Review
+
 ```bash
 my-context list --limit 10
 my-context export "Sprint 42 - User dashboard"
@@ -187,27 +201,54 @@ Override location: `export MY_CONTEXT_HOME=/custom/path`
 
 ## Comparison
 
-| Feature | my-context | git stash | tmux sessions | note apps |
-|---------|-----------|-----------|---------------|-----------|
-| Context tracking | Yes | No | No | Manual |
-| Automatic transitions | Yes | No | No | No |
-| File associations | Yes | Yes (staged) | No | Manual |
-| Timestamped notes | Yes | No | No | Yes |
-| Plain text storage | Yes | Binary | N/A | Varies |
-| Cross-platform | Yes | Yes | Unix only | Varies |
-| CLI-first | Yes | Yes | Yes | No |
+| Feature               | my-context | git stash    | tmux sessions | note apps |
+| --------------------- | ---------- | ------------ | ------------- | --------- |
+| Context tracking      | Yes        | No           | No            | Manual    |
+| Automatic transitions | Yes        | No           | No            | No        |
+| File associations     | Yes        | Yes (staged) | No            | Manual    |
+| Timestamped notes     | Yes        | No           | No            | Yes       |
+| Plain text storage    | Yes        | Binary       | N/A           | Varies    |
+| Cross-platform        | Yes        | Yes          | Unix only     | Varies    |
+| CLI-first             | Yes        | Yes          | Yes           | No        |
 
 ## Contributing
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 **Development:**
+
 ```bash
 go build -o my-context ./cmd/my-context/
 go test ./...
 ```
 
+**Integration Testing with BATS:**
+
+```bash
+# Install BATS (https://bats-core.readthedocs.io/)
+# macOS: brew install bats-core
+# Debian/Ubuntu: apt install bats
+
+# Run file mode tests
+make test-bats
+
+# Run all tests (database tests require DATABASE_URL_TEST)
+DATABASE_URL_TEST="postgres://..." make test-bats-all
+
+# Or use the runner script directly
+./scripts/run-integration-tests.sh file    # File mode only
+./scripts/run-integration-tests.sh db      # Database mode only
+./scripts/run-integration-tests.sh all     # Both suites
+```
+
+Test suites include:
+
+- **file_mode.bats** — Core commands with file-based storage (17 tests)
+- **database_mode.bats** — Database backend commands (19 tests)
+- **synthetic_workflows.bats** — Real developer workflow simulations (8 tests)
+
 **Key principles:**
+
 1. Unix philosophy — Do one thing well
 2. Plain text — All storage human-readable
 3. Test-first — TDD approach required

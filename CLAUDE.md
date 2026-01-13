@@ -426,7 +426,38 @@ Each feature lives in `specs/###-feature-name/`:
 
 - Integration tests: `tests/integration/*_test.go`
 - Unit tests: `tests/unit/*_test.go`
+- BATS integration tests: `tests/bats/*.bats`
 - Framework: `github.com/stretchr/testify`
+
+### BATS Integration Tests
+
+BATS (Bash Automated Testing System) provides end-to-end CLI testing:
+
+```bash
+# Run file mode tests only
+make test-bats
+
+# Run all tests (requires DATABASE_URL_TEST for database tests)
+make test-bats-all
+
+# Use runner script directly
+./scripts/run-integration-tests.sh file    # File mode
+./scripts/run-integration-tests.sh db      # Database mode
+./scripts/run-integration-tests.sh all     # Both
+```
+
+**Test Suites**:
+
+- `file_mode.bats` — Core commands with file-based storage (17 tests)
+- `database_mode.bats` — Database backend commands (19 tests)
+- `synthetic_workflows.bats` — Real developer workflow simulations (8 tests)
+
+**Helper Functions** (`tests/bats/helpers/test_helper.bash`):
+
+- `run_my_context` — Execute binary with arguments
+- `assert_success` / `assert_failure` — Check exit codes
+- `assert_output_contains` / `assert_output_not_contains` — Output validation
+- `assert_json_field` — JSON output validation with jq
 
 ### Cross-Platform Testing Requirements
 
