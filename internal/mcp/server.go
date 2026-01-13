@@ -68,6 +68,18 @@ func (s *Server) registerTools() {
 		Name:        "list_contexts",
 		Description: "List all contexts with optional filtering.",
 	}, handleListContexts)
+
+	// add_file - Associate a file with the active context
+	mcp.AddTool(s.server, &mcp.Tool{
+		Name:        "add_file",
+		Description: "Associate a file with the currently active context for tracking.",
+	}, handleAddFile)
+
+	// list_files - List files associated with a context
+	mcp.AddTool(s.server, &mcp.Tool{
+		Name:        "list_files",
+		Description: "List files associated with a context (defaults to active context).",
+	}, handleListFiles)
 }
 
 // Run starts the MCP server with stdio transport.

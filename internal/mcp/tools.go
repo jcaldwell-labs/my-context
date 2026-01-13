@@ -294,3 +294,136 @@ func handleListContexts(
 		HasMore:    hasMore,
 	}, nil
 }
+
+// AddFileInput defines the input for add_file tool.
+type AddFileInput struct {
+	Path string `json:"path" jsonschema_description:"Absolute or relative path to the file to associate with the context"`
+}
+
+// AddFileOutput defines the output for add_file tool.
+type AddFileOutput struct {
+	ContextName string `json:"context_name"`
+	FilePath    string `json:"file_path"`
+	Message     string `json:"message"`
+	FileCount   int    `json:"file_count"`
+}
+
+// handleAddFile associates a file with the active context.
+func handleAddFile(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input AddFileInput,
+) (*mcp.CallToolResult, AddFileOutput, error) {
+	if input.Path == "" {
+		return nil, AddFileOutput{}, fmt.Errorf("file path is required")
+	}
+
+	// Get active context
+	state, err := core.GetActiveContext()
+	if err != nil {
+		return nil, AddFileOutput{}, fmt.Errorf("failed to get active context: %w", err)
+	}
+
+	if !state.HasActiveContext() {
+		return nil, AddFileOutput{}, fmt.Errorf("no active context - start one first with start_context")
+	}
+
+	contextName := state.GetActiveContextName()
+
+	// Add the file
+	fileAssoc, err := core.AddFile(input.Path)
+	if err != nil {
+		return nil, AddFileOutput{}, fmt.Errorf("failed to add file: %w", err)
+	}
+
+	// Get file count
+	_, _, files, _, _ := core.GetContextWithMetadata(contextName)
+	fileCount := len(files)
+
+	return nil, AddFileOutput{
+		ContextName: contextName,
+		FilePath:    fileAssoc.FilePath,
+		Message:     "File associated successfully",
+		FileCount:   fileCount,
+	}, nil
+}
+
+// ListFilesInput defines the input for list_files tool.
+type ListFilesInput struct {
+	ContextName string `json:"context_name,omitempty" jsonschema_description:"Context name to list files for (defaults to active context)"`
+	Limit       int    `json:"limit,omitempty" jsonschema_description:"Maximum number of files to return (default: 20)"`
+}
+
+// FileSummary provides a summary of a file association.
+type FileSummary struct {
+	Path      string `json:"path"`
+	Timestamp string `json:"timestamp"`
+}
+
+// ListFilesOutput defines the output for list_files tool.
+type ListFilesOutput struct {
+	ContextName string        `json:"context_name"`
+	Files       []FileSummary `json:"files"`
+	TotalCount  int           `json:"total_count"`
+	HasMore     bool          `json:"has_more"`
+}
+
+// handleListFiles lists files associated with a context.
+func handleListFiles(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input ListFilesInput,
+) (*mcp.CallToolResult, ListFilesOutput, error) {
+	contextName := input.ContextName
+
+	// Default to active context if not specified
+	if contextName == "" {
+		state, err := core.GetActiveContext()
+		if err != nil {
+			return nil, ListFilesOutput{}, fmt.Errorf("failed to get active context: %w", err)
+		}
+
+		if !state.HasActiveContext() {
+			return nil, ListFilesOutput{}, fmt.Errorf("no active context and no context_name specified")
+		}
+
+		contextName = state.GetActiveContextName()
+	}
+
+	// Get context data with files
+	_, _, files, _, err := core.GetContextWithMetadata(contextName)
+	if err != nil {
+		return nil, ListFilesOutput{}, fmt.Errorf("failed to get context files: %w", err)
+	}
+
+	// Set default limit
+	limit := input.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+
+	// Check if there are more results
+	hasMore := len(files) > limit
+	totalCount := len(files)
+
+	// Apply limit
+	if len(files) > limit {
+		files = files[:limit]
+	}
+
+	// Build file summaries
+	summaries := make([]FileSummary, len(files))
+	for i, f := range files {
+		summaries[i] = FileSummary{
+			Path:      f.FilePath,
+			Timestamp: f.Timestamp.Format("2006-01-02 15:04:05"),
+		}
+	}
+
+	return nil, ListFilesOutput{
+		ContextName: contextName,
+		Files:       summaries,
+		TotalCount:  totalCount,
+		HasMore:     hasMore,
+	}, nil
+}
