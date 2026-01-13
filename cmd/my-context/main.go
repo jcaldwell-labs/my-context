@@ -59,6 +59,7 @@ func init() {
 	rootCmd.AddCommand(commands.NewWhichCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewPartitionsCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewStatsCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewRecordCmd(&jsonOutput))
 }
 
 func main() {
