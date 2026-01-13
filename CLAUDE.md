@@ -41,6 +41,48 @@ go build ./...
 ./my-context.exe show
 ```
 
+### Pre-PR Checklist (MANDATORY)
+
+Before creating a pull request, complete ALL of these checks:
+
+```bash
+# 1. Build and lint (mirrors CI)
+go build ./...
+make lint
+
+# 2. Run unit tests
+go test ./tests/unit/... -v
+
+# 3. Test locally with both backends (if changing command logic)
+export MY_CONTEXT_HOME=db && ./bin/my-context <command>     # Database mode
+export MY_CONTEXT_HOME=~/.my-context && ./bin/my-context <command>  # File mode
+```
+
+**Code Path Verification (for database mode changes):**
+
+When adding database mode support to existing commands:
+
+1. **Trace all function calls** - Verify no function depends on file-based storage
+2. **Check filter functions** - Do they call `core.Get*` helpers that read files?
+3. **Verify metadata preservation** - Does conversion lose fields needed for filtering?
+4. **Test ALL flags** - Not just happy path (`--tag`, `--archived`, `--project`, etc.)
+
+**Example of what to catch:**
+
+```go
+// BAD: filterByTag calls core.GetContextWithMetadata (file-based!)
+func filterByTag(contexts []*models.Context, tag string) {
+    ctxWithMeta, _, _, _, _ := core.GetContextWithMetadata(ctx.Name) // ← File-based!
+}
+
+// GOOD: Use database model metadata directly
+func filterDBContextsByTag(dbContexts []*pkgmodels.ContextWithMetadata, tag string) {
+    for _, ctx := range dbContexts {
+        for _, t := range ctx.Metadata.Labels { // ← Already have metadata!
+```
+
+**Retro Reference:** See `docs/retros/2026-01-13-list-command-database-mode.md` for detailed case study.
+
 ## Architecture
 
 ### Project Structure
