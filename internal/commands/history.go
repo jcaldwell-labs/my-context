@@ -16,7 +16,20 @@ func NewHistoryCmd(jsonOutput *bool) *cobra.Command {
 		Long:    `Display the chronological history of all context transitions.`,
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Get all transitions
+			// Check if using database backend
+			if core.IsUsingDatabase() {
+				msg := "history command is not yet supported in database mode"
+				if *jsonOutput {
+					jsonStr, _ := output.FormatJSONError("history", 3, msg)
+					fmt.Print(jsonStr)
+					return nil
+				}
+				fmt.Println(msg)
+				fmt.Println("Tip: Use 'my-context list --all' to see context timestamps")
+				return nil
+			}
+
+			// Get all transitions (file-based backend)
 			transitions, err := core.GetTransitions()
 			if err != nil {
 				if *jsonOutput {

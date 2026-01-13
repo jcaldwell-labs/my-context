@@ -107,6 +107,19 @@ Examples:
   my-context watch --exec="notify-send 'Context updated'"`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Check if using database backend
+			if core.IsUsingDatabase() {
+				msg := "watch command is not supported in database mode (file-based only)"
+				if *jsonOutput {
+					jsonStr, _ := output.FormatJSONError("watch", 3, msg)
+					fmt.Print(jsonStr)
+					return nil
+				}
+				fmt.Println(msg)
+				fmt.Println("Tip: Database mode stores contexts in PostgreSQL, not as files to watch")
+				return nil
+			}
+
 			// Get context name
 			contextName, err := getContextNameOrActive(args)
 			if err != nil {

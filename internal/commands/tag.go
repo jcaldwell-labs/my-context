@@ -6,8 +6,102 @@ import (
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
+	"github.com/jefferycaldwell/my-context-copilot/pkg/storage"
 	"github.com/spf13/cobra"
 )
+
+// Database mode helper functions
+
+// addTagsDB adds tags to a context in database mode
+func addTagsDB(backend storage.Backend, contextName string, tags []string) ([]string, error) {
+	ctx, err := backend.GetContext(contextName)
+	if err != nil {
+		return nil, fmt.Errorf("context not found: %w", err)
+	}
+
+	// Find which tags are new
+	existingTags := make(map[string]bool)
+	for _, t := range ctx.Metadata.Labels {
+		existingTags[strings.ToLower(t)] = true
+	}
+
+	var added []string
+	for _, tag := range tags {
+		if !existingTags[strings.ToLower(tag)] {
+			ctx.Metadata.Labels = append(ctx.Metadata.Labels, tag)
+			added = append(added, tag)
+			existingTags[strings.ToLower(tag)] = true
+		}
+	}
+
+	if len(added) > 0 {
+		if err := backend.UpdateContext(ctx); err != nil {
+			return nil, fmt.Errorf("failed to update context: %w", err)
+		}
+	}
+
+	return added, nil
+}
+
+// removeTagsDB removes tags from a context in database mode
+func removeTagsDB(backend storage.Backend, contextName string, tags []string) ([]string, error) {
+	ctx, err := backend.GetContext(contextName)
+	if err != nil {
+		return nil, fmt.Errorf("context not found: %w", err)
+	}
+
+	// Build set of tags to remove (case-insensitive)
+	toRemove := make(map[string]bool)
+	for _, t := range tags {
+		toRemove[strings.ToLower(t)] = true
+	}
+
+	// Filter out tags to remove
+	var newLabels []string
+	var removed []string
+	for _, label := range ctx.Metadata.Labels {
+		if toRemove[strings.ToLower(label)] {
+			removed = append(removed, label)
+		} else {
+			newLabels = append(newLabels, label)
+		}
+	}
+
+	if len(removed) > 0 {
+		ctx.Metadata.Labels = newLabels
+		if err := backend.UpdateContext(ctx); err != nil {
+			return nil, fmt.Errorf("failed to update context: %w", err)
+		}
+	}
+
+	return removed, nil
+}
+
+// getContextTagsDB gets tags for a specific context in database mode
+func getContextTagsDB(backend storage.Backend, contextName string) ([]string, error) {
+	ctx, err := backend.GetContext(contextName)
+	if err != nil {
+		return nil, fmt.Errorf("context not found: %w", err)
+	}
+	return ctx.Metadata.Labels, nil
+}
+
+// getAllTagsDB gets all tags with counts across all contexts in database mode
+func getAllTagsDB(backend storage.Backend) (map[string]int, error) {
+	contexts, err := backend.ListContexts()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list contexts: %w", err)
+	}
+
+	tagCounts := make(map[string]int)
+	for _, ctx := range contexts {
+		for _, label := range ctx.Metadata.Labels {
+			tagCounts[label]++
+		}
+	}
+
+	return tagCounts, nil
+}
 
 func NewTagCmd(jsonOutput *bool) *cobra.Command {
 	cmd := &cobra.Command{
@@ -56,8 +150,28 @@ Examples:
 				}
 			}
 
-			// Add tags
-			added, err := core.AddTags(contextName, tags)
+			var added []string
+			var err error
+
+			// Check if using database backend
+			if core.IsUsingDatabase() {
+				backend, berr := core.GetBackend()
+				if berr != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("tag_add", 2, fmt.Sprintf("failed to get backend: %v", berr))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to get backend: %w", berr)
+				}
+				defer backend.Close()
+
+				added, err = addTagsDB(backend, contextName, tags)
+			} else {
+				// File-based backend
+				added, err = core.AddTags(contextName, tags)
+			}
+
 			if err != nil {
 				if *jsonOutput {
 					jsonStr, _ := output.FormatJSONError("tag_add", 2, err.Error())
@@ -113,6 +227,69 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			contextName := args[0]
 
+			// Check if using database backend
+			if core.IsUsingDatabase() {
+				backend, err := core.GetBackend()
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("tag_remove", 2, fmt.Sprintf("failed to get backend: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to get backend: %w", err)
+				}
+				defer backend.Close()
+
+				var tags []string
+				if removeAll {
+					// Get all tags for the context from database
+					allTags, err := getContextTagsDB(backend, contextName)
+					if err != nil {
+						if *jsonOutput {
+							jsonStr, _ := output.FormatJSONError("tag_remove", 2, err.Error())
+							fmt.Print(jsonStr)
+							return nil
+						}
+						return err
+					}
+					tags = allTags
+				} else {
+					tags = args[1:]
+				}
+
+				removed, err := removeTagsDB(backend, contextName, tags)
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("tag_remove", 2, err.Error())
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return err
+				}
+
+				// Output
+				if *jsonOutput {
+					data := map[string]interface{}{
+						"context":      contextName,
+						"removed_tags": removed,
+					}
+					jsonStr, err := output.FormatJSON("tag_remove", map[string]interface{}{"data": data})
+					if err != nil {
+						return err
+					}
+					fmt.Print(jsonStr)
+				} else {
+					if len(removed) == 0 {
+						fmt.Printf("No tags removed from \"%s\" (tags not found)\n", contextName)
+					} else {
+						fmt.Printf("✓ Removed %d tag(s) from \"%s\": %s\n", len(removed), contextName, strings.Join(removed, ", "))
+					}
+				}
+
+				return nil
+			}
+
+			// File-based backend
 			var tags []string
 			if removeAll {
 				// Get all tags for the context
@@ -183,6 +360,92 @@ Examples:
   my-context tag list "Bug fix"    # List tags for specific context`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Check if using database backend
+			if core.IsUsingDatabase() {
+				backend, err := core.GetBackend()
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("tag_list", 2, fmt.Sprintf("failed to get backend: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to get backend: %w", err)
+				}
+				defer backend.Close()
+
+				if len(args) == 1 {
+					// List tags for specific context
+					contextName := args[0]
+					tags, err := getContextTagsDB(backend, contextName)
+					if err != nil {
+						if *jsonOutput {
+							jsonStr, _ := output.FormatJSONError("tag_list", 2, err.Error())
+							fmt.Print(jsonStr)
+							return nil
+						}
+						return err
+					}
+
+					// Output
+					if *jsonOutput {
+						data := map[string]interface{}{
+							"context": contextName,
+							"tags":    tags,
+						}
+						jsonStr, err := output.FormatJSON("tag_list", map[string]interface{}{"data": data})
+						if err != nil {
+							return err
+						}
+						fmt.Print(jsonStr)
+					} else {
+						if len(tags) == 0 {
+							fmt.Printf("Context \"%s\" has no tags\n", contextName)
+						} else {
+							fmt.Printf("Tags for \"%s\": %s\n", contextName, strings.Join(tags, ", "))
+						}
+					}
+				} else {
+					// List all tags across all contexts
+					tagCounts, err := getAllTagsDB(backend)
+					if err != nil {
+						if *jsonOutput {
+							jsonStr, _ := output.FormatJSONError("tag_list", 2, err.Error())
+							fmt.Print(jsonStr)
+							return nil
+						}
+						return err
+					}
+
+					// Output
+					if *jsonOutput {
+						data := map[string]interface{}{
+							"tags": tagCounts,
+						}
+						jsonStr, err := output.FormatJSON("tag_list", map[string]interface{}{"data": data})
+						if err != nil {
+							return err
+						}
+						fmt.Print(jsonStr)
+					} else {
+						if len(tagCounts) == 0 {
+							fmt.Println("No tags in use")
+						} else {
+							fmt.Println("All tags in use:")
+							for tag, count := range tagCounts {
+								if showCount {
+									fmt.Printf("  %s (%d)\n", tag, count)
+								} else {
+									fmt.Printf("  %s\n", tag)
+								}
+							}
+						}
+					}
+				}
+
+				return nil
+			}
+
+			// File-based backend
 			if len(args) == 1 {
 				// List tags for specific context
 				contextName := args[0]
