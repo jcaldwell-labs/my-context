@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, dev, claude/** ]
+    branches: [main, dev, claude/**]
   pull_request:
-    branches: [ main, dev ]
+    branches: [main, dev]
   workflow_dispatch:
 
 permissions:
@@ -22,7 +22,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: "1.23"
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
@@ -37,7 +37,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        go-version: ['1.22', '1.23']
+        go-version: ["1.22", "1.23"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -53,9 +53,8 @@ jobs:
       - name: Run unit tests
         run: go test ./internal/... ./pkg/... ./cmd/... -v -race -coverprofile=coverage.out -covermode=atomic
 
-      - name: Run integration tests (allow failures for TDD placeholders)
+      - name: Run integration tests
         run: go test ./tests/integration/... -v
-        continue-on-error: true
 
       - name: Run benchmark tests
         run: go test ./tests/benchmarks/... -v
@@ -92,7 +91,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: "1.23"
 
       - name: Build binary
         env:
@@ -118,7 +117,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: "1.23"
 
       - name: Verify go.mod and go.sum
         run: |
