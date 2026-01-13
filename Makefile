@@ -38,10 +38,26 @@ test-short: ## Run tests without race detector
 	@go test ./... -v
 	@echo "✓ Tests complete"
 
-test-integration: ## Run only integration tests
+test-integration: ## Run only integration tests (Go)
 	@echo "Running integration tests..."
 	@go test ./tests/integration/... -v
 	@echo "✓ Integration tests complete"
+
+test-bats: build ## Run BATS integration tests
+	@echo "Running BATS integration tests..."
+	@if command -v bats > /dev/null; then \
+		./scripts/run-integration-tests.sh file; \
+	else \
+		echo "⚠ BATS not installed. Install: brew install bats-core (macOS) or apt install bats (Debian)"; \
+	fi
+
+test-bats-all: build ## Run all BATS tests (requires DATABASE_URL_TEST for db tests)
+	@echo "Running all BATS integration tests..."
+	@if command -v bats > /dev/null; then \
+		./scripts/run-integration-tests.sh all; \
+	else \
+		echo "⚠ BATS not installed. Install: brew install bats-core (macOS) or apt install bats (Debian)"; \
+	fi
 
 test-unit: ## Run only unit tests
 	@echo "Running unit tests..."
