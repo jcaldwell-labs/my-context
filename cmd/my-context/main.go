@@ -13,7 +13,7 @@ var (
 	jsonOutput bool
 
 	// Version information - set via ldflags during build
-	Version   = "3.2.3"
+	Version   = "3.2.4"
 	BuildTime = "unknown"
 	GitCommit = "unknown"
 )

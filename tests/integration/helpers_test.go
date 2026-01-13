@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"testing"
 
@@ -47,7 +48,13 @@ func buildTestBinary(t *testing.T) string {
 			testBinaryErr = err
 			return
 		}
-		testBinaryPath = filepath.Join(tmpDir, "my-context-test")
+
+		// On Windows, go build creates .exe files, so we need to match the path
+		binaryName := "my-context-test"
+		if runtime.GOOS == "windows" {
+			binaryName += ".exe"
+		}
+		testBinaryPath = filepath.Join(tmpDir, binaryName)
 
 		cmd := exec.Command("go", "build", "-o", testBinaryPath, "./cmd/my-context/")
 		cmd.Dir = projectRoot // Must set working directory to project root
