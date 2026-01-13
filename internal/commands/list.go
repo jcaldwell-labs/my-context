@@ -146,21 +146,16 @@ func convertDBContextToInternal(dbCtx *pkgmodels.ContextWithMetadata) *models.Co
 	}
 }
 
-// filterDBContextsByProject filters database contexts by project name
+// filterDBContextsByProject filters database contexts by project name (single-pass)
 func filterDBContextsByProject(dbContexts []*pkgmodels.ContextWithMetadata, projectFilter string) []*pkgmodels.ContextWithMetadata {
-	contextNames := make([]string, 0, len(dbContexts))
-	for _, ctx := range dbContexts {
-		contextNames = append(contextNames, ctx.Name)
+	if projectFilter == "" {
+		return dbContexts
 	}
-	filteredNames := core.FilterContextsByProject(contextNames, projectFilter)
-	filteredNamesMap := make(map[string]bool, len(filteredNames))
-	for _, name := range filteredNames {
-		filteredNamesMap[name] = true
-	}
-
+	projectFilter = strings.TrimSpace(projectFilter)
 	var filtered []*pkgmodels.ContextWithMetadata
 	for _, ctx := range dbContexts {
-		if filteredNamesMap[ctx.Name] {
+		contextProject := core.ExtractProjectName(ctx.Name)
+		if strings.EqualFold(contextProject, projectFilter) {
 			filtered = append(filtered, ctx)
 		}
 	}
