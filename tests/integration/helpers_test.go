@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -87,55 +86,6 @@ func runCommandWithInput(args ...string) error {
 	cmd.Args = append(cmd.Args, args...)
 	cmd.Dir = projectRoot
 	return cmd.Run()
-}
-
-// runCommandFull executes a my-context command and returns stderr and exit code
-func runCommandFull(binary string, args ...string) (stderr string, exitCode int) {
-	cmd := exec.Command(binary, args...)
-
-	stdoutPipe, err := cmd.StdoutPipe()
-	if err != nil {
-		return err.Error(), 1
-	}
-
-	stderrPipe, err := cmd.StderrPipe()
-	if err != nil {
-		return err.Error(), 1
-	}
-
-	// Start the command
-	err = cmd.Start()
-	if err != nil {
-		return err.Error(), 1
-	}
-
-	// Read output
-	_, outErr := io.ReadAll(stdoutPipe)
-	errBytes, errErr := io.ReadAll(stderrPipe)
-
-	// Wait for completion
-	exitErr := cmd.Wait()
-
-	stderr = string(errBytes)
-
-	exitCode = 0
-	if exitErr != nil {
-		if exit, ok := exitErr.(*exec.ExitError); ok {
-			exitCode = exit.ExitCode()
-		} else {
-			exitCode = 1
-		}
-	}
-
-	// Include any read errors in stderr
-	if outErr != nil {
-		stderr += "\nRead stdout error: " + outErr.Error()
-	}
-	if errErr != nil {
-		stderr += "\nRead stderr error: " + errErr.Error()
-	}
-
-	return
 }
 
 // setupTestEnvironment creates a temporary test directory

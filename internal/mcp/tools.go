@@ -568,6 +568,44 @@ type SearchContextsOutput struct {
 	TotalCount int            `json:"total_count"`
 }
 
+// searchNotesForQuery searches a context's notes for matching content.
+// Returns a SearchResult if matches found, nil otherwise.
+func searchNotesForQuery(c *intmodels.Context, query string) *SearchResult {
+	_, notes, _, _, err := core.GetContextWithMetadata(c.Name)
+	if err != nil {
+		return nil
+	}
+
+	var excerpts []string
+	for _, note := range notes {
+		if strings.Contains(strings.ToLower(note.TextContent), query) {
+			excerpt := note.TextContent
+			if len(excerpt) > 100 {
+				excerpt = excerpt[:100] + "..."
+			}
+			excerpts = append(excerpts, excerpt)
+		}
+	}
+
+	if len(excerpts) == 0 {
+		return nil
+	}
+
+	// Limit excerpts to 3
+	if len(excerpts) > 3 {
+		excerpts = excerpts[:3]
+	}
+
+	return &SearchResult{
+		Name:       c.Name,
+		Status:     c.Status,
+		IsArchived: c.IsArchived,
+		Duration:   c.Duration().String(),
+		MatchedIn:  "notes",
+		Excerpts:   excerpts,
+	}
+}
+
 // handleSearchContexts searches contexts by name and optionally note content.
 func handleSearchContexts(
 	ctx context.Context,
@@ -578,20 +616,17 @@ func handleSearchContexts(
 		return nil, SearchContextsOutput{}, fmt.Errorf("query is required")
 	}
 
-	// Set default limit
 	limit := input.Limit
 	if limit <= 0 {
 		limit = 10
 	}
 
-	// Build filter for name search
 	filter := core.ContextFilter{
 		Search:       input.Query,
 		ShowArchived: input.IncludeArchived,
-		Limit:        0, // Get all for filtering
+		Limit:        0,
 	}
 
-	// Get contexts matching name filter
 	contexts, err := core.ListContextsFiltered(filter)
 	if err != nil {
 		return nil, SearchContextsOutput{}, fmt.Errorf("failed to search contexts: %w", err)
@@ -600,7 +635,6 @@ func handleSearchContexts(
 	results := make([]SearchResult, 0)
 	query := strings.ToLower(input.Query)
 
-	// Process name matches
 	for _, c := range contexts {
 		results = append(results, SearchResult{
 			Name:       c.Name,
@@ -611,62 +645,25 @@ func handleSearchContexts(
 		})
 	}
 
-	// If searching notes, also check note content
 	if input.SearchNotes {
-		// Get all contexts to search notes
-		allFilter := core.ContextFilter{
-			ShowArchived: input.IncludeArchived,
-			Limit:        0,
-		}
+		allFilter := core.ContextFilter{ShowArchived: input.IncludeArchived, Limit: 0}
 		allContexts, _ := core.ListContextsFiltered(allFilter)
 
-		// Track which contexts we've already added
 		addedNames := make(map[string]bool)
 		for _, r := range results {
 			addedNames[r.Name] = true
 		}
 
-		// Search notes in each context
 		for _, c := range allContexts {
 			if addedNames[c.Name] {
 				continue
 			}
-
-			_, notes, _, _, err := core.GetContextWithMetadata(c.Name)
-			if err != nil {
-				continue
-			}
-
-			var excerpts []string
-			for _, note := range notes {
-				if strings.Contains(strings.ToLower(note.TextContent), query) {
-					// Extract excerpt (first 100 chars of matching note)
-					excerpt := note.TextContent
-					if len(excerpt) > 100 {
-						excerpt = excerpt[:100] + "..."
-					}
-					excerpts = append(excerpts, excerpt)
-				}
-			}
-
-			if len(excerpts) > 0 {
-				// Limit excerpts to 3
-				if len(excerpts) > 3 {
-					excerpts = excerpts[:3]
-				}
-				results = append(results, SearchResult{
-					Name:       c.Name,
-					Status:     c.Status,
-					IsArchived: c.IsArchived,
-					Duration:   c.Duration().String(),
-					MatchedIn:  "notes",
-					Excerpts:   excerpts,
-				})
+			if result := searchNotesForQuery(c, query); result != nil {
+				results = append(results, *result)
 			}
 		}
 	}
 
-	// Apply limit
 	totalCount := len(results)
 	if len(results) > limit {
 		results = results[:limit]

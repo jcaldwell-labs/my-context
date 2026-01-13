@@ -101,7 +101,7 @@ func (s *Server) registerTools() {
 }
 
 // Run starts the MCP server with stdio transport.
-// This blocks until the client disconnects or context is cancelled.
+// This blocks until the client disconnects or context is canceled.
 func (s *Server) Run(ctx context.Context) error {
 	fmt.Fprintln(os.Stderr, "my-context MCP server started")
 	return s.server.Run(ctx, &mcp.StdioTransport{})
