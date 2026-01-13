@@ -72,13 +72,13 @@ func TestSignalTimeoutIntegration(t *testing.T) {
 
 	// Wait for a non-existent signal with short timeout should timeout
 	start := time.Now()
-	_, exitCode := runCommandFullWithEnv(binary, testDir, "signal", "wait", "timeout-test-signal", "--timeout", "200ms")
+	output, exitCode := runCommandFullWithEnv(binary, testDir, "signal", "wait", "timeout-test-signal", "--timeout", "200ms")
 
 	elapsed := time.Since(start)
 
 	// Should timeout (non-zero exit) and take approximately 200ms
 	assert.NotEqual(t, 0, exitCode, "Wait should timeout with non-zero exit")
-	assert.True(t, elapsed >= 180*time.Millisecond, "Should wait at least 180ms")
+	assert.True(t, elapsed >= 180*time.Millisecond, "Should wait at least 180ms. Elapsed: %v, Output: %s, TestDir: %s", elapsed, output, testDir)
 	assert.True(t, elapsed < 1*time.Second, "Should not wait too long")
 }
 
@@ -92,8 +92,8 @@ func TestSignalWaitSuccess(t *testing.T) {
 	signalName := fmt.Sprintf("wait-success-signal-%d", time.Now().UnixNano())
 
 	// Create signal first
-	_, exitCode := runCommandFullWithEnv(binary, testDir, "signal", "create", signalName)
-	require.Equal(t, 0, exitCode, "Create should succeed")
+	output, exitCode := runCommandFullWithEnv(binary, testDir, "signal", "create", signalName)
+	require.Equal(t, 0, exitCode, "Create should succeed. Output: %s, TestDir: %s", output, testDir)
 	defer runCommandFullWithEnv(binary, testDir, "signal", "clear", signalName)
 
 	// Wait should succeed immediately since signal exists
