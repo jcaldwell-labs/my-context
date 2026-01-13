@@ -2,10 +2,9 @@ package commands
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
+	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
 	"github.com/jefferycaldwell/my-context-copilot/internal/signal"
 	"github.com/spf13/cobra"
@@ -39,12 +38,8 @@ func newSignalCreateCmd(jsonOutput *bool) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 
-			// Get signal directory
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return fmt.Errorf("failed to get home directory: %w", err)
-			}
-			signalsDir := filepath.Join(homeDir, ".my-context", "signals")
+			// Get signal directory (respects MY_CONTEXT_HOME)
+			signalsDir := core.GetSignalsDir()
 
 			// Create signal manager
 			manager, err := signal.NewManager(signalsDir)
@@ -98,12 +93,8 @@ func newSignalListCmd(jsonOutput *bool) *cobra.Command {
 		Long:  `List all existing signal files with their creation timestamps.`,
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Get signal directory
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return fmt.Errorf("failed to get home directory: %w", err)
-			}
-			signalsDir := filepath.Join(homeDir, ".my-context", "signals")
+			// Get signal directory (respects MY_CONTEXT_HOME)
+			signalsDir := core.GetSignalsDir()
 
 			// Create signal manager
 			manager, err := signal.NewManager(signalsDir)
@@ -178,12 +169,8 @@ Timeout can be specified as a duration (e.g., "30s", "5m", "1h") or "infinite" t
 				}
 			}
 
-			// Get signal directory
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return fmt.Errorf("failed to get home directory: %w", err)
-			}
-			signalsDir := filepath.Join(homeDir, ".my-context", "signals")
+			// Get signal directory (respects MY_CONTEXT_HOME)
+			signalsDir := core.GetSignalsDir()
 
 			// Create signal manager
 			manager, err := signal.NewManager(signalsDir)
@@ -261,12 +248,8 @@ func newSignalClearCmd(jsonOutput *bool) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 
-			// Get signal directory
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return fmt.Errorf("failed to get home directory: %w", err)
-			}
-			signalsDir := filepath.Join(homeDir, ".my-context", "signals")
+			// Get signal directory (respects MY_CONTEXT_HOME)
+			signalsDir := core.GetSignalsDir()
 
 			// Create signal manager
 			manager, err := signal.NewManager(signalsDir)

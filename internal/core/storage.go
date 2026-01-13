@@ -209,6 +209,12 @@ func GetTransitionsLogPath() string {
 	return filepath.Join(GetContextHome(), "transitions.log")
 }
 
+// GetSignalsDir returns the path to the signals directory
+// This respects MY_CONTEXT_HOME for test isolation
+func GetSignalsDir() string {
+	return filepath.Join(GetContextHome(), "signals")
+}
+
 // GetMetaJSONPath returns the path to a context's meta.json file
 func GetMetaJSONPath(contextName string) string {
 	sanitized := SanitizeContextName(contextName)
