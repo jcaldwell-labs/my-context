@@ -127,20 +127,21 @@ func TestListActiveOnly(t *testing.T) {
 	testDir := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, testDir)
 
-	// Create stopped contexts
-	createTestContext(t, "stopped-1")
+	// Create stopped context
+	runCommand("start", "stopped-1")
 	runCommand("stop")
 
-	// Create active context
+	// Create active context (don't stop it!)
 	active := "active-context"
-	createTestContext(t, active)
+	runCommand("start", active)
+	// Note: Do NOT stop this context - we want it active for the test
 
 	// Execute: List --active-only
 	output, _ := runCommandWithOutput("list", "--active-only")
 
 	// Verify: Only active context shown
 	if !strings.Contains(output, active) {
-		t.Error("Expected active context in output")
+		t.Errorf("Expected active context in output, got: %s", output)
 	}
 	if strings.Contains(output, "stopped-1") {
 		t.Error("Stopped contexts should not appear with --active-only")

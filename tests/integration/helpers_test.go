@@ -51,6 +51,7 @@ func buildTestBinary(t *testing.T) string {
 		testBinaryPath = filepath.Join(tmpDir, "my-context-test")
 
 		cmd := exec.Command("go", "build", "-o", testBinaryPath, "./cmd/my-context/")
+		cmd.Dir = projectRoot // Must set working directory to project root
 		testBinaryErr = cmd.Run()
 	})
 
