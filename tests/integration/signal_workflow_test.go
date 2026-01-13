@@ -122,7 +122,17 @@ func TestSignalErrorHandlingIntegration(t *testing.T) {
 // runCommandFullWithEnv executes a command with MY_CONTEXT_HOME set
 func runCommandFullWithEnv(binary string, testDir string, args ...string) (output string, exitCode int) {
 	cmd := exec.Command(binary, args...)
-	cmd.Env = append(os.Environ(), "MY_CONTEXT_HOME="+testDir)
+
+	// Filter out any existing MY_CONTEXT_HOME to avoid duplicates
+	// (On Windows, duplicate env vars can cause the first value to be used)
+	env := make([]string, 0, len(os.Environ())+1)
+	for _, e := range os.Environ() {
+		if !strings.HasPrefix(strings.ToUpper(e), "MY_CONTEXT_HOME=") {
+			env = append(env, e)
+		}
+	}
+	env = append(env, "MY_CONTEXT_HOME="+testDir)
+	cmd.Env = env
 
 	outputBytes, err := cmd.CombinedOutput()
 	output = string(outputBytes)
