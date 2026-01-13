@@ -15,6 +15,8 @@ my-context creates lightweight, timestamped work journals that track your develo
 - **File associations**: Link source files to contexts for later reference
 - **Project grouping**: Organize contexts by project with filters and search
 - **Export**: Generate markdown summaries for documentation or sharing
+- **Time tracking**: Aggregate work time with stats command (today/week/month/project)
+- **Clipboard recording**: Auto-capture clipboard changes as notes in record mode
 - **Plain text storage**: All data stored as human-readable files in ~/.my-context/
 
 ## Quick start
@@ -68,6 +70,8 @@ my-context export "Feature: user authentication"
 | `export <name>` | `e` | Export to markdown/JSON |
 | `archive <name>` | `a` | Archive completed context |
 | `delete <name>` | `d` | Permanently remove context |
+| `stats` | | Time tracking aggregation (--today, --week, --month, --project) |
+| `record` | `r` | Clipboard recording mode - auto-capture pastes as notes |
 
 ## Use cases
 

@@ -137,6 +137,8 @@ specs/                   # Feature specifications
 - **NEW Sprint 2**: export (e), archive (a), delete (d) commands
 - **NEW Sprint 2**: list command supports --project, --limit, --search, --all, --archived, --active-only
 - **NEW Sprint 2**: start command supports --project flag for "project: phase" naming
+- **NEW**: stats command for time tracking aggregation (--today, --week, --month, --project)
+- **NEW**: record (r) command for clipboard monitoring (auto-capture pastes as notes)
 
 **Project Organization** (Sprint 2):
 
@@ -584,6 +586,13 @@ Go version: 1.25.1
 - `.specify/memory/constitution.md` - Project principles (needs customization)
 
 ## Recent Changes
+
+### Sprint 3 (2026-01-13): Analytics & Automation
+
+- **Stats command**: Time tracking aggregation with filters (--today, --week, --month, --since, --until, --project)
+- **Record command**: Clipboard monitoring mode - auto-capture pastes as notes with optional prefix tag
+- **BATS integration testing**: 44 tests across file mode, database mode, and synthetic workflows
+- **Database mode fixes**: tag, tree, history, watch commands now work with PostgreSQL backend
 
 ### Sprint 2 (2025-10-05): Installation & Usability Improvements
 

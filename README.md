@@ -120,6 +120,13 @@ my-context list
 | `archive <name>` | `a`   | Archive completed contexts      |
 | `delete <name>`  | `d`   | Permanently remove a context    |
 
+### Analytics & Automation
+
+| Command  | Alias | Description                                             |
+| -------- | ----- | ------------------------------------------------------- |
+| `stats`  |       | Time tracking aggregation (--today, --week, --month)    |
+| `record` | `r`   | Clipboard recording mode - auto-capture pastes as notes |
+
 ### Advanced Features
 
 **Project Grouping:**
