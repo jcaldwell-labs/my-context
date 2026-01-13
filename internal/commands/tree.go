@@ -18,8 +18,20 @@ type DBContextTreeNode struct {
 	Children []*DBContextTreeNode `json:"children,omitempty"`
 }
 
-// getContextTreeDB builds a context tree from database
+// getContextTreeDB builds a context tree from database with cycle detection
 func getContextTreeDB(backend storage.Backend, contextName string) (*DBContextTreeNode, error) {
+	visited := make(map[string]bool)
+	return getContextTreeDBWithVisited(backend, contextName, visited)
+}
+
+// getContextTreeDBWithVisited builds a context tree with cycle detection
+func getContextTreeDBWithVisited(backend storage.Backend, contextName string, visited map[string]bool) (*DBContextTreeNode, error) {
+	// Check for cycles
+	if visited[contextName] {
+		return nil, fmt.Errorf("cycle detected: context '%s' already visited", contextName)
+	}
+	visited[contextName] = true
+
 	// Verify context exists
 	_, err := backend.GetContext(contextName)
 	if err != nil {
@@ -31,14 +43,15 @@ func getContextTreeDB(backend storage.Backend, contextName string) (*DBContextTr
 	// Get children recursively
 	children, err := backend.GetContextsByParent(contextName)
 	if err != nil {
-		return node, nil // Return node without children on error
+		return nil, fmt.Errorf("failed to get children for '%s': %w", contextName, err)
 	}
 
 	for _, child := range children {
-		childNode, _ := getContextTreeDB(backend, child.Name)
-		if childNode != nil {
-			node.Children = append(node.Children, childNode)
+		childNode, err := getContextTreeDBWithVisited(backend, child.Name, visited)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build subtree for '%s': %w", child.Name, err)
 		}
+		node.Children = append(node.Children, childNode)
 	}
 
 	return node, nil
