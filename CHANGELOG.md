@@ -5,6 +5,12 @@ All notable changes to my-context will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2026-01-13
+
+### Fixed
+
+- CI workflow: Added X11 development libraries (`libx11-dev`) for clipboard package compilation on Linux
+
 ## [3.2.0] - 2026-01-13
 
 ### Added
