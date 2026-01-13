@@ -6,11 +6,165 @@ import (
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
+	"github.com/jefferycaldwell/my-context-copilot/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
+// Database mode tree helper functions
+
+// DBContextTreeNode represents a tree node for database mode
+type DBContextTreeNode struct {
+	Name     string               `json:"name"`
+	Children []*DBContextTreeNode `json:"children,omitempty"`
+}
+
+// getContextTreeDB builds a context tree from database with cycle detection
+func getContextTreeDB(backend storage.Backend, contextName string) (*DBContextTreeNode, error) {
+	visited := make(map[string]bool)
+	return getContextTreeDBWithVisited(backend, contextName, visited)
+}
+
+// getContextTreeDBWithVisited builds a context tree with cycle detection
+func getContextTreeDBWithVisited(backend storage.Backend, contextName string, visited map[string]bool) (*DBContextTreeNode, error) {
+	// Check for cycles
+	if visited[contextName] {
+		return nil, fmt.Errorf("cycle detected: context '%s' already visited", contextName)
+	}
+	visited[contextName] = true
+
+	// Verify context exists
+	_, err := backend.GetContext(contextName)
+	if err != nil {
+		return nil, fmt.Errorf("context not found: %w", err)
+	}
+
+	node := &DBContextTreeNode{Name: contextName}
+
+	// Get children recursively
+	children, err := backend.GetContextsByParent(contextName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get children for '%s': %w", contextName, err)
+	}
+
+	for _, child := range children {
+		childNode, err := getContextTreeDBWithVisited(backend, child.Name, visited)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build subtree for '%s': %w", child.Name, err)
+		}
+		node.Children = append(node.Children, childNode)
+	}
+
+	return node, nil
+}
+
+// getRootContextsDB gets all contexts without parents from database
+func getRootContextsDB(backend storage.Backend) ([]string, error) {
+	contexts, err := backend.ListContexts()
+	if err != nil {
+		return nil, err
+	}
+
+	var roots []string
+	for _, ctx := range contexts {
+		if ctx.Metadata.Parent == "" {
+			roots = append(roots, ctx.Name)
+		}
+	}
+
+	return roots, nil
+}
+
+// getChildrenDB gets child context names from database
+func getChildrenDB(backend storage.Backend, contextName string) ([]string, error) {
+	children, err := backend.GetContextsByParent(contextName)
+	if err != nil {
+		return nil, err
+	}
+
+	names := make([]string, 0, len(children))
+	for _, child := range children {
+		names = append(names, child.Name)
+	}
+
+	return names, nil
+}
+
+// printDBTree prints a DBContextTreeNode tree structure
+func printDBTree(node *DBContextTreeNode, prefix string, isLast bool) {
+	// Print current node
+	if prefix == "" {
+		// Root node
+		fmt.Printf("└─ %s\n", node.Name)
+	} else {
+		// Child node
+		marker := "├─"
+		if isLast {
+			marker = "└─"
+		}
+		fmt.Printf("%s%s %s\n", prefix, marker, node.Name)
+	}
+
+	// Print children
+	if len(node.Children) > 0 {
+		for i, child := range node.Children {
+			isLastChild := i == len(node.Children)-1
+
+			// Calculate new prefix for children
+			var newPrefix string
+			if prefix == "" {
+				newPrefix = "   "
+			} else {
+				if isLast {
+					newPrefix = prefix + "   "
+				} else {
+					newPrefix = prefix + "│  "
+				}
+			}
+
+			printDBTree(child, newPrefix, isLastChild)
+		}
+	}
+}
+
 // showSingleContextTree shows the tree for a specific context
 func showSingleContextTree(contextName string, jsonOutput *bool) error {
+	// Check if using database backend
+	if core.IsUsingDatabase() {
+		backend, err := core.GetBackend()
+		if err != nil {
+			if *jsonOutput {
+				jsonStr, _ := output.FormatJSONError("tree", 2, fmt.Sprintf("failed to get backend: %v", err))
+				fmt.Print(jsonStr)
+				return nil
+			}
+			return fmt.Errorf("failed to get backend: %w", err)
+		}
+		defer backend.Close()
+
+		tree, err := getContextTreeDB(backend, contextName)
+		if err != nil {
+			if *jsonOutput {
+				jsonStr, _ := output.FormatJSONError("tree", 1, err.Error())
+				fmt.Print(jsonStr)
+				return nil
+			}
+			return err
+		}
+
+		if *jsonOutput {
+			jsonStr, err := json.MarshalIndent(tree, "", "  ")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(jsonStr))
+		} else {
+			fmt.Printf("Context hierarchy for \"%s\":\n\n", contextName)
+			printDBTree(tree, "", true)
+		}
+		return nil
+	}
+
+	// File-based backend
 	tree, err := core.GetContextTree(contextName)
 	if err != nil {
 		if *jsonOutput {
@@ -36,6 +190,69 @@ func showSingleContextTree(contextName string, jsonOutput *bool) error {
 
 // showAllRootContexts shows all root contexts
 func showAllRootContexts(jsonOutput *bool) error {
+	// Check if using database backend
+	if core.IsUsingDatabase() {
+		backend, err := core.GetBackend()
+		if err != nil {
+			if *jsonOutput {
+				jsonStr, _ := output.FormatJSONError("tree", 2, fmt.Sprintf("failed to get backend: %v", err))
+				fmt.Print(jsonStr)
+				return nil
+			}
+			return fmt.Errorf("failed to get backend: %w", err)
+		}
+		defer backend.Close()
+
+		roots, err := getRootContextsDB(backend)
+		if err != nil {
+			if *jsonOutput {
+				jsonStr, _ := output.FormatJSONError("tree", 2, err.Error())
+				fmt.Print(jsonStr)
+				return nil
+			}
+			return err
+		}
+
+		if len(roots) == 0 {
+			if *jsonOutput {
+				data := map[string]interface{}{"message": "No contexts found"}
+				jsonStr, _ := output.FormatJSON("tree", map[string]interface{}{"data": data})
+				fmt.Print(jsonStr)
+			} else {
+				fmt.Println("No contexts found")
+			}
+			return nil
+		}
+
+		// Build trees for all roots
+		trees := make([]*DBContextTreeNode, 0, len(roots))
+		for _, rootName := range roots {
+			tree, err := getContextTreeDB(backend, rootName)
+			if err != nil {
+				continue
+			}
+			trees = append(trees, tree)
+		}
+
+		if *jsonOutput {
+			jsonStr, err := json.MarshalIndent(trees, "", "  ")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(jsonStr))
+		} else {
+			fmt.Printf("Context hierarchies (%d root contexts):\n\n", len(roots))
+			for i, tree := range trees {
+				printDBTree(tree, "", true)
+				if i < len(trees)-1 {
+					fmt.Println()
+				}
+			}
+		}
+		return nil
+	}
+
+	// File-based backend
 	roots, err := core.GetRootContexts()
 	if err != nil {
 		if *jsonOutput {
@@ -157,6 +374,79 @@ Examples:
   my-context up "Bug fix"    # Show parent of specific context`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Check if using database backend
+			if core.IsUsingDatabase() {
+				backend, err := core.GetBackend()
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("up", 2, fmt.Sprintf("failed to get backend: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to get backend: %w", err)
+				}
+				defer backend.Close()
+
+				var contextName string
+				if len(args) == 1 {
+					contextName = args[0]
+				} else {
+					// Get active context from database
+					contextName, err = backend.GetActiveContext()
+					if err != nil || contextName == "" {
+						if *jsonOutput {
+							jsonStr, _ := output.FormatJSONError("up", 1, "no active context")
+							fmt.Print(jsonStr)
+							return nil
+						}
+						return fmt.Errorf("no active context")
+					}
+				}
+
+				// Get parent from database
+				ctx, err := backend.GetContext(contextName)
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("up", 1, fmt.Sprintf("context %q not found", contextName))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("context %q not found", contextName)
+				}
+
+				if ctx.Metadata.Parent == "" {
+					if *jsonOutput {
+						data := map[string]interface{}{
+							"context": contextName,
+							"message": "no parent",
+						}
+						jsonStr, _ := output.FormatJSON("up", map[string]interface{}{"data": data})
+						fmt.Print(jsonStr)
+						return nil
+					}
+					fmt.Printf("\"%s\" has no parent context\n", contextName)
+					return nil
+				}
+
+				// Output
+				if *jsonOutput {
+					data := map[string]interface{}{
+						"context": contextName,
+						"parent":  ctx.Metadata.Parent,
+					}
+					jsonStr, err := output.FormatJSON("up", map[string]interface{}{"data": data})
+					if err != nil {
+						return err
+					}
+					fmt.Print(jsonStr)
+				} else {
+					fmt.Printf("Parent of \"%s\": %s\n", contextName, ctx.Metadata.Parent)
+				}
+
+				return nil
+			}
+
+			// File-based backend
 			var contextName string
 
 			if len(args) == 1 {
@@ -243,6 +533,82 @@ Examples:
   my-context down "Sprint 3"   # List children of specific context`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Check if using database backend
+			if core.IsUsingDatabase() {
+				backend, err := core.GetBackend()
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("down", 2, fmt.Sprintf("failed to get backend: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to get backend: %w", err)
+				}
+				defer backend.Close()
+
+				var contextName string
+				if len(args) == 1 {
+					contextName = args[0]
+				} else {
+					// Get active context from database
+					contextName, err = backend.GetActiveContext()
+					if err != nil || contextName == "" {
+						if *jsonOutput {
+							jsonStr, _ := output.FormatJSONError("down", 1, "no active context")
+							fmt.Print(jsonStr)
+							return nil
+						}
+						return fmt.Errorf("no active context")
+					}
+				}
+
+				// Verify context exists
+				if _, err := backend.GetContext(contextName); err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("down", 1, fmt.Sprintf("context %q not found", contextName))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("context %q not found", contextName)
+				}
+
+				// Get children from database
+				children, err := getChildrenDB(backend, contextName)
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("down", 2, err.Error())
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return err
+				}
+
+				// Output
+				if *jsonOutput {
+					data := map[string]interface{}{
+						"context":  contextName,
+						"children": children,
+					}
+					jsonStr, err := output.FormatJSON("down", map[string]interface{}{"data": data})
+					if err != nil {
+						return err
+					}
+					fmt.Print(jsonStr)
+				} else {
+					if len(children) == 0 {
+						fmt.Printf("\"%s\" has no child contexts\n", contextName)
+					} else {
+						fmt.Printf("Children of \"%s\":\n", contextName)
+						for _, child := range children {
+							fmt.Printf("  • %s\n", child)
+						}
+					}
+				}
+
+				return nil
+			}
+
+			// File-based backend
 			var contextName string
 
 			if len(args) == 1 {
