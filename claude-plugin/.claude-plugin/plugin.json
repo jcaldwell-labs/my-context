@@ -1,0 +1,8 @@
+{
+  "name": "my-context",
+  "description": "Track developer work contexts with notes, files, and timestamps. Manage work sessions for AI assistants.",
+  "author": {
+    "name": "jcaldwell-labs",
+    "email": "jcaldwell1066@gmail.com"
+  }
+}
