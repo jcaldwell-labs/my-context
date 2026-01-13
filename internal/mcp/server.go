@@ -80,6 +80,24 @@ func (s *Server) registerTools() {
 		Name:        "list_files",
 		Description: "List files associated with a context (defaults to active context).",
 	}, handleListFiles)
+
+	// export_context - Export a context to markdown or JSON
+	mcp.AddTool(s.server, &mcp.Tool{
+		Name:        "export_context",
+		Description: "Export a context to markdown or JSON format for documentation or backup.",
+	}, handleExportContext)
+
+	// archive_context - Archive a stopped context
+	mcp.AddTool(s.server, &mcp.Tool{
+		Name:        "archive_context",
+		Description: "Archive a stopped context. Cannot archive active contexts.",
+	}, handleArchiveContext)
+
+	// search_contexts - Search contexts by name and optionally notes
+	mcp.AddTool(s.server, &mcp.Tool{
+		Name:        "search_contexts",
+		Description: "Search contexts by name and optionally search within note content.",
+	}, handleSearchContexts)
 }
 
 // Run starts the MCP server with stdio transport.

@@ -3,8 +3,11 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
+	intmodels "github.com/jefferycaldwell/my-context-copilot/internal/models"
+	"github.com/jefferycaldwell/my-context-copilot/internal/output"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -425,5 +428,253 @@ func handleListFiles(
 		Files:       summaries,
 		TotalCount:  totalCount,
 		HasMore:     hasMore,
+	}, nil
+}
+
+// ExportContextInput defines the input for export_context tool.
+type ExportContextInput struct {
+	ContextName string `json:"context_name,omitempty" jsonschema_description:"Context name to export (defaults to active context)"`
+	Format      string `json:"format,omitempty" jsonschema_description:"Export format: 'markdown' (default) or 'json'"`
+}
+
+// ExportContextOutput defines the output for export_context tool.
+type ExportContextOutput struct {
+	ContextName string `json:"context_name"`
+	Format      string `json:"format"`
+	Content     string `json:"content"`
+	NoteCount   int    `json:"note_count"`
+	FileCount   int    `json:"file_count"`
+}
+
+// handleExportContext exports a context to markdown or JSON format.
+func handleExportContext(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input ExportContextInput,
+) (*mcp.CallToolResult, ExportContextOutput, error) {
+	contextName := input.ContextName
+
+	// Default to active context if not specified
+	if contextName == "" {
+		state, err := core.GetActiveContext()
+		if err != nil {
+			return nil, ExportContextOutput{}, fmt.Errorf("failed to get active context: %w", err)
+		}
+
+		if !state.HasActiveContext() {
+			return nil, ExportContextOutput{}, fmt.Errorf("no active context and no context_name specified")
+		}
+
+		contextName = state.GetActiveContextName()
+	}
+
+	// Get context data
+	ctxData, notes, files, touches, err := core.GetContext(contextName)
+	if err != nil {
+		return nil, ExportContextOutput{}, fmt.Errorf("context %q not found: %w", contextName, err)
+	}
+
+	// Convert to model types for export
+	noteModels := make([]intmodels.Note, 0, len(notes))
+	for _, n := range notes {
+		noteModels = append(noteModels, *n)
+	}
+
+	fileModels := make([]intmodels.FileAssociation, 0, len(files))
+	for _, f := range files {
+		fileModels = append(fileModels, *f)
+	}
+
+	// Determine format and generate content
+	format := input.Format
+	if format == "" {
+		format = "markdown"
+	}
+
+	var content string
+	if format == "json" {
+		jsonContent, err := output.FormatExportJSON(ctxData, noteModels, fileModels, len(touches))
+		if err != nil {
+			return nil, ExportContextOutput{}, fmt.Errorf("failed to generate JSON export: %w", err)
+		}
+		content = jsonContent
+	} else {
+		content = output.FormatExportMarkdown(ctxData, noteModels, fileModels, len(touches))
+	}
+
+	return nil, ExportContextOutput{
+		ContextName: contextName,
+		Format:      format,
+		Content:     content,
+		NoteCount:   len(notes),
+		FileCount:   len(files),
+	}, nil
+}
+
+// ArchiveContextInput defines the input for archive_context tool.
+type ArchiveContextInput struct {
+	ContextName string `json:"context_name" jsonschema_description:"Name of the context to archive"`
+}
+
+// ArchiveContextOutput defines the output for archive_context tool.
+type ArchiveContextOutput struct {
+	ContextName string `json:"context_name"`
+	Message     string `json:"message"`
+}
+
+// handleArchiveContext archives a stopped context.
+func handleArchiveContext(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input ArchiveContextInput,
+) (*mcp.CallToolResult, ArchiveContextOutput, error) {
+	if input.ContextName == "" {
+		return nil, ArchiveContextOutput{}, fmt.Errorf("context_name is required")
+	}
+
+	// Archive the context
+	if err := core.ArchiveContext(input.ContextName); err != nil {
+		return nil, ArchiveContextOutput{}, fmt.Errorf("failed to archive context: %w", err)
+	}
+
+	return nil, ArchiveContextOutput{
+		ContextName: input.ContextName,
+		Message:     fmt.Sprintf("Context %q archived successfully", input.ContextName),
+	}, nil
+}
+
+// SearchContextsInput defines the input for search_contexts tool.
+type SearchContextsInput struct {
+	Query           string `json:"query" jsonschema_description:"Search query to match against context names"`
+	SearchNotes     bool   `json:"search_notes,omitempty" jsonschema_description:"Also search within note content"`
+	IncludeArchived bool   `json:"include_archived,omitempty" jsonschema_description:"Include archived contexts in search"`
+	Limit           int    `json:"limit,omitempty" jsonschema_description:"Maximum number of results (default: 10)"`
+}
+
+// SearchResult represents a single search result.
+type SearchResult struct {
+	Name       string   `json:"name"`
+	Status     string   `json:"status"`
+	IsArchived bool     `json:"is_archived,omitempty"`
+	Duration   string   `json:"duration"`
+	MatchedIn  string   `json:"matched_in"`
+	Excerpts   []string `json:"excerpts,omitempty"`
+}
+
+// SearchContextsOutput defines the output for search_contexts tool.
+type SearchContextsOutput struct {
+	Query      string         `json:"query"`
+	Results    []SearchResult `json:"results"`
+	TotalCount int            `json:"total_count"`
+}
+
+// handleSearchContexts searches contexts by name and optionally note content.
+func handleSearchContexts(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input SearchContextsInput,
+) (*mcp.CallToolResult, SearchContextsOutput, error) {
+	if input.Query == "" {
+		return nil, SearchContextsOutput{}, fmt.Errorf("query is required")
+	}
+
+	// Set default limit
+	limit := input.Limit
+	if limit <= 0 {
+		limit = 10
+	}
+
+	// Build filter for name search
+	filter := core.ContextFilter{
+		Search:       input.Query,
+		ShowArchived: input.IncludeArchived,
+		Limit:        0, // Get all for filtering
+	}
+
+	// Get contexts matching name filter
+	contexts, err := core.ListContextsFiltered(filter)
+	if err != nil {
+		return nil, SearchContextsOutput{}, fmt.Errorf("failed to search contexts: %w", err)
+	}
+
+	results := make([]SearchResult, 0)
+	query := strings.ToLower(input.Query)
+
+	// Process name matches
+	for _, c := range contexts {
+		results = append(results, SearchResult{
+			Name:       c.Name,
+			Status:     c.Status,
+			IsArchived: c.IsArchived,
+			Duration:   c.Duration().String(),
+			MatchedIn:  "name",
+		})
+	}
+
+	// If searching notes, also check note content
+	if input.SearchNotes {
+		// Get all contexts to search notes
+		allFilter := core.ContextFilter{
+			ShowArchived: input.IncludeArchived,
+			Limit:        0,
+		}
+		allContexts, _ := core.ListContextsFiltered(allFilter)
+
+		// Track which contexts we've already added
+		addedNames := make(map[string]bool)
+		for _, r := range results {
+			addedNames[r.Name] = true
+		}
+
+		// Search notes in each context
+		for _, c := range allContexts {
+			if addedNames[c.Name] {
+				continue
+			}
+
+			_, notes, _, _, err := core.GetContextWithMetadata(c.Name)
+			if err != nil {
+				continue
+			}
+
+			var excerpts []string
+			for _, note := range notes {
+				if strings.Contains(strings.ToLower(note.TextContent), query) {
+					// Extract excerpt (first 100 chars of matching note)
+					excerpt := note.TextContent
+					if len(excerpt) > 100 {
+						excerpt = excerpt[:100] + "..."
+					}
+					excerpts = append(excerpts, excerpt)
+				}
+			}
+
+			if len(excerpts) > 0 {
+				// Limit excerpts to 3
+				if len(excerpts) > 3 {
+					excerpts = excerpts[:3]
+				}
+				results = append(results, SearchResult{
+					Name:       c.Name,
+					Status:     c.Status,
+					IsArchived: c.IsArchived,
+					Duration:   c.Duration().String(),
+					MatchedIn:  "notes",
+					Excerpts:   excerpts,
+				})
+			}
+		}
+	}
+
+	// Apply limit
+	totalCount := len(results)
+	if len(results) > limit {
+		results = results[:limit]
+	}
+
+	return nil, SearchContextsOutput{
+		Query:      input.Query,
+		Results:    results,
+		TotalCount: totalCount,
 	}, nil
 }
