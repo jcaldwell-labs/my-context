@@ -58,6 +58,7 @@ func init() {
 	rootCmd.AddCommand(commands.NewWatchCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewWhichCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewPartitionsCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewStatsCmd(&jsonOutput))
 }
 
 func main() {
