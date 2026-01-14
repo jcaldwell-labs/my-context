@@ -24,8 +24,8 @@ type StartContextOutput struct {
 	WasDuplicate bool   `json:"was_duplicate,omitempty"`
 }
 
-// handleStartContext starts a new work context.
-func handleStartContext(
+// HandleStartContext starts a new work context.
+func HandleStartContext(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
 	input StartContextInput,
@@ -67,8 +67,8 @@ type StopContextOutput struct {
 	Duration    string `json:"duration,omitempty"`
 }
 
-// handleStopContext stops the currently active context.
-func handleStopContext(
+// HandleStopContext stops the currently active context.
+func HandleStopContext(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
 	input StopContextInput,
@@ -117,8 +117,8 @@ type AddNoteOutput struct {
 	NoteCount   int    `json:"note_count"`
 }
 
-// handleAddNote adds a timestamped note to the active context.
-func handleAddNote(
+// HandleAddNote adds a timestamped note to the active context.
+func HandleAddNote(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
 	input AddNoteInput,
@@ -170,8 +170,8 @@ type GetActiveContextOutput struct {
 	Notes       []string `json:"notes,omitempty"`
 }
 
-// handleGetActiveContext returns information about the active context.
-func handleGetActiveContext(
+// HandleGetActiveContext returns information about the active context.
+func HandleGetActiveContext(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
 	input GetActiveContextInput,
@@ -240,8 +240,8 @@ type ListContextsOutput struct {
 	HasMore    bool             `json:"has_more"`
 }
 
-// handleListContexts lists all contexts with optional filtering.
-func handleListContexts(
+// HandleListContexts lists all contexts with optional filtering.
+func HandleListContexts(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
 	input ListContextsInput,
@@ -311,8 +311,8 @@ type AddFileOutput struct {
 	FileCount   int    `json:"file_count"`
 }
 
-// handleAddFile associates a file with the active context.
-func handleAddFile(
+// HandleAddFile associates a file with the active context.
+func HandleAddFile(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
 	input AddFileInput,
@@ -371,8 +371,8 @@ type ListFilesOutput struct {
 	HasMore     bool          `json:"has_more"`
 }
 
-// handleListFiles lists files associated with a context.
-func handleListFiles(
+// HandleListFiles lists files associated with a context.
+func HandleListFiles(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
 	input ListFilesInput,
@@ -446,8 +446,8 @@ type ExportContextOutput struct {
 	FileCount   int    `json:"file_count"`
 }
 
-// handleExportContext exports a context to markdown or JSON format.
-func handleExportContext(
+// HandleExportContext exports a context to markdown or JSON format.
+func HandleExportContext(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
 	input ExportContextInput,
@@ -522,8 +522,8 @@ type ArchiveContextOutput struct {
 	Message     string `json:"message"`
 }
 
-// handleArchiveContext archives a stopped context.
-func handleArchiveContext(
+// HandleArchiveContext archives a stopped context.
+func HandleArchiveContext(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
 	input ArchiveContextInput,
@@ -606,8 +606,8 @@ func searchNotesForQuery(c *intmodels.Context, query string) *SearchResult {
 	}
 }
 
-// handleSearchContexts searches contexts by name and optionally note content.
-func handleSearchContexts(
+// HandleSearchContexts searches contexts by name and optionally note content.
+func HandleSearchContexts(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
 	input SearchContextsInput,

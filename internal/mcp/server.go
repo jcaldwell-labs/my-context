@@ -43,61 +43,61 @@ func (s *Server) registerTools() {
 	mcp.AddTool(s.server, &mcp.Tool{
 		Name:        "start_context",
 		Description: "Start a new work context. Automatically stops any active context.",
-	}, handleStartContext)
+	}, HandleStartContext)
 
 	// stop_context - Stop the active context
 	mcp.AddTool(s.server, &mcp.Tool{
 		Name:        "stop_context",
 		Description: "Stop the currently active context.",
-	}, handleStopContext)
+	}, HandleStopContext)
 
 	// add_note - Add a timestamped note to the active context
 	mcp.AddTool(s.server, &mcp.Tool{
 		Name:        "add_note",
 		Description: "Add a timestamped note to the currently active context.",
-	}, handleAddNote)
+	}, HandleAddNote)
 
 	// get_active_context - Get information about the active context
 	mcp.AddTool(s.server, &mcp.Tool{
 		Name:        "get_active_context",
 		Description: "Get information about the currently active context including notes and files.",
-	}, handleGetActiveContext)
+	}, HandleGetActiveContext)
 
 	// list_contexts - List all contexts
 	mcp.AddTool(s.server, &mcp.Tool{
 		Name:        "list_contexts",
 		Description: "List all contexts with optional filtering.",
-	}, handleListContexts)
+	}, HandleListContexts)
 
 	// add_file - Associate a file with the active context
 	mcp.AddTool(s.server, &mcp.Tool{
 		Name:        "add_file",
 		Description: "Associate a file with the currently active context for tracking.",
-	}, handleAddFile)
+	}, HandleAddFile)
 
 	// list_files - List files associated with a context
 	mcp.AddTool(s.server, &mcp.Tool{
 		Name:        "list_files",
 		Description: "List files associated with a context (defaults to active context).",
-	}, handleListFiles)
+	}, HandleListFiles)
 
 	// export_context - Export a context to markdown or JSON
 	mcp.AddTool(s.server, &mcp.Tool{
 		Name:        "export_context",
 		Description: "Export a context to markdown or JSON format for documentation or backup.",
-	}, handleExportContext)
+	}, HandleExportContext)
 
 	// archive_context - Archive a stopped context
 	mcp.AddTool(s.server, &mcp.Tool{
 		Name:        "archive_context",
 		Description: "Archive a stopped context. Cannot archive active contexts.",
-	}, handleArchiveContext)
+	}, HandleArchiveContext)
 
 	// search_contexts - Search contexts by name and optionally notes
 	mcp.AddTool(s.server, &mcp.Tool{
 		Name:        "search_contexts",
 		Description: "Search contexts by name and optionally search within note content.",
-	}, handleSearchContexts)
+	}, HandleSearchContexts)
 }
 
 // Run starts the MCP server with stdio transport.
