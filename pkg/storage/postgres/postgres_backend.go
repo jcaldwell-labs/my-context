@@ -805,9 +805,71 @@ func (b *Backend) LogTransition(transition *storage.Transition) error {
 	return fmt.Errorf("LogTransition: not implemented")
 }
 
-// GetTransitions retrieves recent transitions
+// GetTransitions retrieves recent transitions derived from context start/stop times
 func (b *Backend) GetTransitions(limit int) ([]storage.Transition, error) {
-	return nil, fmt.Errorf("GetTransitions: not implemented")
+	// Query to generate transitions from context start/stop events
+	// Uses UNION to combine start and stop events, then orders by timestamp
+	query := `
+		WITH transitions AS (
+			-- Start events
+			SELECT
+				started_at AS timestamp,
+				NULL::text AS previous_context,
+				name AS new_context,
+				'start' AS transition_type
+			FROM contexts
+
+			UNION ALL
+
+			-- Stop events (only for contexts that have been stopped)
+			SELECT
+				stopped_at AS timestamp,
+				name AS previous_context,
+				NULL::text AS new_context,
+				'stop' AS transition_type
+			FROM contexts
+			WHERE stopped_at IS NOT NULL
+		)
+		SELECT timestamp, previous_context, new_context, transition_type
+		FROM transitions
+		ORDER BY timestamp DESC
+		LIMIT $1
+	`
+
+	rows, err := b.db.Query(query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query transitions: %w", err)
+	}
+	defer rows.Close()
+
+	var transitions []storage.Transition
+	var id int64 = 1
+	for rows.Next() {
+		var t storage.Transition
+		var prevCtx, newCtx sql.NullString
+
+		if err := rows.Scan(&t.Timestamp, &prevCtx, &newCtx, &t.TransitionType); err != nil {
+			return nil, fmt.Errorf("failed to scan transition row: %w", err)
+		}
+
+		t.ID = id
+		id++
+
+		if prevCtx.Valid {
+			t.PreviousContext = &prevCtx.String
+		}
+		if newCtx.Valid {
+			t.NewContext = &newCtx.String
+		}
+
+		transitions = append(transitions, t)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating transitions: %w", err)
+	}
+
+	return transitions, nil
 }
 
 // GetTransitionsByContext retrieves transitions for a specific context
