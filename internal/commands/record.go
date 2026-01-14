@@ -11,6 +11,7 @@ import (
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
+	"github.com/jefferycaldwell/my-context-copilot/pkg/storage"
 	"github.com/spf13/cobra"
 	"golang.design/x/clipboard"
 )
@@ -37,15 +38,19 @@ func truncatePreview(s string, maxLen int) string {
 
 // recordFromClipboard watches clipboard and records changes as notes
 func recordFromClipboard(prefix string, jsonOutput bool) error {
-	// Verify active context exists
+	// Verify active context exists and get backend if using database
 	var activeContextName string
+	var backend storage.Backend
+
 	if core.IsUsingDatabase() {
-		backend, err := core.GetBackend()
+		var err error
+		backend, err = core.GetBackend()
 		if err != nil {
 			return fmt.Errorf("failed to get backend: %w", err)
 		}
+		defer backend.Close()
+
 		activeContextName, err = backend.GetActiveContext()
-		backend.Close()
 		if err != nil || activeContextName == "" {
 			return fmt.Errorf("no active context. Start one with: my-context start <name>")
 		}
@@ -126,19 +131,11 @@ func recordFromClipboard(prefix string, jsonOutput bool) error {
 				noteText = fmt.Sprintf("[%s] %s", prefix, noteText)
 			}
 
-			// Add note
+			// Add note (reuse backend connection if using database)
 			var err error
 			if core.IsUsingDatabase() {
-				backend, berr := core.GetBackend()
-				if berr != nil {
-					if !jsonOutput {
-						fmt.Printf("Error getting backend: %v\n", berr)
-					}
-					continue
-				}
 				timestamp := time.Now().Format(time.RFC3339)
 				err = backend.AddNote(activeContextName, timestamp, noteText)
-				backend.Close()
 			} else {
 				_, err = core.AddNote(noteText)
 			}
