@@ -805,38 +805,95 @@ func (b *Backend) LogTransition(transition *storage.Transition) error {
 	return fmt.Errorf("LogTransition: not implemented")
 }
 
-// GetTransitions retrieves recent transitions derived from context start/stop times
+// GetTransitions retrieves recent transitions derived from context start/stop times.
+// It detects "switch" events when one context stops within 5 seconds of another starting.
 func (b *Backend) GetTransitions(limit int) ([]storage.Transition, error) {
 	// Query to generate transitions from context start/stop events
-	// Uses UNION to combine start and stop events, then orders by timestamp
+	// Detects switch events by matching stop/start timestamps within a tolerance window
+	//
+	// Logic:
+	// 1. Get all stop events and join with starts within 5 seconds
+	// 2. If a stop matches a start within tolerance -> "switch" event
+	// 3. If a stop has no matching start -> "stop" event
+	// 4. Get starts that don't match any stop -> "start" event
+	//
+	// The 5-second tolerance accounts for:
+	// - Sequential execution (stop then start takes milliseconds)
+	// - Network latency in distributed systems
+	// - Clock drift between systems
 	query := `
-		WITH transitions AS (
-			-- Start events
-			SELECT
-				started_at AS timestamp,
-				NULL::text AS previous_context,
-				name AS new_context,
-				'start' AS transition_type
-			FROM contexts
-
-			UNION ALL
-
-			-- Stop events (only for contexts that have been stopped)
-			SELECT
-				stopped_at AS timestamp,
-				name AS previous_context,
-				NULL::text AS new_context,
-				'stop' AS transition_type
+		WITH stop_events AS (
+			-- All contexts that have been stopped
+			SELECT id, name, stopped_at
 			FROM contexts
 			WHERE stopped_at IS NOT NULL
+		),
+		start_events AS (
+			-- All context starts
+			SELECT id, name, started_at
+			FROM contexts
+		),
+		switch_events AS (
+			-- Detect switches: stop + start within 5 seconds (different contexts)
+			-- Use the stop timestamp as the switch timestamp
+			SELECT DISTINCT ON (s.id)
+				s.stopped_at AS timestamp,
+				s.name AS previous_context,
+				t.name AS new_context,
+				'switch' AS transition_type,
+				s.id AS stop_id,
+				t.id AS start_id
+			FROM stop_events s
+			INNER JOIN start_events t ON
+				s.id != t.id AND
+				t.started_at >= s.stopped_at - INTERVAL '5 seconds' AND
+				t.started_at <= s.stopped_at + INTERVAL '5 seconds'
+			ORDER BY s.id, ABS(EXTRACT(EPOCH FROM (t.started_at - s.stopped_at)))
+		),
+		pure_stops AS (
+			-- Stops that are NOT part of a switch
+			SELECT
+				s.stopped_at AS timestamp,
+				s.name AS previous_context,
+				NULL::text AS new_context,
+				'stop' AS transition_type
+			FROM stop_events s
+			WHERE NOT EXISTS (
+				SELECT 1 FROM switch_events sw WHERE sw.stop_id = s.id
+			)
+		),
+		pure_starts AS (
+			-- Starts that are NOT part of a switch
+			SELECT
+				t.started_at AS timestamp,
+				NULL::text AS previous_context,
+				t.name AS new_context,
+				'start' AS transition_type
+			FROM start_events t
+			WHERE NOT EXISTS (
+				SELECT 1 FROM switch_events sw WHERE sw.start_id = t.id
+			)
+		),
+		all_transitions AS (
+			SELECT timestamp, previous_context, new_context, transition_type FROM switch_events
+			UNION ALL
+			SELECT timestamp, previous_context, new_context, transition_type FROM pure_stops
+			UNION ALL
+			SELECT timestamp, previous_context, new_context, transition_type FROM pure_starts
 		)
 		SELECT timestamp, previous_context, new_context, transition_type
-		FROM transitions
+		FROM all_transitions
 		ORDER BY timestamp DESC
 		LIMIT $1
 	`
 
-	rows, err := b.db.Query(query, limit)
+	// Use a high limit if 0 is passed (unlimited)
+	queryLimit := limit
+	if queryLimit <= 0 {
+		queryLimit = 10000 // Practical upper bound
+	}
+
+	rows, err := b.db.Query(query, queryLimit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query transitions: %w", err)
 	}

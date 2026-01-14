@@ -9,15 +9,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const defaultHistoryLimit = 100
+const defaultHistoryLimit = 50
 
 func NewHistoryCmd(jsonOutput *bool) *cobra.Command {
+	var limit int
+
 	cmd := &cobra.Command{
 		Use:     "history",
 		Aliases: []string{"h"},
 		Short:   "Show context transition history",
-		Long:    `Display the chronological history of all context transitions.`,
-		Args:    cobra.NoArgs,
+		Long: `Display the chronological history of all context transitions.
+
+Shows start, stop, and switch events for all contexts. A "switch" event
+indicates one context stopped and another started at the same moment.`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var transitions []*models.ContextTransition
 
@@ -35,7 +40,7 @@ func NewHistoryCmd(jsonOutput *bool) *cobra.Command {
 				defer backend.Close()
 
 				// Get transitions from database
-				storageTransitions, err := backend.GetTransitions(defaultHistoryLimit)
+				storageTransitions, err := backend.GetTransitions(limit)
 				if err != nil {
 					if *jsonOutput {
 						jsonStr, _ := output.FormatJSONError("history", 2, err.Error())
@@ -66,6 +71,11 @@ func NewHistoryCmd(jsonOutput *bool) *cobra.Command {
 					}
 					return err
 				}
+
+				// Apply limit for file-based backend
+				if limit > 0 && len(transitions) > limit {
+					transitions = transitions[:limit]
+				}
 			}
 
 			// Output
@@ -87,6 +97,8 @@ func NewHistoryCmd(jsonOutput *bool) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().IntVarP(&limit, "limit", "n", defaultHistoryLimit, "Maximum number of transitions to show (0 for unlimited)")
 
 	return cmd
 }
