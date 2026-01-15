@@ -133,3 +133,24 @@ jobs:
         run: |
           go mod tidy
           git diff --exit-code go.mod go.sum
+
+  deploy-local:
+    name: Deploy to Local Environment
+    runs-on: self-hosted
+    needs: [lint, test, build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Build and deploy for all users
+        run: ./scripts/deploy-local.sh
+
+      - name: Notify deployment complete
+        run: |
+          echo "::notice::Deployed $(git rev-parse --short HEAD) to local environment"
