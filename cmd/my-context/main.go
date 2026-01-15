@@ -61,6 +61,7 @@ func init() {
 	rootCmd.AddCommand(commands.NewStatsCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewRecordCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewTemplateCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewTimelineCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewMCPServerCmd(Version))
 }
 
