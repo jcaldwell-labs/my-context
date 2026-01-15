@@ -14,8 +14,9 @@ import (
 
 func NewTemplateCmd(jsonOutput *bool) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "template",
-		Short: "Manage context templates",
+		Use:     "template",
+		Aliases: []string{"tmpl"},
+		Short:   "Manage context templates",
 		Long: `Manage context templates with predefined settings.
 
 Templates allow you to start contexts with predefined labels and initial notes.
