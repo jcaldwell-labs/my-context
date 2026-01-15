@@ -60,6 +60,7 @@ func init() {
 	rootCmd.AddCommand(commands.NewPartitionsCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewStatsCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewRecordCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewTemplateCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewMCPServerCmd(Version))
 }
 

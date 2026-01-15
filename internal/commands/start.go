@@ -20,6 +20,7 @@ var startForce bool
 var startCreatedBy string
 var startParent string
 var startLabels string
+var startTemplate string
 
 // handleDuplicateContext handles the case where a context with the same name already exists
 func handleDuplicateContext(existingContext *models.Context, contextName string, force bool) (newName string, shouldResume bool, err error) {
@@ -111,9 +112,26 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 				contextName = strings.TrimSpace(startProject) + ": " + strings.TrimSpace(contextName)
 			}
 
+			// Load template if specified
+			var templateLabels []string
+			var templateNotes []string
+			if startTemplate != "" {
+				template, err := core.GetTemplate(startTemplate)
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("start", 1, fmt.Sprintf("template error: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("template error: %w", err)
+				}
+				templateLabels = template.Labels
+				templateNotes = template.InitialNotes
+			}
+
 			// Check if using database backend
 			if core.IsUsingDatabase() {
-				return startWithDatabaseBackend(contextName, startCreatedBy, startParent, startLabels, jsonOutput)
+				return startWithDatabaseBackend(contextName, startCreatedBy, startParent, startLabels, templateLabels, templateNotes, jsonOutput)
 			}
 
 			// Check for duplicate context name (smart resume)
@@ -136,8 +154,12 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 				}
 			}
 
-			// Parse labels
-			labels := parseLabels(startLabels)
+			// Parse labels - combine template labels with command-line labels
+			labels := templateLabels
+			if startLabels != "" {
+				cmdLabels := parseLabels(startLabels)
+				labels = append(labels, cmdLabels...)
+			}
 
 			// Create the context
 			context, previousContext, err := core.CreateContextWithMetadata(contextName, startCreatedBy, startParent, labels)
@@ -150,6 +172,18 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 				return err
 			}
 
+			// Add initial notes from template
+			if len(templateNotes) > 0 {
+				for _, note := range templateNotes {
+					if _, err := core.AddNote(note); err != nil {
+						// Log error but don't fail - context was created successfully
+						if !*jsonOutput {
+							fmt.Fprintf(os.Stderr, "Warning: failed to add template note: %v\n", err)
+						}
+					}
+				}
+			}
+
 			// Output
 			return outputStartResult(context, contextName, previousContext, jsonOutput)
 		},
@@ -160,6 +194,7 @@ func NewStartCmd(jsonOutput *bool) *cobra.Command {
 	cmd.Flags().StringVar(&startCreatedBy, "created-by", "", "User who created this context")
 	cmd.Flags().StringVar(&startParent, "parent", "", "Parent context name for hierarchy")
 	cmd.Flags().StringVar(&startLabels, "labels", "", "Comma-separated labels for categorization")
+	cmd.Flags().StringVarP(&startTemplate, "template", "T", "", "Template to use for initial setup")
 
 	return cmd
 }
@@ -286,7 +321,7 @@ func resumeExistingContext(ctx *models.Context, jsonOutput *bool) error {
 }
 
 // startWithDatabaseBackend creates a new context using the PostgreSQL backend
-func startWithDatabaseBackend(contextName, createdBy, parent, labelsStr string, jsonOutput *bool) error {
+func startWithDatabaseBackend(contextName, createdBy, parent, labelsStr string, templateLabels, templateNotes []string, jsonOutput *bool) error {
 	backend, err := core.GetBackend()
 	if err != nil {
 		if *jsonOutput {
@@ -298,10 +333,11 @@ func startWithDatabaseBackend(contextName, createdBy, parent, labelsStr string, 
 	}
 	defer backend.Close()
 
-	// Parse labels
-	var labels []string
+	// Parse labels - combine template labels with command-line labels
+	labels := templateLabels
 	if labelsStr != "" {
-		labels = strings.Split(strings.ReplaceAll(labelsStr, " ", ""), ",")
+		cmdLabels := strings.Split(strings.ReplaceAll(labelsStr, " ", ""), ",")
+		labels = append(labels, cmdLabels...)
 	}
 
 	// Get current active context (if any)
@@ -329,6 +365,19 @@ func startWithDatabaseBackend(contextName, createdBy, parent, labelsStr string, 
 			return nil
 		}
 		return fmt.Errorf("failed to create context: %w", err)
+	}
+
+	// Add initial notes from template
+	if len(templateNotes) > 0 {
+		for _, note := range templateNotes {
+			timestamp := time.Now().Format(time.RFC3339)
+			if err := backend.AddNote(contextName, timestamp, note); err != nil {
+				// Log error but don't fail - context was created successfully
+				if !*jsonOutput {
+					fmt.Fprintf(os.Stderr, "Warning: failed to add template note: %v\n", err)
+				}
+			}
+		}
 	}
 
 	// Output
