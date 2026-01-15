@@ -12,24 +12,47 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// buildTimelineFromFileContexts constructs timeline from file-based contexts
-func buildTimelineFromFileContexts(contexts []*models.Context, period TimePeriod, activeContextName string) output.TimelineData {
-	var entries []output.TimelineEntry
+// timelineContext defines the common interface for context types used in timeline building
+type timelineContext interface {
+	GetName() string
+	GetStatus() string
+	GetStartTime() time.Time
+	GetEndTime() *time.Time
+	Duration() time.Duration
+}
+
+// fileContextAdapter adapts models.Context to timelineContext
+type fileContextAdapter struct{ *models.Context }
+
+func (a fileContextAdapter) GetName() string         { return a.Name }
+func (a fileContextAdapter) GetStatus() string       { return a.Status }
+func (a fileContextAdapter) GetStartTime() time.Time { return a.StartTime }
+func (a fileContextAdapter) GetEndTime() *time.Time  { return a.EndTime }
+
+// dbContextAdapter adapts pkgmodels.ContextWithMetadata to timelineContext
+type dbContextAdapter struct{ *pkgmodels.ContextWithMetadata }
+
+func (a dbContextAdapter) GetName() string         { return a.Name }
+func (a dbContextAdapter) GetStatus() string       { return a.Status }
+func (a dbContextAdapter) GetStartTime() time.Time { return a.StartTime }
+func (a dbContextAdapter) GetEndTime() *time.Time  { return a.EndTime }
+
+// buildTimelineFromContexts constructs timeline from context adapters
+func buildTimelineFromContexts(contexts []timelineContext, period TimePeriod, activeContextName string) output.TimelineData {
+	entries := make([]output.TimelineEntry, 0, len(contexts))
 
 	// Sort contexts by start time
-	sortedContexts := make([]*models.Context, len(contexts))
-	copy(sortedContexts, contexts)
-	sort.Slice(sortedContexts, func(i, j int) bool {
-		return sortedContexts[i].StartTime.Before(sortedContexts[j].StartTime)
+	sort.Slice(contexts, func(i, j int) bool {
+		return contexts[i].GetStartTime().Before(contexts[j].GetStartTime())
 	})
 
 	// Convert to timeline entries
-	for _, ctx := range sortedContexts {
-		isActive := ctx.Name == activeContextName && ctx.Status == "active"
+	for _, ctx := range contexts {
+		isActive := ctx.GetName() == activeContextName && ctx.GetStatus() == "active"
 		entry := output.TimelineEntry{
-			ContextName: ctx.Name,
-			StartTime:   ctx.StartTime,
-			EndTime:     ctx.EndTime,
+			ContextName: ctx.GetName(),
+			StartTime:   ctx.GetStartTime(),
+			EndTime:     ctx.GetEndTime(),
 			Duration:    ctx.Duration(),
 			IsGap:       false,
 			IsActive:    isActive,
@@ -40,32 +63,22 @@ func buildTimelineFromFileContexts(contexts []*models.Context, period TimePeriod
 	return buildTimelineData(entries, period)
 }
 
+// buildTimelineFromFileContexts constructs timeline from file-based contexts
+func buildTimelineFromFileContexts(contexts []*models.Context, period TimePeriod, activeContextName string) output.TimelineData {
+	adapters := make([]timelineContext, len(contexts))
+	for i, ctx := range contexts {
+		adapters[i] = fileContextAdapter{ctx}
+	}
+	return buildTimelineFromContexts(adapters, period, activeContextName)
+}
+
 // buildTimelineFromDBContexts constructs timeline from database contexts
 func buildTimelineFromDBContexts(contexts []*pkgmodels.ContextWithMetadata, period TimePeriod, activeContextName string) output.TimelineData {
-	var entries []output.TimelineEntry
-
-	// Sort contexts by start time
-	sortedContexts := make([]*pkgmodels.ContextWithMetadata, len(contexts))
-	copy(sortedContexts, contexts)
-	sort.Slice(sortedContexts, func(i, j int) bool {
-		return sortedContexts[i].StartTime.Before(sortedContexts[j].StartTime)
-	})
-
-	// Convert to timeline entries
-	for _, ctx := range sortedContexts {
-		isActive := ctx.Name == activeContextName && ctx.Status == "active"
-		entry := output.TimelineEntry{
-			ContextName: ctx.Name,
-			StartTime:   ctx.StartTime,
-			EndTime:     ctx.EndTime,
-			Duration:    ctx.Duration(),
-			IsGap:       false,
-			IsActive:    isActive,
-		}
-		entries = append(entries, entry)
+	adapters := make([]timelineContext, len(contexts))
+	for i, ctx := range contexts {
+		adapters[i] = dbContextAdapter{ctx}
 	}
-
-	return buildTimelineData(entries, period)
+	return buildTimelineFromContexts(adapters, period, activeContextName)
 }
 
 // buildTimelineData constructs timeline with gap detection
@@ -80,7 +93,8 @@ func buildTimelineData(entries []output.TimelineEntry, period TimePeriod) output
 	}
 
 	// Calculate gaps between contexts
-	var allEntries []output.TimelineEntry
+	// Pre-allocate with capacity for entries + potential gaps (worst case: n-1 gaps)
+	allEntries := make([]output.TimelineEntry, 0, len(entries)*2)
 	for i, entry := range entries {
 		// Add the context entry
 		allEntries = append(allEntries, entry)
@@ -119,7 +133,7 @@ func buildTimelineData(entries []output.TimelineEntry, period TimePeriod) output
 }
 
 // groupByDay groups timeline entries by day
-func groupByDay(timeline output.TimelineData) []output.DayGroup {
+func groupByDay(timeline *output.TimelineData) []output.DayGroup {
 	if len(timeline.Entries) == 0 {
 		return nil
 	}
@@ -148,7 +162,7 @@ func groupByDay(timeline output.TimelineData) []output.DayGroup {
 	}
 
 	// Convert to sorted slice
-	var days []output.DayGroup
+	days := make([]output.DayGroup, 0, len(dayMap))
 	for _, group := range dayMap {
 		days = append(days, *group)
 	}
@@ -201,7 +215,7 @@ func timelineFromDatabase(jsonOutput *bool, projectFilter string, period TimePer
 	// Group by day if multi-day period
 	isMultiDay := period.End.Sub(period.Start) > 24*time.Hour
 	if isMultiDay {
-		timeline.DayGroups = groupByDay(timeline)
+		timeline.DayGroups = groupByDay(&timeline)
 	}
 
 	// Output
@@ -295,7 +309,7 @@ Supports filtering by time period and project.`,
 			// Group by day if multi-day period
 			isMultiDay := period.End.Sub(period.Start) > 24*time.Hour
 			if isMultiDay {
-				timeline.DayGroups = groupByDay(timeline)
+				timeline.DayGroups = groupByDay(&timeline)
 			}
 
 			// Output

@@ -11,24 +11,24 @@ import (
 )
 
 // setupTimelineTest creates a temporary context home for testing
-func setupTimelineTest(t *testing.T) (string, func()) {
+func setupTimelineTest(t *testing.T) func() {
 	tmpDir, err := os.MkdirTemp("", "timeline-test-*")
 	require.NoError(t, err)
 
 	originalHome := os.Getenv("MY_CONTEXT_HOME")
-	os.Setenv("MY_CONTEXT_HOME", tmpDir)
+	t.Setenv("MY_CONTEXT_HOME", tmpDir)
 
 	cleanup := func() {
-		os.Setenv("MY_CONTEXT_HOME", originalHome)
+		t.Setenv("MY_CONTEXT_HOME", originalHome)
 		os.RemoveAll(tmpDir)
 	}
 
-	return tmpDir, cleanup
+	return cleanup
 }
 
 // TestTimelineCommandToday tests the --today flag
 func TestTimelineCommandToday(t *testing.T) {
-	_, cleanup := setupTimelineTest(t)
+	cleanup := setupTimelineTest(t)
 	defer cleanup()
 
 	jsonOutput := false
@@ -41,7 +41,7 @@ func TestTimelineCommandToday(t *testing.T) {
 
 // TestTimelineCommandWeek tests the --week flag
 func TestTimelineCommandWeek(t *testing.T) {
-	_, cleanup := setupTimelineTest(t)
+	cleanup := setupTimelineTest(t)
 	defer cleanup()
 
 	jsonOutput := false
@@ -54,7 +54,7 @@ func TestTimelineCommandWeek(t *testing.T) {
 
 // TestTimelineCommandMonth tests the --month flag
 func TestTimelineCommandMonth(t *testing.T) {
-	_, cleanup := setupTimelineTest(t)
+	cleanup := setupTimelineTest(t)
 	defer cleanup()
 
 	jsonOutput := false
@@ -67,7 +67,7 @@ func TestTimelineCommandMonth(t *testing.T) {
 
 // TestTimelineCommandSinceUntil tests the --since and --until flags
 func TestTimelineCommandSinceUntil(t *testing.T) {
-	_, cleanup := setupTimelineTest(t)
+	cleanup := setupTimelineTest(t)
 	defer cleanup()
 
 	jsonOutput := false
@@ -80,7 +80,7 @@ func TestTimelineCommandSinceUntil(t *testing.T) {
 
 // TestTimelineCommandProject tests the --project flag
 func TestTimelineCommandProject(t *testing.T) {
-	_, cleanup := setupTimelineTest(t)
+	cleanup := setupTimelineTest(t)
 	defer cleanup()
 
 	jsonOutput := false
@@ -93,7 +93,7 @@ func TestTimelineCommandProject(t *testing.T) {
 
 // TestTimelineCommandJSON tests JSON output
 func TestTimelineCommandJSON(t *testing.T) {
-	_, cleanup := setupTimelineTest(t)
+	cleanup := setupTimelineTest(t)
 	defer cleanup()
 
 	jsonOutput := true
@@ -106,7 +106,7 @@ func TestTimelineCommandJSON(t *testing.T) {
 
 // TestTimelineCommandEmptyContexts tests timeline with no contexts
 func TestTimelineCommandEmptyContexts(t *testing.T) {
-	_, cleanup := setupTimelineTest(t)
+	cleanup := setupTimelineTest(t)
 	defer cleanup()
 
 	jsonOutput := false
@@ -194,7 +194,7 @@ func TestTimelineJSONStructure(t *testing.T) {
 
 // TestTimelineCommandInvalidDate tests invalid date format
 func TestTimelineCommandInvalidDate(t *testing.T) {
-	_, cleanup := setupTimelineTest(t)
+	cleanup := setupTimelineTest(t)
 	defer cleanup()
 
 	jsonOutput := false
@@ -209,7 +209,7 @@ func TestTimelineCommandInvalidDate(t *testing.T) {
 
 // TestTimelineCommandMultipleFlags tests conflicting flags
 func TestTimelineCommandMultipleFlags(t *testing.T) {
-	_, cleanup := setupTimelineTest(t)
+	cleanup := setupTimelineTest(t)
 	defer cleanup()
 
 	jsonOutput := false

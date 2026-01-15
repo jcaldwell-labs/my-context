@@ -126,9 +126,8 @@ func formatSingleDayTimeline(entries []TimelineEntry) string {
 }
 
 // formatVisualBar creates the ASCII timeline bar
-func formatVisualBar(entries []TimelineEntry, dayDate time.Time) string {
+func formatVisualBar(entries []TimelineEntry, _ time.Time) string {
 	const barWidth = 48 // Characters for the bar
-	const hoursInDay = 24.0
 
 	var sb strings.Builder
 
@@ -304,7 +303,7 @@ func FormatTimelineJSON(timeline *TimelineData) (string, error) {
 	}
 
 	// Convert entries
-	var jsonEntries []jsonEntry
+	jsonEntries := make([]jsonEntry, 0, len(timeline.Entries))
 	for _, e := range timeline.Entries {
 		var endTimeStr *string
 		if e.EndTime != nil {
@@ -323,7 +322,7 @@ func FormatTimelineJSON(timeline *TimelineData) (string, error) {
 	}
 
 	// Convert day groups
-	var jsonDayGroups []jsonDayGroup
+	jsonDayGroups := make([]jsonDayGroup, 0, len(timeline.DayGroups))
 	for _, dg := range timeline.DayGroups {
 		var dgEntries []jsonEntry
 		for _, e := range dg.Entries {
