@@ -12,6 +12,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	golang.design/x/clipboard v0.7.1
 	golang.org/x/term v0.36.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -28,5 +29,4 @@ require (
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
