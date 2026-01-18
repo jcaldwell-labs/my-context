@@ -76,10 +76,48 @@ jobs:
           fail_ci_if_error: false
           verbose: true
 
+  test-db:
+    name: Test (Database Backend)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: test_context
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install X11 development libraries
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run database backend tests
+        env:
+          MY_CONTEXT_HOME: db
+          DATABASE_URL: "postgres://testuser:testpass@localhost:5432/test_context?sslmode=disable"
+        run: go test ./internal/... ./pkg/... -v -race -tags=database
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [lint, test, test-db]
     strategy:
       matrix:
         include:
