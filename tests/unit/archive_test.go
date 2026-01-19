@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/commands"
+	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 )
 
 // TestGetEnvInt tests the getEnvInt helper function (already tested in note_test.go)
@@ -33,7 +34,7 @@ func TestArchiveGetEnvInt(t *testing.T) {
 	}
 }
 
-// TestMatchesPattern tests the pattern matching functionality (copied from resume tests)
+// TestMatchesPattern tests the pattern matching functionality from core package
 func TestArchiveMatchesPattern(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -68,9 +69,9 @@ func TestArchiveMatchesPattern(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			patternParts := strings.Split(tt.pattern, "*")
-			result := commands.MatchesPattern(tt.contextName, patternParts)
+			result := core.MatchesPattern(tt.contextName, patternParts)
 			if result != tt.expected {
-				t.Errorf("MatchesPattern(%q, %v) = %v, expected %v",
+				t.Errorf("core.MatchesPattern(%q, %v) = %v, expected %v",
 					tt.contextName, patternParts, result, tt.expected)
 			}
 		})

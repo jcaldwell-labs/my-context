@@ -179,7 +179,7 @@ func FindContextsByPattern(pattern string) ([]*models.Context, error) {
 	patternParts := strings.Split(pattern, "*")
 
 	for _, ctx := range stoppedContexts {
-		if matchesPattern(ctx.Name, patternParts) {
+		if MatchesPattern(ctx.Name, patternParts) {
 			matches = append(matches, ctx)
 		}
 	}
@@ -191,42 +191,6 @@ func FindContextsByPattern(pattern string) ([]*models.Context, error) {
 	})
 
 	return matches, nil
-}
-
-// matchesPattern checks if a context name matches a glob pattern
-func matchesPattern(name string, patternParts []string) bool {
-	if len(patternParts) == 0 {
-		return true
-	}
-
-	// Handle simple cases
-	if len(patternParts) == 1 {
-		// No wildcards
-		return name == patternParts[0]
-	}
-
-	// Check prefix
-	if !strings.HasPrefix(name, patternParts[0]) {
-		return false
-	}
-
-	remainingName := name[len(patternParts[0]):]
-
-	// Check suffix
-	lastPart := patternParts[len(patternParts)-1]
-	if !strings.HasSuffix(remainingName, lastPart) {
-		return false
-	}
-
-	// For multiple wildcards, we do a simple substring check
-	// This is not a full glob implementation but covers common use cases
-	for i := 1; i < len(patternParts)-1; i++ {
-		if !strings.Contains(remainingName, patternParts[i]) {
-			return false
-		}
-	}
-
-	return true
 }
 
 // FindRelatedContexts finds contexts with similar names (shared prefixes)
