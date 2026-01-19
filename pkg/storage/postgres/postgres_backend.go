@@ -297,6 +297,16 @@ func (b *Backend) createSchema() error {
 	CREATE INDEX IF NOT EXISTS idx_files_added_at ON context_files(added_at DESC);
 	CREATE INDEX IF NOT EXISTS idx_files_path_search ON context_files USING GIN (to_tsvector('english', file_path));
 
+	-- Touches table (activity timestamps)
+	CREATE TABLE IF NOT EXISTS context_touches (
+		id SERIAL PRIMARY KEY,
+		context_id INTEGER NOT NULL REFERENCES contexts(id) ON DELETE CASCADE,
+		touched_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_touches_context ON context_touches(context_id);
+	CREATE INDEX IF NOT EXISTS idx_touches_touched_at ON context_touches(touched_at DESC);
+
 	-- State table (generic key-value store)
 	CREATE TABLE IF NOT EXISTS state (
 		id SERIAL PRIMARY KEY,
@@ -672,9 +682,32 @@ func (b *Backend) GetNotes(contextName string) ([]storage.Note, error) {
 	return notes, nil
 }
 
-// GetNotesByTimestamp retrieves notes within a time range
+// GetNotesByTimestamp retrieves notes within a time range.
+// Note: Database backend uses GetNotes() for all notes. Time filtering can be
+// done client-side or via direct SQL queries if needed.
 func (b *Backend) GetNotesByTimestamp(contextName string, after, before time.Time) ([]storage.Note, error) {
-	return nil, fmt.Errorf("GetNotesByTimestamp: not implemented")
+	rows, err := b.db.Query(`
+		SELECT n.id, n.context_id, n.note, n.noted_at
+		FROM context_notes n
+		JOIN contexts c ON n.context_id = c.id
+		WHERE c.name = $1 AND n.noted_at >= $2 AND n.noted_at <= $3
+		ORDER BY n.noted_at DESC
+	`, contextName, after, before)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query notes by timestamp: %w", err)
+	}
+	defer rows.Close()
+
+	var notes []storage.Note
+	for rows.Next() {
+		var n storage.Note
+		if err := rows.Scan(&n.ID, &n.ContextID, &n.Content, &n.Timestamp); err != nil {
+			return nil, fmt.Errorf("failed to scan note: %w", err)
+		}
+		notes = append(notes, n)
+	}
+
+	return notes, rows.Err()
 }
 
 // AddFile adds a file reference to a context
@@ -766,7 +799,28 @@ func (b *Backend) GetFiles(contextName string) ([]storage.File, error) {
 
 // GetFilesByTimestamp retrieves files within a time range
 func (b *Backend) GetFilesByTimestamp(contextName string, after, before time.Time) ([]storage.File, error) {
-	return nil, fmt.Errorf("GetFilesByTimestamp: not implemented")
+	rows, err := b.db.Query(`
+		SELECT f.id, f.context_id, f.added_at, f.file_path
+		FROM context_files f
+		JOIN contexts c ON f.context_id = c.id
+		WHERE c.name = $1 AND f.added_at >= $2 AND f.added_at <= $3
+		ORDER BY f.added_at DESC
+	`, contextName, after, before)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query files by timestamp: %w", err)
+	}
+	defer rows.Close()
+
+	var files []storage.File
+	for rows.Next() {
+		var f storage.File
+		if err := rows.Scan(&f.ID, &f.ContextID, &f.Timestamp, &f.Path); err != nil {
+			return nil, fmt.Errorf("failed to scan file: %w", err)
+		}
+		files = append(files, f)
+	}
+
+	return files, rows.Err()
 }
 
 // AddTouch records a context access
@@ -775,6 +829,22 @@ func (b *Backend) AddTouch(contextName, timestamp string) error {
 	touchTime, err := time.Parse(time.RFC3339, timestamp)
 	if err != nil {
 		return fmt.Errorf("failed to parse timestamp: %w", err)
+	}
+
+	// Get context ID
+	var contextID int64
+	err = b.db.QueryRow(`SELECT id FROM contexts WHERE name = $1`, contextName).Scan(&contextID)
+	if err != nil {
+		return fmt.Errorf("failed to get context ID: %w", err)
+	}
+
+	// Insert touch record
+	_, err = b.db.Exec(`
+		INSERT INTO context_touches (context_id, touched_at)
+		VALUES ($1, $2)
+	`, contextID, touchTime)
+	if err != nil {
+		return fmt.Errorf("failed to insert touch: %w", err)
 	}
 
 	// Update context touch tracking
@@ -797,12 +867,41 @@ func (b *Backend) AddTouch(contextName, timestamp string) error {
 
 // GetTouches retrieves all touches for a context
 func (b *Backend) GetTouches(contextName string) ([]storage.Touch, error) {
-	return nil, fmt.Errorf("GetTouches: not implemented")
+	rows, err := b.db.Query(`
+		SELECT t.id, t.context_id, t.touched_at
+		FROM context_touches t
+		JOIN contexts c ON t.context_id = c.id
+		WHERE c.name = $1
+		ORDER BY t.touched_at DESC
+	`, contextName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query touches: %w", err)
+	}
+	defer rows.Close()
+
+	var touches []storage.Touch
+	for rows.Next() {
+		var t storage.Touch
+		if err := rows.Scan(&t.ID, &t.ContextID, &t.Timestamp); err != nil {
+			return nil, fmt.Errorf("failed to scan touch: %w", err)
+		}
+		touches = append(touches, t)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating touches: %w", err)
+	}
+
+	return touches, nil
 }
 
-// LogTransition logs a context transition
+// LogTransition logs a context transition.
+// Note: Not implemented in database backend. Transition history is tracked
+// implicitly via context start/stop times. Use GetTransitions for history.
 func (b *Backend) LogTransition(transition *storage.Transition) error {
-	return fmt.Errorf("LogTransition: not implemented")
+	// In database mode, transitions are implicit (context start/stop events)
+	// This is a no-op to maintain interface compatibility
+	return nil
 }
 
 // GetTransitions retrieves recent transitions derived from context start/stop times.
