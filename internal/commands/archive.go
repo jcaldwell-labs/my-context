@@ -96,7 +96,10 @@ func runSingleArchive(args []string) error {
 		}
 
 		// Prevent archiving active context
-		activeContext, _ := backend.GetActiveContext()
+		activeContext, err := backend.GetActiveContext()
+		if err != nil {
+			return fmt.Errorf("failed to check active context: %w", err)
+		}
 		if activeContext == ctx.Name {
 			return fmt.Errorf("cannot archive active context %q - stop it first", contextName)
 		}
