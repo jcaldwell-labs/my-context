@@ -410,5 +410,8 @@ Supports filtering by project, search term, and archive status.`,
 	cmd.Flags().BoolVar(&showArchived, "archived", false, "Show only archived contexts")
 	cmd.Flags().BoolVar(&activeOnly, "active-only", false, "Show only the active context")
 
+	// Mark mutually exclusive flags
+	cmd.MarkFlagsMutuallyExclusive("archived", "active-only")
+
 	return cmd
 }
