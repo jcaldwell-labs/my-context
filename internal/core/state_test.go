@@ -11,7 +11,8 @@ func TestMatchesPattern(t *testing.T) {
 		patternParts []string
 		want         bool
 	}{
-		{"empty pattern matches all", "any-context", []string{}, true},
+		{"empty pattern returns false", "any-context", []string{}, false},
+		{"single wildcard matches all", "any-context", []string{"", ""}, true},
 		{"no wildcard exact match", "test-context", []string{"test-context"}, true},
 		{"no wildcard no match", "test-context", []string{"other-context"}, false},
 		{"prefix wildcard", "test-context", []string{"test", ""}, true},
@@ -26,9 +27,9 @@ func TestMatchesPattern(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := matchesPattern(tt.contextName, tt.patternParts)
+			got := MatchesPattern(tt.contextName, tt.patternParts)
 			if got != tt.want {
-				t.Errorf("matchesPattern(%q, %v) = %v, want %v", tt.contextName, tt.patternParts, got, tt.want)
+				t.Errorf("MatchesPattern(%q, %v) = %v, want %v", tt.contextName, tt.patternParts, got, tt.want)
 			}
 		})
 	}

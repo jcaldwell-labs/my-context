@@ -218,7 +218,7 @@ func filterContextsByPattern(contexts []*models.Context, pattern string) []*mode
 	patternParts := strings.Split(pattern, "*")
 
 	for _, ctx := range contexts {
-		if MatchesPattern(ctx.Name, patternParts) {
+		if core.MatchesPattern(ctx.Name, patternParts) {
 			matches = append(matches, ctx)
 		}
 	}
@@ -332,44 +332,4 @@ func getEnvInt(key string, defaultVal int) int {
 		}
 	}
 	return defaultVal
-}
-
-// MatchesPattern checks if a context name matches a glob pattern (copied from resume.go)
-func MatchesPattern(name string, patternParts []string) bool {
-	if len(patternParts) == 0 {
-		return false // Empty pattern parts means no pattern was split, so no match
-	}
-
-	// Handle the special case of just "*" which should match everything
-	if len(patternParts) == 2 && patternParts[0] == "" && patternParts[1] == "" {
-		return true
-	}
-
-	// Handle simple cases
-	if len(patternParts) == 1 {
-		// No wildcards
-		return name == patternParts[0]
-	}
-
-	// Check prefix
-	if !strings.HasPrefix(name, patternParts[0]) {
-		return false
-	}
-
-	remainingName := name[len(patternParts[0]):]
-
-	// Check suffix
-	lastPart := patternParts[len(patternParts)-1]
-	if !strings.HasSuffix(remainingName, lastPart) {
-		return false
-	}
-
-	// For multiple wildcards, we do a simple substring check
-	for i := 1; i < len(patternParts)-1; i++ {
-		if !strings.Contains(remainingName, patternParts[i]) {
-			return false
-		}
-	}
-
-	return true
 }
