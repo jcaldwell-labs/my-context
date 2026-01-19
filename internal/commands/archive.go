@@ -237,15 +237,29 @@ func filterContextsByStopDate(contexts []*models.Context, before time.Time) []*m
 	return filtered
 }
 
-// ParseDateString parses a YYYY-MM-DD date string
+// ParseDateString parses a YYYY-MM-DD date string and returns end of day in local timezone.
+// Trims whitespace and validates the date is valid (rejects dates like 2024-02-30).
 func ParseDateString(dateStr string) (time.Time, error) {
-	// Parse as YYYY-MM-DD and set to end of day
-	parsed, err := time.Parse("2006-01-02", dateStr)
-	if err != nil {
-		return time.Time{}, err
+	// Trim whitespace
+	dateStr = strings.TrimSpace(dateStr)
+	if dateStr == "" {
+		return time.Time{}, fmt.Errorf("date string cannot be empty")
 	}
-	// Set to end of day (23:59:59)
-	return time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 23, 59, 59, 0, parsed.Location()), nil
+
+	// Parse as YYYY-MM-DD in local timezone
+	parsed, err := time.ParseInLocation("2006-01-02", dateStr, time.Local)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid date format (expected YYYY-MM-DD): %w", err)
+	}
+
+	// Validate the date didn't roll over (e.g., 2024-02-30 would become 2024-03-01)
+	// Re-format and compare to catch invalid dates
+	if parsed.Format("2006-01-02") != dateStr {
+		return time.Time{}, fmt.Errorf("invalid date: %s (day out of range for month)", dateStr)
+	}
+
+	// Set to end of day (23:59:59) in local timezone
+	return time.Date(parsed.Year(), parsed.Month(), parsed.Day(), 23, 59, 59, 0, time.Local), nil
 }
 
 // showBulkDryRun displays what would be archived without actually doing it
