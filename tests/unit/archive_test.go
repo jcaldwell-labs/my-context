@@ -88,9 +88,13 @@ func TestParseDateString(t *testing.T) {
 	}{
 		{"valid date", "2024-01-15", false, 15},
 		{"leap year", "2024-02-29", false, 29},
+		{"whitespace trimmed", "  2024-01-15  ", false, 15},
 		{"invalid format", "2024/01/15", true, 0},
 		{"invalid date", "2024-13-01", true, 0},
+		{"invalid day rollover", "2024-02-30", true, 0},
+		{"invalid day in april", "2024-04-31", true, 0},
 		{"empty string", "", true, 0},
+		{"whitespace only", "   ", true, 0},
 		{"incomplete date", "2024-01", true, 0},
 	}
 
