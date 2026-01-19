@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
@@ -49,6 +50,7 @@ func filterByTag(contexts []*models.Context, tagFilter string) []*models.Context
 	for _, ctx := range contexts {
 		ctxWithMeta, _, _, _, err := core.GetContextWithMetadata(ctx.Name)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: skipping context %q in tag filter: %v\n", ctx.Name, err)
 			continue
 		}
 		for _, tag := range ctxWithMeta.Metadata.Labels {
