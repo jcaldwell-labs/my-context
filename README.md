@@ -199,6 +199,45 @@ All data stored in `~/.my-context/` as plain text:
 
 Override location: `export MY_CONTEXT_HOME=/custom/path`
 
+### Database Backend (PostgreSQL)
+
+For teams, high-volume usage, or centralized context storage, my-context supports PostgreSQL:
+
+```bash
+# Enable database backend
+export MY_CONTEXT_HOME=db
+export DATABASE_URL="host=localhost port=5432 user=myuser password=mypass dbname=dev_state sslmode=disable"
+
+# Or use connection URL format
+export DATABASE_URL="postgres://myuser:mypass@localhost:5432/dev_state?sslmode=disable"
+```
+
+**Partitions** — Isolate contexts by project:
+
+```bash
+# Each partition gets its own schema
+export MY_CONTEXT_HOME=db:project-alpha
+export MY_CONTEXT_HOME=db:project-beta
+
+# List all partitions
+my-context partitions
+
+# Query across partitions
+my-context list --all-partitions
+```
+
+**When to use database backend:**
+
+| Use Case         | File Backend   | Database Backend  |
+| ---------------- | -------------- | ----------------- |
+| Single developer | ✅ Recommended | Works             |
+| Team sharing     | ❌ Manual sync | ✅ Recommended    |
+| 100+ contexts    | Slower         | ✅ 10-400x faster |
+| Backup/restore   | File copy      | pg_dump           |
+| Cross-machine    | ❌ Manual      | ✅ Built-in       |
+
+**Migration:** Existing file-based contexts remain in `~/.my-context/`. Database mode creates new contexts in PostgreSQL. There's no automatic migration—use `export` to move contexts if needed.
+
 ## Documentation
 
 - **[Getting Started Guide](docs/guides/GETTING-STARTED.md)** — Full installation and first steps
