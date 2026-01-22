@@ -185,8 +185,10 @@ func listPartitions(backend interface{}) ([]PartitionInfo, error) {
 		}
 
 		// Get active context using pq.QuoteIdentifier for safe schema quoting
+		// Note: The value is stored as a JSON string (e.g., "context-name"), not an object.
+		// We use trim() to remove the JSON string quotes after casting to text.
 		activeQuery := fmt.Sprintf(`
-			SELECT value->>'name'
+			SELECT trim(both '"' from value::text)
 			FROM %s.state
 			WHERE key = 'active_context'
 		`, pq.QuoteIdentifier(schema))
