@@ -63,12 +63,13 @@ func TestCascadeStopWarning(t *testing.T) {
 	}
 	
 	// Use CLI to resume parent
-	cmd := exec.Command("go", "run", "../../cmd/my-context/main.go", "resume", "parent")
-	cmd.Dir = tempDir
+	cmd := exec.Command("go", "run", "./cmd/my-context/main.go", "resume", "parent")
+	cmd.Dir = getProjectRoot()
+	cmd.Env = append(os.Environ(), "MY_CONTEXT_HOME="+tempDir)
 	_, _ = cmd.CombinedOutput()
 	
 	// Now parent is active, stop it without cascade (should show warning)
-	cmd = exec.Command("go", "run", "../../cmd/my-context/main.go", "stop")
+	cmd = exec.Command("go", "run", "./cmd/my-context/main.go", "stop")
 	cmd.Dir = getProjectRoot()
 	cmd.Env = append(os.Environ(), "MY_CONTEXT_HOME="+tempDir)
 	output, err := cmd.CombinedOutput()
@@ -138,7 +139,7 @@ func TestCascadeStopWithFlag(t *testing.T) {
 	require.NoError(t, err)
 
 	// Stop with cascade flag
-	cmd := exec.Command("go", "run", "../../cmd/my-context/main.go", "stop", "--cascade")
+	cmd := exec.Command("go", "run", "./cmd/my-context/main.go", "stop", "--cascade")
 	cmd.Dir = getProjectRoot()
 	cmd.Env = append(os.Environ(), "MY_CONTEXT_HOME="+tempDir)
 	output, err := cmd.CombinedOutput()
@@ -198,7 +199,7 @@ func TestCascadeStopJSON(t *testing.T) {
 	core.WriteJSON(core.GetMetaJSONPath("parent"), parentCtx)
 
 	// Stop with cascade and JSON output
-	cmd := exec.Command("go", "run", "../../cmd/my-context/main.go", "stop", "--cascade", "--json")
+	cmd := exec.Command("go", "run", "./cmd/my-context/main.go", "stop", "--cascade", "--json")
 	cmd.Dir = getProjectRoot()
 	cmd.Env = append(os.Environ(), "MY_CONTEXT_HOME="+tempDir)
 	output, err := cmd.CombinedOutput()
