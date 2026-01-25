@@ -38,16 +38,16 @@ func (f *FileContextFilter) ByProject(project string) ContextFilter {
 	if project == "" {
 		return f
 	}
-	
+
 	// Extract context names
 	contextNames := make([]string, 0, len(f.contexts))
 	for _, ctx := range f.contexts {
 		contextNames = append(contextNames, ctx.Name)
 	}
-	
+
 	// Use core filtering logic
 	filteredNames := core.FilterContextsByProject(contextNames, project)
-	
+
 	// Build filtered list
 	filtered := make([]*models.Context, 0, len(f.contexts))
 	for _, ctx := range f.contexts {
@@ -58,7 +58,7 @@ func (f *FileContextFilter) ByProject(project string) ContextFilter {
 			}
 		}
 	}
-	
+
 	return &FileContextFilter{contexts: filtered}
 }
 
@@ -67,7 +67,7 @@ func (f *FileContextFilter) BySearch(term string) ContextFilter {
 	if term == "" {
 		return f
 	}
-	
+
 	searchLower := strings.ToLower(term)
 	filtered := make([]*models.Context, 0, len(f.contexts))
 	for _, ctx := range f.contexts {
@@ -75,7 +75,7 @@ func (f *FileContextFilter) BySearch(term string) ContextFilter {
 			filtered = append(filtered, ctx)
 		}
 	}
-	
+
 	return &FileContextFilter{contexts: filtered}
 }
 
@@ -84,7 +84,7 @@ func (f *FileContextFilter) ByTag(tag string) ContextFilter {
 	if tag == "" {
 		return f
 	}
-	
+
 	filtered := make([]*models.Context, 0, len(f.contexts))
 	for _, ctx := range f.contexts {
 		ctxWithMeta, _, _, _, err := core.GetContextWithMetadata(ctx.Name)
@@ -98,7 +98,7 @@ func (f *FileContextFilter) ByTag(tag string) ContextFilter {
 			}
 		}
 	}
-	
+
 	return &FileContextFilter{contexts: filtered}
 }
 
@@ -113,7 +113,7 @@ func (f *FileContextFilter) ByArchiveStatus(showArchived, activeOnly bool) Conte
 		}
 		return &FileContextFilter{contexts: filtered}
 	}
-	
+
 	if !activeOnly {
 		filtered := make([]*models.Context, 0, len(f.contexts))
 		for _, ctx := range f.contexts {
@@ -123,7 +123,7 @@ func (f *FileContextFilter) ByArchiveStatus(showArchived, activeOnly bool) Conte
 		}
 		return &FileContextFilter{contexts: filtered}
 	}
-	
+
 	return f
 }
 
@@ -132,13 +132,13 @@ func (f *FileContextFilter) ByActive(activeContextName string) ContextFilter {
 	if activeContextName == "" {
 		return &FileContextFilter{contexts: []*models.Context{}}
 	}
-	
+
 	for _, ctx := range f.contexts {
 		if ctx.Name == activeContextName {
 			return &FileContextFilter{contexts: []*models.Context{ctx}}
 		}
 	}
-	
+
 	return &FileContextFilter{contexts: []*models.Context{}}
 }
 
@@ -150,7 +150,7 @@ func (f *FileContextFilter) ByPeriod(start, end time.Time) ContextFilter {
 			filtered = append(filtered, ctx)
 		}
 	}
-	
+
 	return &FileContextFilter{contexts: filtered}
 }
 
@@ -159,16 +159,16 @@ func (f *FileContextFilter) ByPattern(pattern string) ContextFilter {
 	if pattern == "" {
 		return f
 	}
-	
+
 	matches := make([]*models.Context, 0, len(f.contexts))
 	patternParts := strings.Split(pattern, "*")
-	
+
 	for _, ctx := range f.contexts {
 		if core.MatchesPattern(ctx.Name, patternParts) {
 			matches = append(matches, ctx)
 		}
 	}
-	
+
 	return &FileContextFilter{contexts: matches}
 }
 
@@ -180,7 +180,7 @@ func (f *FileContextFilter) ByStopDate(before time.Time) ContextFilter {
 			filtered = append(filtered, ctx)
 		}
 	}
-	
+
 	return &FileContextFilter{contexts: filtered}
 }
 
@@ -209,7 +209,7 @@ func (d *DBContextFilter) ByProject(project string) ContextFilter {
 	if project == "" {
 		return d
 	}
-	
+
 	projectFilter := strings.TrimSpace(project)
 	filtered := make([]*pkgmodels.ContextWithMetadata, 0, len(d.contexts))
 	for _, ctx := range d.contexts {
@@ -218,7 +218,7 @@ func (d *DBContextFilter) ByProject(project string) ContextFilter {
 			filtered = append(filtered, ctx)
 		}
 	}
-	
+
 	return &DBContextFilter{contexts: filtered}
 }
 
@@ -227,7 +227,7 @@ func (d *DBContextFilter) BySearch(term string) ContextFilter {
 	if term == "" {
 		return d
 	}
-	
+
 	searchLower := strings.ToLower(term)
 	filtered := make([]*pkgmodels.ContextWithMetadata, 0, len(d.contexts))
 	for _, ctx := range d.contexts {
@@ -235,7 +235,7 @@ func (d *DBContextFilter) BySearch(term string) ContextFilter {
 			filtered = append(filtered, ctx)
 		}
 	}
-	
+
 	return &DBContextFilter{contexts: filtered}
 }
 
@@ -244,7 +244,7 @@ func (d *DBContextFilter) ByTag(tag string) ContextFilter {
 	if tag == "" {
 		return d
 	}
-	
+
 	filtered := make([]*pkgmodels.ContextWithMetadata, 0, len(d.contexts))
 	for _, ctx := range d.contexts {
 		for _, t := range ctx.Metadata.Labels {
@@ -254,7 +254,7 @@ func (d *DBContextFilter) ByTag(tag string) ContextFilter {
 			}
 		}
 	}
-	
+
 	return &DBContextFilter{contexts: filtered}
 }
 
@@ -269,7 +269,7 @@ func (d *DBContextFilter) ByArchiveStatus(showArchived, activeOnly bool) Context
 		}
 		return &DBContextFilter{contexts: filtered}
 	}
-	
+
 	if !activeOnly {
 		filtered := make([]*pkgmodels.ContextWithMetadata, 0, len(d.contexts))
 		for _, ctx := range d.contexts {
@@ -279,7 +279,7 @@ func (d *DBContextFilter) ByArchiveStatus(showArchived, activeOnly bool) Context
 		}
 		return &DBContextFilter{contexts: filtered}
 	}
-	
+
 	return d
 }
 
@@ -288,13 +288,13 @@ func (d *DBContextFilter) ByActive(activeContextName string) ContextFilter {
 	if activeContextName == "" {
 		return &DBContextFilter{contexts: []*pkgmodels.ContextWithMetadata{}}
 	}
-	
+
 	for _, ctx := range d.contexts {
 		if ctx.Name == activeContextName {
 			return &DBContextFilter{contexts: []*pkgmodels.ContextWithMetadata{ctx}}
 		}
 	}
-	
+
 	return &DBContextFilter{contexts: []*pkgmodels.ContextWithMetadata{}}
 }
 
@@ -306,7 +306,7 @@ func (d *DBContextFilter) ByPeriod(start, end time.Time) ContextFilter {
 			filtered = append(filtered, ctx)
 		}
 	}
-	
+
 	return &DBContextFilter{contexts: filtered}
 }
 
@@ -315,16 +315,16 @@ func (d *DBContextFilter) ByPattern(pattern string) ContextFilter {
 	if pattern == "" {
 		return d
 	}
-	
+
 	matches := make([]*pkgmodels.ContextWithMetadata, 0, len(d.contexts))
 	patternParts := strings.Split(pattern, "*")
-	
+
 	for _, ctx := range d.contexts {
 		if core.MatchesPattern(ctx.Name, patternParts) {
 			matches = append(matches, ctx)
 		}
 	}
-	
+
 	return &DBContextFilter{contexts: matches}
 }
 
@@ -336,7 +336,7 @@ func (d *DBContextFilter) ByStopDate(before time.Time) ContextFilter {
 			filtered = append(filtered, ctx)
 		}
 	}
-	
+
 	return &DBContextFilter{contexts: filtered}
 }
 
