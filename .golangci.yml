@@ -6,57 +6,55 @@ run:
   modules-download-mode: readonly
 
 linters:
+  default: none
   enable:
-    # Enabled by default
-    - errcheck       # Check for unchecked errors
-    - govet          # Go vet examinations
-    - ineffassign    # Detect ineffectual assignments
-    - staticcheck    # Advanced static analysis
-    - unused         # Check for unused constants, variables, functions
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - revive
+    - unconvert
+    - unparam
+    - gosec
+    - bodyclose
+    - gocritic
+    - gocyclo
+    - dupl
+    - prealloc
 
-    # Additional recommended linters
-    - misspell       # Spell checker
-    - revive         # Fast, extensible, flexible linter
-    - unconvert      # Remove unnecessary type conversions
-    - unparam        # Find unused function parameters
-    - gosec          # Security issues
-    - bodyclose      # Check HTTP response body is closed
-    - gocritic       # Opinionated linter
-    - gocyclo        # Cyclomatic complexity
-    - dupl           # Code duplication
-    - prealloc       # Slice preallocation
+  settings:
+    gocyclo:
+      min-complexity: 15
 
-settings:
-  gocyclo:
-    min-complexity: 15
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+      disabled-checks:
+        - commentFormatting
 
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - style
-      - performance
-    disabled-checks:
-      - commentFormatting
+    revive:
+      rules:
+        - name: exported
+          disabled: false
+        - name: package-comments
+          disabled: false
+        - name: var-naming
+          disabled: false
 
-  revive:
-    rules:
-      - name: exported
-        disabled: false
-      - name: package-comments
-        disabled: false
-      - name: var-naming
-        disabled: false
+    misspell:
+      locale: US
 
-  misspell:
-    locale: US
+    gosec:
+      excludes:
+        - G204
+        - G304
 
-  gosec:
-    excludes:
-      - G204  # Subprocess launched with variable - common in CLI tools
-      - G304  # File path from variable - necessary for file operations
-
-  dupl:
-    threshold: 100
+    dupl:
+      threshold: 100
 
 issues:
   max-issues-per-linter: 0
