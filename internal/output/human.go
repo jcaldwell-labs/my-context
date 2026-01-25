@@ -189,15 +189,15 @@ func FormatContextList(contexts []*models.Context, activeContextName string) str
 		return sb.String()
 	}
 
-	for _, ctx := range contexts {
+	for i, ctx := range contexts {
 		// Active indicator
 		indicator := "○"
 		if ctx.Name == activeContextName {
 			indicator = "●"
 		}
 
-		// Status line
-		statusLine := fmt.Sprintf("  %s %s (%s)\n", indicator, ctx.Name, ctx.Status)
+		// Status line with index number
+		statusLine := fmt.Sprintf("  %d. %s %s (%s)\n", i+1, indicator, ctx.Name, ctx.Status)
 		sb.WriteString(statusLine)
 
 		// Start time line
@@ -207,14 +207,14 @@ func FormatContextList(contexts []*models.Context, activeContextName string) str
 		if !strings.Contains(timestampFormat, "2006") {
 			timestampFormat = "2006-01-02 " + timestampFormat
 		}
-		sb.WriteString(fmt.Sprintf("    Started: %s (%s ago)\n",
+		sb.WriteString(fmt.Sprintf("     Started: %s (%s ago)\n",
 			ctx.StartTime.Format(timestampFormat),
 			FormatDuration(duration)))
 
 		// Duration line if stopped
 		if ctx.Status == "stopped" && ctx.EndTime != nil {
 			actualDuration := ctx.EndTime.Sub(ctx.StartTime)
-			sb.WriteString(fmt.Sprintf("    Duration: %s\n", FormatDuration(actualDuration)))
+			sb.WriteString(fmt.Sprintf("     Duration: %s\n", FormatDuration(actualDuration)))
 		}
 
 		sb.WriteString("\n")

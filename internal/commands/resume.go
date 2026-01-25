@@ -24,10 +24,36 @@ func findTargetContext(args []string, useLast bool) (*models.Context, error) {
 	}
 
 	if len(args) == 0 {
-		return nil, errors.New("must specify context name/pattern or use --last flag")
+		return nil, errors.New("must specify context name/pattern/index or use --last flag")
 	}
 
 	pattern := args[0]
+
+	// Check if the argument is a numeric index
+	if index, err := strconv.Atoi(pattern); err == nil {
+		// Get all contexts in list order
+		allContexts, err := core.ListContexts()
+		if err != nil {
+			return nil, fmt.Errorf("failed to list contexts: %w", err)
+		}
+
+		// Check if there are any contexts
+		if len(allContexts) == 0 {
+			return nil, fmt.Errorf("no contexts available to resume")
+		}
+
+		// Validate index range (1-based indexing)
+		if index < 1 || index > len(allContexts) {
+			return nil, fmt.Errorf("index %d is out of range (valid range: 1-%d)", index, len(allContexts))
+		}
+
+		// Get the context at the specified index (convert to 0-based)
+		targetContext := allContexts[index-1]
+
+		return targetContext, nil
+	}
+
+	// Not a numeric index, treat as pattern
 	contexts, err := core.FindContextsByPattern(pattern)
 	if err != nil {
 		return nil, err
@@ -50,10 +76,16 @@ func findTargetContext(args []string, useLast bool) (*models.Context, error) {
 
 func NewResumeCmd(jsonOutput *bool) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "resume <name|pattern>",
+		Use:     "resume <name|pattern|index>",
 		Aliases: []string{"r"},
 		Short:   "Resume a stopped context",
-		Long:    `Resume a previously stopped context by name, pattern, or --last flag.`,
+		Long:    `Resume a previously stopped context by name, pattern, index, or --last flag.
+
+Examples:
+  my-context resume work-2026-01-15    # Resume by name
+  my-context resume work               # Resume by pattern
+  my-context resume 2                  # Resume by index from list
+  my-context resume --last             # Resume most recent stopped`,
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Check if using database backend
@@ -62,7 +94,18 @@ func NewResumeCmd(jsonOutput *bool) *cobra.Command {
 			}
 
 			// File-based backend (existing code)
-			// Check if we have an active context
+			// Find the target context to resume
+			targetContext, err := findTargetContext(args, resumeLast)
+			if err != nil {
+				if *jsonOutput {
+					jsonStr, _ := output.FormatJSONError("resume", 1, err.Error())
+					fmt.Print(jsonStr)
+					return nil
+				}
+				return err
+			}
+
+			// Check if we have an active context and stop it if needed
 			state, err := core.GetActiveContext()
 			if err != nil {
 				if *jsonOutput {
@@ -74,24 +117,28 @@ func NewResumeCmd(jsonOutput *bool) *cobra.Command {
 			}
 
 			if state.HasActiveContext() {
-				errMsg := fmt.Sprintf("Cannot resume: context %q is already active", state.GetActiveContextName())
-				if *jsonOutput {
-					jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
-					fmt.Print(jsonStr)
-					return nil
+				activeContextName := state.GetActiveContextName()
+				// Don't allow resuming the already active context
+				if targetContext.Name == activeContextName {
+					errMsg := fmt.Sprintf("Cannot resume: context %q is already active", activeContextName)
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return errors.New(errMsg)
 				}
-				return errors.New(errMsg)
-			}
 
-			// Find the target context to resume
-			targetContext, err := findTargetContext(args, resumeLast)
-			if err != nil {
-				if *jsonOutput {
-					jsonStr, _ := output.FormatJSONError("resume", 1, err.Error())
-					fmt.Print(jsonStr)
-					return nil
+				// Stop the active context before resuming
+				_, err := core.StopContext()
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("resume", 2, fmt.Sprintf("failed to stop active context: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to stop active context: %w", err)
 				}
-				return err
 			}
 
 			// Resume the selected context
@@ -106,7 +153,14 @@ func NewResumeCmd(jsonOutput *bool) *cobra.Command {
 
 // resumeContext resumes a specific context
 func resumeContext(ctx *models.Context, jsonOutput *bool) error {
-	// Set the context as active
+	// Update context metadata to set status to "active" and clear end time
+	ctx.Status = "active"
+	ctx.EndTime = nil
+	if err := core.WriteJSON(core.GetMetaJSONPath(ctx.Name), ctx); err != nil {
+		return fmt.Errorf("failed to update context metadata: %w", err)
+	}
+
+	// Set the context as active in state
 	if err := core.SetActiveContext(ctx.Name); err != nil {
 		return fmt.Errorf("failed to activate context: %w", err)
 	}
@@ -195,18 +249,6 @@ func resumeWithDatabaseBackend(args []string, useLast bool, jsonOutput *bool) er
 	}
 	defer backend.Close()
 
-	// Check if there's already an active context
-	activeContext, _ := backend.GetActiveContext()
-	if activeContext != "" {
-		errMsg := fmt.Sprintf("Cannot resume: context %q is already active", activeContext)
-		if *jsonOutput {
-			jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
-			fmt.Print(jsonStr)
-			return nil
-		}
-		return errors.New(errMsg)
-	}
-
 	var contextName string
 
 	if useLast {
@@ -240,7 +282,7 @@ func resumeWithDatabaseBackend(args []string, useLast bool, jsonOutput *bool) er
 			return errors.New(errMsg)
 		}
 	} else if len(args) == 0 {
-		errMsg := "Must specify context name or use --last flag"
+		errMsg := "Must specify context name/index or use --last flag"
 		if *jsonOutput {
 			jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
 			fmt.Print(jsonStr)
@@ -248,7 +290,73 @@ func resumeWithDatabaseBackend(args []string, useLast bool, jsonOutput *bool) er
 		}
 		return errors.New(errMsg)
 	} else {
-		contextName = args[0]
+		// Check if the argument is a numeric index
+		if index, err := strconv.Atoi(args[0]); err == nil {
+			// Get all contexts in list order
+			allContexts, err := backend.ListContexts()
+			if err != nil {
+				if *jsonOutput {
+					jsonStr, _ := output.FormatJSONError("resume", 2, fmt.Sprintf("failed to list contexts: %v", err))
+					fmt.Print(jsonStr)
+					return nil
+				}
+				return fmt.Errorf("failed to list contexts: %w", err)
+			}
+
+			// Check if there are any contexts
+			if len(allContexts) == 0 {
+				errMsg := "no contexts available to resume"
+				if *jsonOutput {
+					jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
+					fmt.Print(jsonStr)
+					return nil
+				}
+				return errors.New(errMsg)
+			}
+
+			// Validate index range (1-based indexing)
+			if index < 1 || index > len(allContexts) {
+				errMsg := fmt.Sprintf("index %d is out of range (valid range: 1-%d)", index, len(allContexts))
+				if *jsonOutput {
+					jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
+					fmt.Print(jsonStr)
+					return nil
+				}
+				return errors.New(errMsg)
+			}
+
+			// Get the context at the specified index (convert to 0-based)
+			targetContext := allContexts[index-1]
+			contextName = targetContext.Name
+		} else {
+			// Not a numeric index, treat as context name
+			contextName = args[0]
+		}
+	}
+
+	// Check if there's already an active context
+	activeContext, _ := backend.GetActiveContext()
+	if activeContext != "" {
+		// Don't allow resuming the already active context
+		if contextName == activeContext {
+			errMsg := fmt.Sprintf("Cannot resume: context %q is already active", activeContext)
+			if *jsonOutput {
+				jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
+				fmt.Print(jsonStr)
+				return nil
+			}
+			return errors.New(errMsg)
+		}
+
+		// Stop the active context before resuming
+		ctx, err := backend.GetContext(activeContext)
+		if err == nil && ctx.Status == "active" {
+			now := time.Now()
+			ctx.Status = "stopped"
+			ctx.EndTime = &now
+			_ = backend.UpdateContext(ctx)
+		}
+		_ = backend.ClearActiveContext()
 	}
 
 	// Get the context
@@ -260,16 +368,6 @@ func resumeWithDatabaseBackend(args []string, useLast bool, jsonOutput *bool) er
 			return nil
 		}
 		return fmt.Errorf("context not found: %w", err)
-	}
-
-	if ctx.Status == "active" {
-		errMsg := fmt.Sprintf("Context %q is already active", contextName)
-		if *jsonOutput {
-			jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
-			fmt.Print(jsonStr)
-			return nil
-		}
-		return errors.New(errMsg)
 	}
 
 	// Resume the context (clear end time, set to active)
