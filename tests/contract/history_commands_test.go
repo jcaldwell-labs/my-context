@@ -233,3 +233,144 @@ func TestHistoryCommandLimitZero(t *testing.T) {
 	assert.Equal(t, 0, exitCode, "history with limit 0 should succeed: %s", stdout)
 	assert.Contains(t, stdout, "unlimited-test", "Should show context")
 }
+
+// TestHistoryCommandTodayFlag tests the --today flag
+func TestHistoryCommandTodayFlag(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Create contexts
+	_, exitCode := runHistoryCommand(binary, testDir, "start", "today-context")
+	require.Equal(t, 0, exitCode, "start should succeed")
+
+	// Check history with --today filter
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--today")
+
+	assert.Equal(t, 0, exitCode, "history --today should succeed: %s", stdout)
+	assert.Contains(t, stdout, "today-context", "Should show today's context")
+}
+
+// TestHistoryCommandWeekFlag tests the --week flag
+func TestHistoryCommandWeekFlag(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Create contexts
+	_, exitCode := runHistoryCommand(binary, testDir, "start", "week-context")
+	require.Equal(t, 0, exitCode, "start should succeed")
+
+	// Check history with --week filter
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--week")
+
+	assert.Equal(t, 0, exitCode, "history --week should succeed: %s", stdout)
+	assert.Contains(t, stdout, "week-context", "Should show this week's context")
+}
+
+// TestHistoryCommandMonthFlag tests the --month flag
+func TestHistoryCommandMonthFlag(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Create contexts
+	_, exitCode := runHistoryCommand(binary, testDir, "start", "month-context")
+	require.Equal(t, 0, exitCode, "start should succeed")
+
+	// Check history with --month filter
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--month")
+
+	assert.Equal(t, 0, exitCode, "history --month should succeed: %s", stdout)
+	assert.Contains(t, stdout, "month-context", "Should show this month's context")
+}
+
+// TestHistoryCommandSinceFlag tests the --since flag
+func TestHistoryCommandSinceFlag(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Create contexts
+	_, exitCode := runHistoryCommand(binary, testDir, "start", "recent-context")
+	require.Equal(t, 0, exitCode, "start should succeed")
+
+	// Check history with --since filter (should include all contexts from beginning of time)
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--since", "2020-01-01")
+
+	assert.Equal(t, 0, exitCode, "history --since should succeed: %s", stdout)
+	assert.Contains(t, stdout, "recent-context", "Should show context after since date")
+}
+
+// TestHistoryCommandUntilFlag tests the --until flag
+func TestHistoryCommandUntilFlag(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Create contexts
+	_, exitCode := runHistoryCommand(binary, testDir, "start", "until-context")
+	require.Equal(t, 0, exitCode, "start should succeed")
+
+	// Check history with --until filter (far future should include everything)
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--until", "2099-12-31")
+
+	assert.Equal(t, 0, exitCode, "history --until should succeed: %s", stdout)
+	assert.Contains(t, stdout, "until-context", "Should show context before until date")
+}
+
+// TestHistoryCommandSinceUntilFlags tests both --since and --until flags
+func TestHistoryCommandSinceUntilFlags(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Create contexts
+	_, exitCode := runHistoryCommand(binary, testDir, "start", "range-context")
+	require.Equal(t, 0, exitCode, "start should succeed")
+
+	// Check history with both filters
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--since", "2020-01-01", "--until", "2099-12-31")
+
+	assert.Equal(t, 0, exitCode, "history --since --until should succeed: %s", stdout)
+	assert.Contains(t, stdout, "range-context", "Should show context in date range")
+}
+
+// TestHistoryCommandInvalidSinceDate tests error handling for invalid --since date
+func TestHistoryCommandInvalidSinceDate(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Try to use invalid date format
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--since", "invalid-date")
+
+	assert.NotEqual(t, 0, exitCode, "history with invalid --since should fail")
+	assert.Contains(t, stdout, "invalid --since date format", "Should show error message")
+}
+
+// TestHistoryCommandInvalidUntilDate tests error handling for invalid --until date
+func TestHistoryCommandInvalidUntilDate(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Try to use invalid date format
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--until", "not-a-date")
+
+	assert.NotEqual(t, 0, exitCode, "history with invalid --until should fail")
+	assert.Contains(t, stdout, "invalid --until date format", "Should show error message")
+}
+
+// TestHistoryCommandDateFlagsWithJSON tests JSON output with date flags
+func TestHistoryCommandDateFlagsWithJSON(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Create contexts
+	_, exitCode := runHistoryCommand(binary, testDir, "start", "json-date-test")
+	require.Equal(t, 0, exitCode, "start should succeed")
+
+	// Check history with --today and --json
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--today", "--json")
+
+	assert.Equal(t, 0, exitCode, "history --today --json should succeed: %s", stdout)
+
+	// Verify it's valid JSON
+	var result map[string]interface{}
+	err := json.Unmarshal([]byte(stdout), &result)
+	assert.NoError(t, err, "Output should be valid JSON")
+	assert.Equal(t, "history", result["command"], "Should have command field")
+}
