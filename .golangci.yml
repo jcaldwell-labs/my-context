@@ -86,6 +86,9 @@ linters:
       - path: internal/commands/
         linters:
           - gocyclo
+      - path: internal/filters/
+        linters:
+          - dupl
       - linters:
           - prealloc
         text: "Consider preallocating"
