@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
+	"github.com/jefferycaldwell/my-context-copilot/internal/filters"
 	"github.com/jefferycaldwell/my-context-copilot/internal/models"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
 	pkgmodels "github.com/jefferycaldwell/my-context-copilot/pkg/models"
@@ -201,13 +202,13 @@ func timelineFromDatabase(jsonOutput *bool, projectFilter string, period TimePer
 	// Get active context
 	activeContextName, _ := backend.GetActiveContext()
 
-	// Filter by period
-	dbContexts = filterDBContextsByPeriod(dbContexts, period)
-
-	// Filter by project if specified
+	// Apply filters using filter package
+	filter := filters.NewDBContextFilter(dbContexts).
+		ByPeriod(period.Start, period.End).(*filters.DBContextFilter)
 	if projectFilter != "" {
-		dbContexts = filterDBContextsByProject(dbContexts, projectFilter)
+		filter = filter.ByProject(projectFilter).(*filters.DBContextFilter)
 	}
+	dbContexts = filter.GetDBContexts()
 
 	// Build timeline
 	timeline := buildTimelineFromDBContexts(dbContexts, period, activeContextName)
@@ -292,16 +293,14 @@ Supports filtering by time period and project.`,
 			}
 			activeContextName := state.GetActiveContextName()
 
-			// Filter by period
-			contexts := filterContextsByPeriod(allContexts, period)
-
-			// Filter by project if specified
+			// Apply filters using filter package
+			filter := filters.NewFileContextFilter(allContexts).
+				ByPeriod(period.Start, period.End).(*filters.FileContextFilter)
 			if projectFilter != "" {
-				contexts = filterByProject(contexts, projectFilter)
+				filter = filter.ByProject(projectFilter).(*filters.FileContextFilter)
 			}
-
-			// Exclude archived
-			contexts = filterByArchiveStatus(contexts, false, false)
+			filter = filter.ByArchiveStatus(false, false).(*filters.FileContextFilter)
+			contexts := filter.GetFileContexts()
 
 			// Build timeline
 			timeline := buildTimelineFromFileContexts(contexts, period, activeContextName)
