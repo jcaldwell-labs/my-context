@@ -4,21 +4,16 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 )
 
-// getBinaryPath returns the path to the built binary
-func getBinaryPath() string {
-	root := getProjectRoot()
-	return filepath.Join(root, "bin", "my-context")
-}
-
 // TestFocusCommandIntegration tests the focus command end-to-end
 func TestFocusCommandIntegration(t *testing.T) {
+	// Build the test binary once for all subtests
+	binaryPath := buildTestBinary(t)
 	// Setup temporary directory for testing
 	tempDir := t.TempDir()
 	originalHome := os.Getenv("MY_CONTEXT_HOME")
@@ -46,7 +41,7 @@ func TestFocusCommandIntegration(t *testing.T) {
 		}
 
 		// Focus back to context-1
-		cmd := exec.Command(getBinaryPath(), "focus", "focus-test-1")
+		cmd := exec.Command(binaryPath, "focus", "focus-test-1")
 		cmd.Env = append(os.Environ(), "MY_CONTEXT_HOME="+tempDir)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
@@ -83,7 +78,7 @@ func TestFocusCommandIntegration(t *testing.T) {
 		core.StopContext()
 
 		// Focus should work like resume
-		cmd := exec.Command(getBinaryPath(), "focus", "focus-no-active")
+		cmd := exec.Command(binaryPath, "focus", "focus-no-active")
 		cmd.Env = append(os.Environ(), "MY_CONTEXT_HOME="+tempDir)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
@@ -110,7 +105,7 @@ func TestFocusCommandIntegration(t *testing.T) {
 		}
 
 		// Focus to the same context (should be no-op)
-		cmd := exec.Command(getBinaryPath(), "focus", "focus-already-active")
+		cmd := exec.Command(binaryPath, "focus", "focus-already-active")
 		cmd.Env = append(os.Environ(), "MY_CONTEXT_HOME="+tempDir)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
@@ -143,7 +138,7 @@ func TestFocusCommandIntegration(t *testing.T) {
 		}
 
 		// Try to focus on nonexistent context
-		cmd := exec.Command(getBinaryPath(), "focus", "nonexistent-context")
+		cmd := exec.Command(binaryPath, "focus", "nonexistent-context")
 		cmd.Env = append(os.Environ(), "MY_CONTEXT_HOME="+tempDir)
 		_, err = cmd.CombinedOutput()
 		if err == nil {
@@ -177,7 +172,7 @@ func TestFocusCommandIntegration(t *testing.T) {
 		}
 
 		// Focus back to context-1 with JSON output
-		cmd := exec.Command(getBinaryPath(), "focus", "focus-json-1", "--json")
+		cmd := exec.Command(binaryPath, "focus", "focus-json-1", "--json")
 		cmd.Env = append(os.Environ(), "MY_CONTEXT_HOME="+tempDir)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
@@ -231,7 +226,7 @@ func TestFocusCommandIntegration(t *testing.T) {
 		}
 
 		// Focus using short alias 'f'
-		cmd := exec.Command(getBinaryPath(), "f", "focus-alias-1")
+		cmd := exec.Command(binaryPath, "f", "focus-alias-1")
 		cmd.Env = append(os.Environ(), "MY_CONTEXT_HOME="+tempDir)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
