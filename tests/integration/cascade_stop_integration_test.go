@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/stretchr/testify/assert"
@@ -220,9 +219,4 @@ func TestCascadeStopJSON(t *testing.T) {
 		childrenList := stoppedChildren.([]interface{})
 		assert.GreaterOrEqual(t, len(childrenList), 1, "Should have stopped at least one child")
 	}
-}
-
-func getProjectRoot() string {
-	// Navigate up from tests/integration to project root
-	return "../../"
 }
