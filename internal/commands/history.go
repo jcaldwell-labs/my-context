@@ -15,7 +15,7 @@ const defaultHistoryLimit = 50
 func filterTransitionsByPeriod(transitions []*models.ContextTransition, period TimePeriod) []*models.ContextTransition {
 	var filtered []*models.ContextTransition
 	for _, t := range transitions {
-		if t.Timestamp.After(period.Start) && t.Timestamp.Before(period.End) {
+		if !t.Timestamp.Before(period.Start) && !t.Timestamp.After(period.End) {
 			filtered = append(filtered, t)
 		}
 	}

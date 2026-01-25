@@ -182,6 +182,37 @@ func TestFilterTransitionsByPeriodAllTypes(t *testing.T) {
 	assert.Equal(t, models.TransitionSwitch, filtered[2].TransitionType)
 }
 
+// TestFilterTransitionsByPeriodBoundaries tests that transitions at exact boundaries are included
+func TestFilterTransitionsByPeriodBoundaries(t *testing.T) {
+	// Test that transitions at exact start and end times are included
+	startTime := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+	endTime := time.Date(2026, time.January, 31, 23, 59, 59, 999999999, time.UTC)
+
+	ctx1 := "at-start"
+	ctx2 := "at-end"
+	ctx3 := "before-start"
+	ctx4 := "after-end"
+
+	transitions := []*models.ContextTransition{
+		{Timestamp: startTime, NewContext: &ctx1, TransitionType: models.TransitionStart},
+		{Timestamp: endTime, NewContext: &ctx2, TransitionType: models.TransitionStart},
+		{Timestamp: startTime.Add(-1 * time.Second), NewContext: &ctx3, TransitionType: models.TransitionStart},
+		{Timestamp: endTime.Add(1 * time.Second), NewContext: &ctx4, TransitionType: models.TransitionStart},
+	}
+
+	period := periodForTest{
+		Start: startTime,
+		End:   endTime,
+	}
+
+	filtered := filterTransitionsByPeriodForTest(transitions, period)
+
+	// Should include transitions at exact boundaries but not outside
+	assert.Len(t, filtered, 2)
+	assert.Equal(t, ctx1, *filtered[0].NewContext, "Should include transition at start boundary")
+	assert.Equal(t, ctx2, *filtered[1].NewContext, "Should include transition at end boundary")
+}
+
 // --- Test Helper Types ---
 
 type periodForTest struct {
@@ -194,7 +225,7 @@ type periodForTest struct {
 func filterTransitionsByPeriodForTest(transitions []*models.ContextTransition, period periodForTest) []*models.ContextTransition {
 	var filtered []*models.ContextTransition
 	for _, t := range transitions {
-		if t.Timestamp.After(period.Start) && t.Timestamp.Before(period.End) {
+		if !t.Timestamp.Before(period.Start) && !t.Timestamp.After(period.End) {
 			filtered = append(filtered, t)
 		}
 	}
