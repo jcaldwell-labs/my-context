@@ -18,8 +18,16 @@ func NewStopCmd(jsonOutput *bool) *cobra.Command {
 		Use:     "stop",
 		Aliases: []string{"p"},
 		Short:   "Stop the active context",
-		Long:    `Stop the currently active context without starting a new one.`,
-		Args:    cobra.NoArgs,
+		Long: `Stop the currently active context without starting a new one.
+
+If the active context has child contexts that are still active, a warning will be
+displayed by default. Use the --cascade flag to automatically stop all child
+contexts along with the parent.
+
+Examples:
+  my-context stop              # Stop active context, warn if children exist
+  my-context stop --cascade    # Stop active context and all its children`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Check if using database backend
 			if core.IsUsingDatabase() {
