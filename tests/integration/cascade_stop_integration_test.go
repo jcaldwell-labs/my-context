@@ -65,7 +65,7 @@ func TestCascadeStopWarning(t *testing.T) {
 	// Use CLI to resume parent
 	cmd := exec.Command("go", "run", "../../cmd/my-context/main.go", "resume", "parent")
 	cmd.Dir = tempDir
-	output, _ := cmd.CombinedOutput()
+	_, _ = cmd.CombinedOutput()
 	
 	// Now parent is active, stop it without cascade (should show warning)
 	cmd = exec.Command("go", "run", "../../cmd/my-context/main.go", "stop")
