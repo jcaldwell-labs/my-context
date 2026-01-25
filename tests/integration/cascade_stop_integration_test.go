@@ -39,30 +39,23 @@ func TestCascadeStopWarning(t *testing.T) {
 	// But we need to manually set them as active to test the warning
 	// Since the tool enforces single active context, we'll manually create the scenario
 	
-	// Load both children and mark them as active
-	child1Ctx, err := core.LoadContext("child1")
+	// Load both children WITH METADATA and mark them as active
+	// Using GetContextWithMetadata preserves the parent relationship
+	child1Ctx, _, _, _, err := core.GetContextWithMetadata("child1")
 	require.NoError(t, err)
 	child1Ctx.Status = "active"
 	child1Ctx.EndTime = nil
 	err = core.WriteJSON(core.GetMetaJSONPath("child1"), child1Ctx)
 	require.NoError(t, err)
 
-	child2Ctx, err := core.LoadContext("child2")
+	child2Ctx, _, _, _, err := core.GetContextWithMetadata("child2")
 	require.NoError(t, err)
 	child2Ctx.Status = "active"
 	child2Ctx.EndTime = nil
 	err = core.WriteJSON(core.GetMetaJSONPath("child2"), child2Ctx)
 	require.NoError(t, err)
 
-	// Resume parent (making it active)
-	_, _, err = core.CreateContext("parent")
-	if err == nil || !strings.Contains(err.Error(), "already exists") {
-		// If it doesn't error, it created a new context, resume the original
-		_, err = core.StopContext()
-		require.NoError(t, err)
-	}
-	
-	// Use CLI to resume parent
+	// Use CLI to resume parent (making it active)
 	cmd := exec.Command("go", "run", "./cmd/my-context/main.go", "resume", "parent")
 	cmd.Dir = getProjectRoot()
 	cmd.Env = append(os.Environ(), "MY_CONTEXT_HOME="+tempDir)
@@ -99,39 +92,34 @@ func TestCascadeStopWithFlag(t *testing.T) {
 	_, err = core.StopContext()
 	require.NoError(t, err)
 
-	// Create nested hierarchy: parent -> child1, child2 -> grandchild
+	// Create nested hierarchy: parent -> child1, child2; child1 -> grandchild
+	// Use GetContextWithMetadata to preserve parent relationships when modifying
+	
 	_, _, err = core.CreateContextWithMetadata("child1", "", "parent", nil)
 	require.NoError(t, err)
-	child1Ctx, _ := core.LoadContext("child1")
+	child1Ctx, _, _, _, _ := core.GetContextWithMetadata("child1")
 	child1Ctx.Status = "active"
 	child1Ctx.EndTime = nil
 	core.WriteJSON(core.GetMetaJSONPath("child1"), child1Ctx)
 	
 	_, _, err = core.CreateContextWithMetadata("child2", "", "parent", nil)
 	require.NoError(t, err)
-	child2Ctx, _ := core.LoadContext("child2")
+	child2Ctx, _, _, _, _ := core.GetContextWithMetadata("child2")
 	child2Ctx.Status = "active"
 	child2Ctx.EndTime = nil
 	core.WriteJSON(core.GetMetaJSONPath("child2"), child2Ctx)
 	
 	_, _, err = core.CreateContextWithMetadata("grandchild", "", "child1", nil)
 	require.NoError(t, err)
-	grandchildCtx, _ := core.LoadContext("grandchild")
+	grandchildCtx, _, _, _, _ := core.GetContextWithMetadata("grandchild")
 	grandchildCtx.Status = "active"
 	grandchildCtx.EndTime = nil
 	core.WriteJSON(core.GetMetaJSONPath("grandchild"), grandchildCtx)
 
-	// Make parent active
-	_, _, err = core.CreateContext("parent-active")
-	require.NoError(t, err)
-	err = core.SetParent("parent-active", "")
-	require.NoError(t, err)
-	// Actually, just load and set as active
-	parentCtx, err := core.LoadContext("parent")
-	require.NoError(t, err)
-	
-	// Set parent as active in state
+	// Make parent active (use GetContextWithMetadata to preserve metadata)
 	err = core.SetActiveContext("parent")
+	require.NoError(t, err)
+	parentCtx, _, _, _, err := core.GetContextWithMetadata("parent")
 	require.NoError(t, err)
 	parentCtx.Status = "active"
 	parentCtx.EndTime = nil
@@ -185,15 +173,16 @@ func TestCascadeStopJSON(t *testing.T) {
 
 	_, _, err = core.CreateContextWithMetadata("child1", "", "parent", nil)
 	require.NoError(t, err)
-	child1Ctx, _ := core.LoadContext("child1")
+	// Use GetContextWithMetadata to preserve parent relationship
+	child1Ctx, _, _, _, _ := core.GetContextWithMetadata("child1")
 	child1Ctx.Status = "active"
 	child1Ctx.EndTime = nil
 	core.WriteJSON(core.GetMetaJSONPath("child1"), child1Ctx)
 
-	// Make parent active
+	// Make parent active (use GetContextWithMetadata to preserve metadata)
 	err = core.SetActiveContext("parent")
 	require.NoError(t, err)
-	parentCtx, _ := core.LoadContext("parent")
+	parentCtx, _, _, _, _ := core.GetContextWithMetadata("parent")
 	parentCtx.Status = "active"
 	parentCtx.EndTime = nil
 	core.WriteJSON(core.GetMetaJSONPath("parent"), parentCtx)
