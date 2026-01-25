@@ -338,9 +338,9 @@ func resumeWithDatabaseBackend(args []string, useLast bool, jsonOutput *bool) er
 			now := time.Now()
 			ctx.Status = "stopped"
 			ctx.EndTime = &now
-			backend.UpdateContext(ctx)
+			_ = backend.UpdateContext(ctx)
 		}
-		backend.ClearActiveContext()
+		_ = backend.ClearActiveContext()
 	}
 
 	// Get the context
