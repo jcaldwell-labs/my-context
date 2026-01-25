@@ -4,9 +4,20 @@
 
 ## Current Version
 
-**v3.1.0** — Context Tags, Hierarchy, and Organization
+**v3.3.1** — Database Backend with Partitions
 
 ## Completed Sprints
+
+### Sprint 4 (v3.2.x - v3.3.x)
+- PostgreSQL database backend (`MY_CONTEXT_HOME=db`)
+- Partition support for project isolation (`db:project-name`)
+- Cross-partition queries (`--all-partitions`)
+- `partitions` command for partition management
+- `which` command shows backend info
+- Shell completions (bash/zsh/fish/powershell)
+- MCP server support (`mcp-server` command)
+- Stats command with date filters (`--today`, `--week`, `--month`, `--since`, `--until`)
+- Record command for clipboard monitoring
 
 ### Sprint 3 (v3.1.0)
 - Context tags and filtering (`--tag`, `--tags`)
@@ -30,17 +41,29 @@
 
 ## Planned Features
 
-### Near-term
+### Near-term (v3.4.x)
 
-**Database Backend (v4.x)**
-- PostgreSQL storage option for enterprise use
-- Instant search across all contexts
-- Multi-machine sync capability
+**Workflow Improvements**
+- Resume by index from list output (#41)
+- Focus command: stop + resume in one (#42)
+- Date filters for history command (#37)
+- Stale context detection and warnings (#96)
+- Cascade-stop for parent/child hierarchies (#97)
 
-**Team Features**
-- Shared context visibility
-- Context templates
-- Team activity dashboards
+**Developer Experience**
+- Pre-release validation script (#43)
+- Dependabot for security updates (#46)
+
+### Medium-term (v3.5.x+)
+
+**Code Quality**
+- Unit test coverage improvements (#89)
+- Consolidate duplicated filter logic (#30)
+- golangci-lint v2 migration (#67)
+
+**Features**
+- Import markdown notes (#29)
+- Timetracker integration docs (#95)
 
 ### Future Exploration
 
@@ -50,10 +73,14 @@
 - Git hooks library
 - Slack notifications
 
+**Team Features**
+- Shared context visibility
+- Context templates
+- Team activity dashboards
+
 **Advanced Workflows**
-- Context chaining (linked workflows)
-- Time tracking and reporting
 - AI-powered context summaries
+- Clawdbot/agent integration
 
 ## Contributing
 
