@@ -46,8 +46,7 @@ func TestNormalizePath(t *testing.T) {
 			
 			if runtime.GOOS == "windows" {
 				// On Windows, forward slashes should become backslashes
-				expectedWindows := tt.input
-				expectedWindows = filepath.FromSlash(tt.input)
+				expectedWindows := filepath.FromSlash(tt.input)
 				assert.Equal(t, expectedWindows, result)
 			} else {
 				// On Unix, backslashes should become forward slashes

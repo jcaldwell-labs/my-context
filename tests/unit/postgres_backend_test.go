@@ -277,7 +277,7 @@ func TestContextMetadataMarshaling(t *testing.T) {
 			assert.Equal(t, tt.metadata.Parent, unmarshaled.Parent)
 			if tt.metadata.Labels == nil {
 				// nil should unmarshal as nil or empty slice
-				assert.True(t, unmarshaled.Labels == nil || len(unmarshaled.Labels) == 0)
+				assert.True(t, len(unmarshaled.Labels) == 0)
 			} else {
 				assert.Equal(t, tt.metadata.Labels, unmarshaled.Labels)
 			}
