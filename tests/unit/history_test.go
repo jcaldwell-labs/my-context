@@ -21,18 +21,18 @@ func TestFilterTransitionsByPeriod(t *testing.T) {
 
 	transitions := []*models.ContextTransition{
 		{
-			Timestamp:  now.Add(-1 * time.Hour),
-			NewContext: &ctx1,
+			Timestamp:      now.Add(-1 * time.Hour),
+			NewContext:     &ctx1,
 			TransitionType: models.TransitionStart,
 		},
 		{
-			Timestamp:  yesterday,
-			NewContext: &ctx2,
+			Timestamp:      yesterday,
+			NewContext:     &ctx2,
 			TransitionType: models.TransitionStart,
 		},
 		{
-			Timestamp:  lastWeek,
-			NewContext: &ctx3,
+			Timestamp:      lastWeek,
+			NewContext:     &ctx3,
 			TransitionType: models.TransitionStart,
 		},
 	}
@@ -60,13 +60,13 @@ func TestFilterTransitionsByPeriodWeek(t *testing.T) {
 
 	transitions := []*models.ContextTransition{
 		{
-			Timestamp:  twoDaysAgo,
-			NewContext: &ctx1,
+			Timestamp:      twoDaysAgo,
+			NewContext:     &ctx1,
 			TransitionType: models.TransitionStart,
 		},
 		{
-			Timestamp:  lastMonth,
-			NewContext: &ctx2,
+			Timestamp:      lastMonth,
+			NewContext:     &ctx2,
 			TransitionType: models.TransitionStart,
 		},
 	}
