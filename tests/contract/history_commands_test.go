@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -232,4 +233,143 @@ func TestHistoryCommandLimitZero(t *testing.T) {
 
 	assert.Equal(t, 0, exitCode, "history with limit 0 should succeed: %s", stdout)
 	assert.Contains(t, stdout, "unlimited-test", "Should show context")
+}
+
+// TestHistoryCommandTodayFlag tests the --today flag
+func TestHistoryCommandTodayFlag(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Create a context today
+	_, exitCode := runHistoryCommand(binary, testDir, "start", "today-context")
+	require.Equal(t, 0, exitCode, "start should succeed")
+
+	// Test with --today flag
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--today")
+
+	assert.Equal(t, 0, exitCode, "history --today should succeed: %s", stdout)
+	assert.Contains(t, stdout, "today-context", "Should show today's context")
+}
+
+// TestHistoryCommandWeekFlag tests the --week flag
+func TestHistoryCommandWeekFlag(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Create a context this week
+	_, exitCode := runHistoryCommand(binary, testDir, "start", "week-context")
+	require.Equal(t, 0, exitCode, "start should succeed")
+
+	// Test with --week flag
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--week")
+
+	assert.Equal(t, 0, exitCode, "history --week should succeed: %s", stdout)
+	assert.Contains(t, stdout, "week-context", "Should show this week's context")
+}
+
+// TestHistoryCommandMonthFlag tests the --month flag
+func TestHistoryCommandMonthFlag(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Create a context this month
+	_, exitCode := runHistoryCommand(binary, testDir, "start", "month-context")
+	require.Equal(t, 0, exitCode, "start should succeed")
+
+	// Test with --month flag
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--month")
+
+	assert.Equal(t, 0, exitCode, "history --month should succeed: %s", stdout)
+	assert.Contains(t, stdout, "month-context", "Should show this month's context")
+}
+
+// TestHistoryCommandSinceFlag tests the --since flag
+func TestHistoryCommandSinceFlag(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Create a context
+	_, exitCode := runHistoryCommand(binary, testDir, "start", "since-test")
+	require.Equal(t, 0, exitCode, "start should succeed")
+
+	// Test with --since flag (use yesterday to ensure it includes today's context)
+	yesterday := time.Now().Add(-24 * time.Hour).Format("2006-01-02")
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--since", yesterday)
+
+	assert.Equal(t, 0, exitCode, "history --since should succeed: %s", stdout)
+	assert.Contains(t, stdout, "since-test", "Should show context since yesterday")
+}
+
+// TestHistoryCommandUntilFlag tests the --until flag
+func TestHistoryCommandUntilFlag(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Create a context
+	_, exitCode := runHistoryCommand(binary, testDir, "start", "until-test")
+	require.Equal(t, 0, exitCode, "start should succeed")
+
+	// Test with --until flag (use tomorrow to ensure it includes today's context)
+	tomorrow := time.Now().Add(24 * time.Hour).Format("2006-01-02")
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--until", tomorrow)
+
+	assert.Equal(t, 0, exitCode, "history --until should succeed: %s", stdout)
+	assert.Contains(t, stdout, "until-test", "Should show context until tomorrow")
+}
+
+// TestHistoryCommandSinceUntilFlags tests both --since and --until flags together
+func TestHistoryCommandSinceUntilFlags(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Create a context
+	_, exitCode := runHistoryCommand(binary, testDir, "start", "range-test")
+	require.Equal(t, 0, exitCode, "start should succeed")
+
+	// Test with both flags
+	yesterday := time.Now().Add(-24 * time.Hour).Format("2006-01-02")
+	tomorrow := time.Now().Add(24 * time.Hour).Format("2006-01-02")
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--since", yesterday, "--until", tomorrow)
+
+	assert.Equal(t, 0, exitCode, "history --since --until should succeed: %s", stdout)
+	assert.Contains(t, stdout, "range-test", "Should show context in date range")
+}
+
+// TestHistoryCommandInvalidSinceDate tests error handling for invalid --since date
+func TestHistoryCommandInvalidSinceDate(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Test with invalid date format
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--since", "invalid-date")
+
+	assert.NotEqual(t, 0, exitCode, "history with invalid --since should fail")
+	assert.Contains(t, stdout, "invalid --since date format", "Should show error message")
+}
+
+// TestHistoryCommandInvalidUntilDate tests error handling for invalid --until date
+func TestHistoryCommandInvalidUntilDate(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	// Test with invalid date format
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--until", "not-a-date")
+
+	assert.NotEqual(t, 0, exitCode, "history with invalid --until should fail")
+	assert.Contains(t, stdout, "invalid --until date format", "Should show error message")
+}
+
+// TestHistoryCommandDateFilterHelp tests that date filters appear in help
+func TestHistoryCommandDateFilterHelp(t *testing.T) {
+	binary := buildHistoryTestBinary(t)
+	testDir := t.TempDir()
+
+	stdout, exitCode := runHistoryCommand(binary, testDir, "history", "--help")
+
+	assert.Equal(t, 0, exitCode, "history --help should succeed")
+	assert.Contains(t, stdout, "--today", "Help should mention --today flag")
+	assert.Contains(t, stdout, "--week", "Help should mention --week flag")
+	assert.Contains(t, stdout, "--month", "Help should mention --month flag")
+	assert.Contains(t, stdout, "--since", "Help should mention --since flag")
+	assert.Contains(t, stdout, "--until", "Help should mention --until flag")
 }
