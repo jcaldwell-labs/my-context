@@ -72,10 +72,12 @@ fi
 # 6. Check CHANGELOG has entry for version
 if [ -n "$1" ]; then
   echo "Checking CHANGELOG entry..."
-  if ! grep -q "$1" CHANGELOG.md; then
-    echo -e "${YELLOW}⚠️  Warning: No CHANGELOG entry for $1${NC}"
-  else
+  # Extract version number without 'v' prefix (e.g., v3.2.5 -> 3.2.5)
+  VERSION_NUM="${1#v}"
+  if grep -q "\[$VERSION_NUM\]" CHANGELOG.md || grep -q "$1" CHANGELOG.md; then
     echo -e "${GREEN}✓ CHANGELOG entry exists${NC}"
+  else
+    echo -e "${YELLOW}⚠️  Warning: No CHANGELOG entry for $1 (checked [$VERSION_NUM] and $1)${NC}"
   fi
   echo ""
 fi
