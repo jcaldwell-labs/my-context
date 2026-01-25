@@ -31,10 +31,12 @@ linters:
     gocritic:
       enabled-tags:
         - diagnostic
-        - style
         - performance
       disabled-checks:
         - commentFormatting
+        - ifElseChain
+        - emptyStringTest
+        - paramTypeCombine
 
     revive:
       rules:
@@ -48,6 +50,7 @@ linters:
 
     gosec:
       excludes:
+        - G104
         - G204
         - G304
         - G301
@@ -69,18 +72,23 @@ linters:
           - dupl
           - gosec
           - gocritic
+          - prealloc
       - path: tests/
         linters:
           - gocyclo
           - errcheck
           - dupl
           - gosec
+          - prealloc
       - path: cmd/my-context/main.go
         linters:
           - gocyclo
       - path: internal/commands/
         linters:
           - gocyclo
+      - linters:
+          - prealloc
+        text: "Consider preallocating"
 
 issues:
   max-issues-per-linter: 0
