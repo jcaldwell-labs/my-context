@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/jefferycaldwell/my-context-copilot/internal/models"
@@ -105,12 +106,22 @@ func NewShowCmd(jsonOutput *bool) *cobra.Command {
 
 				// Output
 				if *jsonOutput {
-					data := map[string]interface{}{
-						"context":     dbCtx,
-						"notes":       notes,
-						"files":       files,
-						"touches":     touches,
-						"touch_count": dbCtx.TouchCount,
+					// Calculate stale information
+					lastActivity := core.GetLastActivityTime(context, notes, files, touches)
+					thresholds := core.GetStaleThresholds()
+					staleLevel := core.GetStaleLevel(lastActivity, thresholds)
+					isStale := core.IsStale(lastActivity, thresholds)
+					inactiveSince := time.Since(lastActivity).Hours()
+
+					data := output.ContextData{
+						Context:        dbCtx,
+						Notes:          notes,
+						Files:          files,
+						Touches:        touches,
+						IsStale:        isStale,
+						StaleLevel:     core.GetStaleLevelString(staleLevel),
+						LastActivity:   &lastActivity,
+						InactiveSinceH: inactiveSince,
 					}
 					jsonStr, err := output.FormatJSON("show", map[string]interface{}{"data": data})
 					if err != nil {
@@ -132,7 +143,23 @@ func NewShowCmd(jsonOutput *bool) *cobra.Command {
 
 					// Print header with partition and count
 					output.PrintContextHomeHeader(homeDisplay, contextCount)
-					fmt.Print(output.FormatContext(context, notes, files, touches))
+
+					// Calculate stale info for display
+					var staleInfo *output.StaleInfo
+					if context.Status == "active" {
+						lastActivity := core.GetLastActivityTime(context, notes, files, touches)
+						thresholds := core.GetStaleThresholds()
+						staleLevel := core.GetStaleLevel(lastActivity, thresholds)
+						staleInfo = &output.StaleInfo{
+							IsActive:          true,
+							LastActivity:      lastActivity,
+							StaleLevel:        core.GetStaleLevelString(staleLevel),
+							TimeSinceActivity: time.Since(lastActivity),
+							ContextStartTime:  context.StartTime,
+						}
+					}
+
+					fmt.Print(output.FormatContextWithStaleInfo(context, notes, files, touches, staleInfo))
 				}
 
 				return nil
@@ -180,13 +207,32 @@ func NewShowCmd(jsonOutput *bool) *cobra.Command {
 				return err
 			}
 
+			// Convert to internal context model for stale calculation
+			internalCtx := &models.Context{
+				Name:      context.Name,
+				StartTime: context.StartTime,
+				EndTime:   context.EndTime,
+				Status:    context.Status,
+			}
+
 			// Output
 			if *jsonOutput {
+				// Calculate stale information
+				lastActivity := core.GetLastActivityTime(internalCtx, notes, files, touches)
+				thresholds := core.GetStaleThresholds()
+				staleLevel := core.GetStaleLevel(lastActivity, thresholds)
+				isStale := core.IsStale(lastActivity, thresholds)
+				inactiveSince := time.Since(lastActivity).Hours()
+
 				data := output.ContextData{
-					Context: context,
-					Notes:   notes,
-					Files:   files,
-					Touches: touches,
+					Context:        context,
+					Notes:          notes,
+					Files:          files,
+					Touches:        touches,
+					IsStale:        isStale,
+					StaleLevel:     core.GetStaleLevelString(staleLevel),
+					LastActivity:   &lastActivity,
+					InactiveSinceH: inactiveSince,
 				}
 				jsonStr, err := output.FormatJSON("show", map[string]interface{}{"data": data})
 				if err != nil {
@@ -196,7 +242,23 @@ func NewShowCmd(jsonOutput *bool) *cobra.Command {
 			} else {
 				// Print context home header
 				output.PrintContextHomeHeader(core.GetContextHomeDisplay(), core.GetContextCount())
-				fmt.Print(output.FormatContext(context, notes, files, touches))
+
+				// Calculate stale info for display
+				var staleInfo *output.StaleInfo
+				if context.Status == "active" {
+					lastActivity := core.GetLastActivityTime(internalCtx, notes, files, touches)
+					thresholds := core.GetStaleThresholds()
+					staleLevel := core.GetStaleLevel(lastActivity, thresholds)
+					staleInfo = &output.StaleInfo{
+						IsActive:          true,
+						LastActivity:      lastActivity,
+						StaleLevel:        core.GetStaleLevelString(staleLevel),
+						TimeSinceActivity: time.Since(lastActivity),
+						ContextStartTime:  context.StartTime,
+					}
+				}
+
+				fmt.Print(output.FormatContextWithStaleInfo(context, notes, files, touches, staleInfo))
 			}
 
 			return nil

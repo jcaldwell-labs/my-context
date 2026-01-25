@@ -151,7 +151,55 @@ func formatActivitySection(touches []*models.TouchEvent) string {
 	return sb.String()
 }
 
-func FormatContext(ctx interface{}, notes []*models.Note, files []*models.FileAssociation, touches []*models.TouchEvent) string {
+// StaleInfo contains information about context staleness
+type StaleInfo struct {
+	IsActive         bool
+	LastActivity     time.Time
+	StaleLevel       string
+	TimeSinceActivity time.Duration
+	ContextStartTime time.Time
+}
+
+// formatStaleWarning formats a stale warning message if the context is stale
+func formatStaleWarning(staleInfo *StaleInfo) string {
+	if staleInfo == nil || !staleInfo.IsActive {
+		return ""
+	}
+
+	// Only show warning if at warn level or higher
+	if staleInfo.StaleLevel == "none" {
+		return ""
+	}
+
+	var sb strings.Builder
+
+	switch staleInfo.StaleLevel {
+	case "critical":
+		sb.WriteString(fmt.Sprintf("⚠️  CRITICAL: Context active for %s with no recent activity\n",
+			FormatDuration(time.Since(staleInfo.ContextStartTime))))
+		sb.WriteString(fmt.Sprintf("   Last activity: %s (%s ago)\n",
+			staleInfo.LastActivity.Format("2006-01-02 15:04:05"),
+			FormatDuration(staleInfo.TimeSinceActivity)))
+		sb.WriteString("   Consider stopping this context.\n\n")
+	case "stale":
+		sb.WriteString(fmt.Sprintf("⚠️  Warning: Context active for %s with no recent activity\n",
+			FormatDuration(time.Since(staleInfo.ContextStartTime))))
+		sb.WriteString(fmt.Sprintf("   Last activity: %s (%s ago)\n",
+			staleInfo.LastActivity.Format("2006-01-02 15:04:05"),
+			FormatDuration(staleInfo.TimeSinceActivity)))
+		sb.WriteString("\n")
+	case "warn":
+		sb.WriteString(fmt.Sprintf("⚠️  Warning: Context active for %s with no recent activity\n",
+			FormatDuration(time.Since(staleInfo.ContextStartTime))))
+		sb.WriteString(fmt.Sprintf("   Last activity: %s ago\n\n",
+			FormatDuration(staleInfo.TimeSinceActivity)))
+	}
+
+	return sb.String()
+}
+
+// FormatContextWithStaleInfo formats a context with stale information
+func FormatContextWithStaleInfo(ctx interface{}, notes []*models.Note, files []*models.FileAssociation, touches []*models.TouchEvent, staleInfo *StaleInfo) string {
 	var sb strings.Builder
 
 	// Extract context information
@@ -159,6 +207,12 @@ func FormatContext(ctx interface{}, notes []*models.Note, files []*models.FileAs
 	if err != nil {
 		sb.WriteString("Error: Unknown context type\n")
 		return sb.String()
+	}
+
+	// Add stale warning if applicable
+	staleWarning := formatStaleWarning(staleInfo)
+	if staleWarning != "" {
+		sb.WriteString(staleWarning)
 	}
 
 	// Format header
@@ -175,6 +229,11 @@ func FormatContext(ctx interface{}, notes []*models.Note, files []*models.FileAs
 	sb.WriteString(formatActivitySection(touches))
 
 	return sb.String()
+}
+
+// FormatContext formats a context without stale information (backwards compatibility)
+func FormatContext(ctx interface{}, notes []*models.Note, files []*models.FileAssociation, touches []*models.TouchEvent) string {
+	return FormatContextWithStaleInfo(ctx, notes, files, touches, nil)
 }
 
 // FormatContextList formats a list of contexts for human-readable output
