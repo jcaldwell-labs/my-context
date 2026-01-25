@@ -142,12 +142,45 @@ my-context list --project myapp
 my-context list --limit 5
 my-context list --search "auth"
 my-context list --archived
+my-context list --stale  # Show only stale contexts (inactive 8h+)
 ```
+
+**Stale Context Detection:**
+
+Automatically detects when active contexts have been inactive for extended periods:
+
+```bash
+# View context with stale warnings
+my-context show
+# ⚠️ Warning: Context active for 5h with no recent activity
+#    Last activity: 5h ago
+
+# List only stale contexts (inactive 8h+ by default)
+my-context list --stale
+
+# Configure thresholds via environment variables
+export MC_STALE_WARN_HOURS=4      # Show warning (default: 4h)
+export MC_STALE_HOURS=8            # Mark as stale (default: 8h)
+export MC_STALE_CRITICAL_HOURS=24  # Show critical warning (default: 24h)
+```
+
+**Warning Levels:**
+- **Warn** (4h): Shows warning message on `show` command
+- **Stale** (8h): Marked as stale, filterable with `--stale` flag
+- **Critical** (24h): Shows critical warning suggesting to stop context
+
+Last activity is calculated from the most recent:
+- Note addition
+- File association
+- Touch event
+
+Stopped contexts never show stale warnings.
 
 **JSON Output:**
 
 ```bash
 my-context show --json | jq .
+# Includes: is_stale, stale_level, last_activity, inactive_since_hours
 ```
 
 ## Use Cases
