@@ -119,6 +119,8 @@ func parseMarkdownNotes(content string, preserveTimestamps bool) []*intmodels.No
 	lines := strings.Split(content, "\n")
 	var currentTimestamp time.Time
 	var currentNoteLines []string
+	foundTimestampHeader := false
+	seenAnyHeader := false
 	
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -160,23 +162,48 @@ func parseMarkdownNotes(content string, preserveTimestamps bool) []*intmodels.No
 					}
 				}
 			}
+			foundTimestampHeader = true
+			seenAnyHeader = true
 			continue
 		}
 		
-		// Skip markdown headers that aren't timestamp headers
+		// Skip ALL markdown headers (not just timestamp headers)
 		if strings.HasPrefix(line, "#") {
+			// If we had a timestamp header before this non-timestamp header,
+			// save the accumulated notes
+			if foundTimestampHeader && len(currentNoteLines) > 0 {
+				noteText := strings.Join(currentNoteLines, "\n")
+				timestamp := currentTimestamp
+				if timestamp.IsZero() || !preserveTimestamps {
+					timestamp = time.Now()
+				}
+				notes = append(notes, &intmodels.Note{
+					Timestamp:   timestamp,
+					TextContent: noteText,
+				})
+				currentNoteLines = []string{}
+			}
+			foundTimestampHeader = false
+			seenAnyHeader = true
 			continue
 		}
 		
-		// Remove markdown list markers (-, *, +)
-		line = strings.TrimPrefix(line, "- ")
-		line = strings.TrimPrefix(line, "* ")
-		line = strings.TrimPrefix(line, "+ ")
-		line = strings.TrimSpace(line)
+		// Only collect text if:
+		// 1. We've seen a timestamp header and are currently in a timestamp section, OR
+		// 2. We haven't seen any headers at all (plain text mode)
+		shouldCollectText := foundTimestampHeader || !seenAnyHeader
 		
-		// Add to current note
-		if line != "" {
-			currentNoteLines = append(currentNoteLines, line)
+		if shouldCollectText {
+			// Remove markdown list markers (-, *, +)
+			line = strings.TrimPrefix(line, "- ")
+			line = strings.TrimPrefix(line, "* ")
+			line = strings.TrimPrefix(line, "+ ")
+			line = strings.TrimSpace(line)
+			
+			// Add to current note
+			if line != "" {
+				currentNoteLines = append(currentNoteLines, line)
+			}
 		}
 	}
 	
