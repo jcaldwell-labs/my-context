@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"strings"
@@ -308,7 +307,7 @@ func appendNoteToLog(contextName string, note *intmodels.Note) error {
 	notesLogPath := core.GetNotesLogPath(contextName)
 	
 	// Open file for append
-	file, err := os.OpenFile(notesLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	file, err := os.OpenFile(notesLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open notes log: %w", err)
 	}
@@ -316,7 +315,7 @@ func appendNoteToLog(contextName string, note *intmodels.Note) error {
 
 	// Write note as log line
 	line := note.ToLogLine() + "\n"
-	if _, err := io.WriteString(file, line); err != nil {
+	if _, err := file.WriteString(line); err != nil {
 		return fmt.Errorf("failed to write note: %w", err)
 	}
 
