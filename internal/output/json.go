@@ -75,6 +75,7 @@ type ListData struct {
 
 // ContextSummary represents a context summary for list output
 type ContextSummary struct {
+	Index           int        `json:"index"`
 	Name            string     `json:"name"`
 	StartTime       time.Time  `json:"start_time"`
 	EndTime         *time.Time `json:"end_time,omitempty"`

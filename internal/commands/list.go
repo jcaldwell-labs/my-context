@@ -14,12 +14,13 @@ import (
 // buildContextSummaries builds context summaries for JSON output (file-based mode)
 func buildContextSummaries(contexts []*models.Context) []*output.ContextSummary {
 	summaries := make([]*output.ContextSummary, 0, len(contexts))
-	for _, ctx := range contexts {
+	for i, ctx := range contexts {
 		notesLines, _ := core.ReadLog(core.GetNotesLogPath(ctx.Name))
 		filesLines, _ := core.ReadLog(core.GetFilesLogPath(ctx.Name))
 		touchesLines, _ := core.ReadLog(core.GetTouchLogPath(ctx.Name))
 
 		summary := &output.ContextSummary{
+			Index:           i + 1,
 			Name:            ctx.Name,
 			StartTime:       ctx.StartTime,
 			EndTime:         ctx.EndTime,
@@ -48,8 +49,9 @@ func convertDBContextToInternal(dbCtx *pkgmodels.ContextWithMetadata) *models.Co
 // buildContextSummariesFromDB builds context summaries from database models
 func buildContextSummariesFromDB(dbContexts []*pkgmodels.ContextWithMetadata) []*output.ContextSummary {
 	summaries := make([]*output.ContextSummary, 0, len(dbContexts))
-	for _, ctx := range dbContexts {
+	for i, ctx := range dbContexts {
 		summary := &output.ContextSummary{
+			Index:           i + 1,
 			Name:            ctx.Name,
 			StartTime:       ctx.StartTime,
 			EndTime:         ctx.EndTime,
