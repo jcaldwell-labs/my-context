@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
+	"github.com/jefferycaldwell/my-context-copilot/internal/filters"
 	"github.com/jefferycaldwell/my-context-copilot/internal/models"
 	"github.com/spf13/cobra"
 )
@@ -197,47 +198,21 @@ func collectContextsForBulkArchive() ([]*models.Context, error) {
 		}
 	}
 
-	// Apply pattern filter if specified
+	// Apply filters using filter package
+	filter := filters.NewFileContextFilter(contexts)
 	if archivePattern != "" {
-		contexts = filterContextsByPattern(contexts, archivePattern)
+		filter = filter.ByPattern(archivePattern).(*filters.FileContextFilter)
 	}
-
-	// Apply date filter if specified
 	if archiveCompletedBefore != "" {
 		beforeTime, err := ParseDateString(archiveCompletedBefore)
 		if err != nil {
 			return nil, fmt.Errorf("invalid date format: %w", err)
 		}
-		contexts = filterContextsByStopDate(contexts, beforeTime)
+		filter = filter.ByStopDate(beforeTime).(*filters.FileContextFilter)
 	}
+	contexts = filter.GetFileContexts()
 
 	return contexts, nil
-}
-
-// filterContextsByPattern filters contexts using glob-style pattern matching
-func filterContextsByPattern(contexts []*models.Context, pattern string) []*models.Context {
-	// Reuse the pattern matching logic from resume command
-	matches := make([]*models.Context, 0, len(contexts))
-	patternParts := strings.Split(pattern, "*")
-
-	for _, ctx := range contexts {
-		if core.MatchesPattern(ctx.Name, patternParts) {
-			matches = append(matches, ctx)
-		}
-	}
-
-	return matches
-}
-
-// filterContextsByStopDate filters contexts stopped before the given time
-func filterContextsByStopDate(contexts []*models.Context, before time.Time) []*models.Context {
-	var filtered []*models.Context
-	for _, ctx := range contexts {
-		if ctx.EndTime != nil && ctx.EndTime.Before(before) {
-			filtered = append(filtered, ctx)
-		}
-	}
-	return filtered
 }
 
 // ParseDateString parses a YYYY-MM-DD date string and returns end of day in local timezone.

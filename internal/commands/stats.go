@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
+	"github.com/jefferycaldwell/my-context-copilot/internal/filters"
 	"github.com/jefferycaldwell/my-context-copilot/internal/models"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
 	pkgmodels "github.com/jefferycaldwell/my-context-copilot/pkg/models"
@@ -118,28 +119,6 @@ func calculatePeriod(today, week, month bool, since, until string) (TimePeriod, 
 	}
 
 	return period, nil
-}
-
-// filterByPeriod filters contexts by time period
-func filterContextsByPeriod(contexts []*models.Context, period TimePeriod) []*models.Context {
-	var filtered []*models.Context
-	for _, ctx := range contexts {
-		if ctx.StartTime.After(period.Start) && ctx.StartTime.Before(period.End) {
-			filtered = append(filtered, ctx)
-		}
-	}
-	return filtered
-}
-
-// filterDBContextsByPeriod filters database contexts by time period
-func filterDBContextsByPeriod(contexts []*pkgmodels.ContextWithMetadata, period TimePeriod) []*pkgmodels.ContextWithMetadata {
-	var filtered []*pkgmodels.ContextWithMetadata
-	for _, ctx := range contexts {
-		if ctx.StartTime.After(period.Start) && ctx.StartTime.Before(period.End) {
-			filtered = append(filtered, ctx)
-		}
-	}
-	return filtered
 }
 
 // statsContextItem provides a common interface for aggregating stats
@@ -345,13 +324,13 @@ func statsFromDatabase(jsonOutput *bool, projectFilter string, period TimePeriod
 	// Get active context
 	activeContextName, _ := backend.GetActiveContext()
 
-	// Filter by period
-	dbContexts = filterDBContextsByPeriod(dbContexts, period)
-
-	// Filter by project if specified
+	// Apply filters using filter package
+	filter := filters.NewDBContextFilter(dbContexts).
+		ByPeriod(period.Start, period.End).(*filters.DBContextFilter)
 	if projectFilter != "" {
-		dbContexts = filterDBContextsByProject(dbContexts, projectFilter)
+		filter = filter.ByProject(projectFilter).(*filters.DBContextFilter)
 	}
+	dbContexts = filter.GetDBContexts()
 
 	// Aggregate stats
 	stats := aggregateDBStats(dbContexts, period, activeContextName)
@@ -430,16 +409,14 @@ Supports filtering by time period and project.`,
 			}
 			activeContextName := state.GetActiveContextName()
 
-			// Filter by period
-			contexts := filterContextsByPeriod(allContexts, period)
-
-			// Filter by project if specified
+			// Apply filters using filter package
+			filter := filters.NewFileContextFilter(allContexts).
+				ByPeriod(period.Start, period.End).(*filters.FileContextFilter)
 			if projectFilter != "" {
-				contexts = filterByProject(contexts, projectFilter)
+				filter = filter.ByProject(projectFilter).(*filters.FileContextFilter)
 			}
-
-			// Exclude archived
-			contexts = filterByArchiveStatus(contexts, false, false)
+			filter = filter.ByArchiveStatus(false, false).(*filters.FileContextFilter)
+			contexts := filter.GetFileContexts()
 
 			// Aggregate stats
 			stats := aggregateStats(contexts, period, activeContextName)
