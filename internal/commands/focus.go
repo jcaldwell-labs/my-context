@@ -34,7 +34,7 @@ func NewFocusCmd(jsonOutput *bool) *cobra.Command {
 // focusWithFileBackend handles focus command with file-based storage
 func focusWithFileBackend(args []string, jsonOutput *bool) error {
 	pattern := args[0]
-	
+
 	// Check if target is the currently active context first
 	state, err := core.GetActiveContext()
 	if err != nil {
@@ -60,7 +60,7 @@ func focusWithFileBackend(args []string, jsonOutput *bool) error {
 		}
 		return nil
 	}
-	
+
 	// Find the target context to focus on (from stopped contexts)
 	targetContext, err := findTargetContext(args, false)
 	if err != nil {
@@ -97,11 +97,11 @@ func focusWithFileBackend(args []string, jsonOutput *bool) error {
 		}
 		return fmt.Errorf("failed to read target context metadata: %w", err)
 	}
-	
+
 	// Clear end time and set to active
 	contextMeta.EndTime = nil
 	contextMeta.Status = "active"
-	
+
 	if err := core.WriteJSON(metaPath, &contextMeta); err != nil {
 		if *jsonOutput {
 			jsonStr, _ := output.FormatJSONError("focus", 2, fmt.Sprintf("failed to update target context metadata: %v", err))
@@ -124,10 +124,10 @@ func focusWithFileBackend(args []string, jsonOutput *bool) error {
 	// Log the transition
 	now := time.Now()
 	transition := &models.ContextTransition{
-		Timestamp:      now,
+		Timestamp:       now,
 		PreviousContext: getContextNamePointer(stoppedContext),
-		NewContext:     &targetContext.Name,
-		TransitionType: models.TransitionStart,
+		NewContext:      &targetContext.Name,
+		TransitionType:  models.TransitionStart,
 	}
 
 	if err := core.AppendLog(core.GetTransitionsLogPath(), transition.ToLogLine()); err != nil {
