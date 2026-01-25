@@ -26,7 +26,7 @@ linters:
     - dupl           # Code duplication
     - prealloc       # Slice preallocation
 
-linters-settings:
+settings:
   gocyclo:
     min-complexity: 15
 
