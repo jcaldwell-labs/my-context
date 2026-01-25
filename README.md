@@ -228,22 +228,41 @@ my-context list --all-partitions
 
 **When to use database backend:**
 
-| Use Case         | File Backend   | Database Backend  |
-| ---------------- | -------------- | ----------------- |
-| Single developer | ✅ Recommended | Works             |
-| Team sharing     | ❌ Manual sync | ✅ Recommended    |
-| 100+ contexts    | Slower         | ✅ 10-400x faster |
-| Backup/restore   | File copy      | pg_dump           |
-| Cross-machine    | ❌ Manual      | ✅ Built-in       |
+| Use Case          | File Backend   | Database Backend  |
+| ----------------- | -------------- | ----------------- |
+| Single developer  | ✅ Recommended | Works             |
+| Team sharing      | ❌ Manual sync | ✅ Recommended    |
+| 100+ contexts     | Slower         | ✅ 10-400x faster |
+| Backup/restore    | File copy      | pg_dump           |
+| Cross-machine     | ❌ Manual      | ✅ Built-in       |
+| External tool API | ❌ Not available | ✅ Direct SQL access |
 
 **Migration:** Existing file-based contexts remain in `~/.my-context/`. Database mode creates new contexts in PostgreSQL. There's no automatic migration—use `export` to move contexts if needed.
+
+**External Integrations:** The PostgreSQL backend enables external tools to read/write my-context data directly. See [External Integrations](docs/guides/EXTERNAL-INTEGRATIONS.md) for details on integrating with tools like TimeTracker.
 
 ## Documentation
 
 - **[Getting Started Guide](docs/guides/GETTING-STARTED.md)** — Full installation and first steps
 - **[Triggers Tutorial](docs/tutorials/TRIGGERS-TUTORIAL.md)** — Automation with signals and watches
 - **[Troubleshooting](docs/guides/TROUBLESHOOTING.md)** — Common issues and solutions
+- **[External Integrations](docs/guides/EXTERNAL-INTEGRATIONS.md)** — Third-party tools and database integrations
 - **[CLAUDE.md](CLAUDE.md)** — Architecture and development guide
+
+## External Integrations
+
+My-context supports external tool integrations through the PostgreSQL database backend. External tools can read/write contexts, notes, and files directly to the shared database.
+
+**Known Integrations:**
+
+- **[TimeTracker](docs/guides/EXTERNAL-INTEGRATIONS.md#timetracker-integration)** — C/ncurses TUI for time tracking with bidirectional sync via `tt-context-bridge` script
+
+**Key Features:**
+- Direct PostgreSQL access for performance
+- Extended metadata support via `note_type` and `tags` columns
+- Concurrent write handling via PostgreSQL row-level locking
+
+**Important:** External integrations bypass my-context validation. See the [External Integrations Guide](docs/guides/EXTERNAL-INTEGRATIONS.md) for schema coordination requirements.
 
 ## Comparison
 
