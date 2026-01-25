@@ -37,6 +37,11 @@ func findTargetContext(args []string, useLast bool) (*models.Context, error) {
 			return nil, fmt.Errorf("failed to list contexts: %w", err)
 		}
 
+		// Check if there are any contexts
+		if len(allContexts) == 0 {
+			return nil, fmt.Errorf("no contexts available to resume")
+		}
+
 		// Validate index range (1-based indexing)
 		if index < 1 || index > len(allContexts) {
 			return nil, fmt.Errorf("index %d is out of range (valid range: 1-%d)", index, len(allContexts))
@@ -296,6 +301,17 @@ func resumeWithDatabaseBackend(args []string, useLast bool, jsonOutput *bool) er
 					return nil
 				}
 				return fmt.Errorf("failed to list contexts: %w", err)
+			}
+
+			// Check if there are any contexts
+			if len(allContexts) == 0 {
+				errMsg := "no contexts available to resume"
+				if *jsonOutput {
+					jsonStr, _ := output.FormatJSONError("resume", 1, errMsg)
+					fmt.Print(jsonStr)
+					return nil
+				}
+				return errors.New(errMsg)
 			}
 
 			// Validate index range (1-based indexing)

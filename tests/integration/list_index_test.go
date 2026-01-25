@@ -11,13 +11,10 @@ func TestListShowsIndexNumbers(t *testing.T) {
 	testDir := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, testDir)
 
-	// Create 3 contexts
+	// Create 3 contexts (createTestContext stops context after creation)
 	createTestContext(t, "ctx1")
-	runCommand("stop")
 	createTestContext(t, "ctx2")
-	runCommand("stop")
 	createTestContext(t, "ctx3")
-	runCommand("stop")
 
 	// Execute: List command
 	output, err := runCommandWithOutput("list")
@@ -42,11 +39,9 @@ func TestListJSONContainsIndex(t *testing.T) {
 	testDir := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, testDir)
 
-	// Create 2 contexts
+	// Create 2 contexts (createTestContext stops context after creation)
 	createTestContext(t, "ctx1")
-	runCommand("stop")
 	createTestContext(t, "ctx2")
-	runCommand("stop")
 
 	// Execute: List with JSON output
 	output, err := runCommandWithOutput("list", "--json")

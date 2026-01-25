@@ -10,13 +10,10 @@ func TestResumeByIndex(t *testing.T) {
 	testDir := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, testDir)
 
-	// Create 3 stopped contexts
+	// Create 3 stopped contexts (createTestContext stops context after creation)
 	createTestContext(t, "ctx1")
-	runCommand("stop")
 	createTestContext(t, "ctx2")
-	runCommand("stop")
 	createTestContext(t, "ctx3")
-	runCommand("stop")
 
 	// Execute: Resume context at index 2
 	output, err := runCommandWithOutput("resume", "2")
@@ -41,13 +38,10 @@ func TestResumeByIndexOutOfRange(t *testing.T) {
 	testDir := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, testDir)
 
-	// Create 3 contexts
+	// Create 3 contexts (createTestContext stops context after creation)
 	createTestContext(t, "ctx1")
-	runCommand("stop")
 	createTestContext(t, "ctx2")
-	runCommand("stop")
 	createTestContext(t, "ctx3")
-	runCommand("stop")
 
 	// Execute: Resume with index 5 (out of range)
 	output, err := runCommandWithOutput("resume", "5")
@@ -64,8 +58,8 @@ func TestResumeByIndexOutOfRange(t *testing.T) {
 	}
 }
 
-// TestResumeByIndexAlreadyActive tests that resume can switch from active context
-func TestResumeByIndexAlreadyActive(t *testing.T) {
+// TestResumeByIndexRejectsResumeAlreadyActive tests that resume rejects attempts to resume an already-active context
+func TestResumeByIndexRejectsResumeAlreadyActive(t *testing.T) {
 	testDir := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, testDir)
 
