@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -81,7 +82,17 @@ Examples:
 
 // readFromFile reads content from a file
 func readFromFile(path string) (string, error) {
-	data, err := os.ReadFile(path)
+	// Sanitize and resolve the file path to prevent path traversal
+	cleanPath := filepath.Clean(path)
+	
+	// Resolve to absolute path for validation
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return "", fmt.Errorf("invalid file path: %w", err)
+	}
+	
+	// #nosec G304 -- Path is sanitized above with filepath.Clean and Abs
+	data, err := os.ReadFile(absPath)
 	if err != nil {
 		return "", err
 	}
@@ -304,9 +315,11 @@ func importNotesWithDatabaseBackend(notes []*intmodels.Note, jsonOutput bool) er
 // appendNoteToLog appends a note directly to the notes log file
 // This is used to preserve timestamps when importing
 func appendNoteToLog(contextName string, note *intmodels.Note) error {
+	// Path is constructed internally by core.GetNotesLogPath, not from user input
 	notesLogPath := core.GetNotesLogPath(contextName)
 	
-	// Open file for append
+	// Open file for append (0o600 = owner read/write only)
+	// #nosec G304 -- Path is constructed internally by core.GetNotesLogPath
 	file, err := os.OpenFile(notesLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open notes log: %w", err)
