@@ -32,7 +32,7 @@ func TestFilterTransitionsByPeriodToday(t *testing.T) {
 
 	// Period: only today
 	y, m, d := now.Date()
-	period := timePeriodForTest{
+	period := historyTimePeriodForTest{
 		Start: time.Date(y, m, d, 0, 0, 0, 0, now.Location()),
 		End:   now,
 		Label: "Today",
@@ -56,7 +56,7 @@ func TestFilterTransitionsByPeriodEmpty(t *testing.T) {
 
 	// Period: only today
 	y, m, d := now.Date()
-	period := timePeriodForTest{
+	period := historyTimePeriodForTest{
 		Start: time.Date(y, m, d, 0, 0, 0, 0, now.Location()),
 		End:   now,
 		Label: "Today",
@@ -86,7 +86,7 @@ func TestFilterTransitionsByPeriodWeek(t *testing.T) {
 		weekday = 7 // Sunday = 7
 	}
 	daysBack := weekday - 1
-	period := timePeriodForTest{
+	period := historyTimePeriodForTest{
 		Start: time.Date(y, m, d-daysBack, 0, 0, 0, 0, now.Location()),
 		End:   now,
 		Label: "This Week",
@@ -115,7 +115,7 @@ func TestFilterTransitionsByPeriodCustomRange(t *testing.T) {
 	}
 
 	// Period: January 2025
-	period := timePeriodForTest{
+	period := historyTimePeriodForTest{
 		Start: start,
 		End:   end,
 		Label: "January 2025",
@@ -141,7 +141,7 @@ func TestFilterTransitionsByPeriodAllTime(t *testing.T) {
 	}
 
 	// Period: all time (end is slightly in the future to include "now")
-	period := timePeriodForTest{
+	period := historyTimePeriodForTest{
 		Start: time.Unix(0, 0),
 		End:   now.Add(1 * time.Hour),
 		Label: "All Time",
@@ -165,7 +165,7 @@ func TestFilterTransitionsByPeriodBoundaryConditions(t *testing.T) {
 		createTestTransition(end.Add(-1*time.Second), models.TransitionStop),   // Just before end - should be included
 	}
 
-	period := timePeriodForTest{
+	period := historyTimePeriodForTest{
 		Start: start,
 		End:   end,
 		Label: "January 2025",
@@ -179,15 +179,15 @@ func TestFilterTransitionsByPeriodBoundaryConditions(t *testing.T) {
 
 // --- Test Helper Functions ---
 
-// timePeriodForTest mirrors the TimePeriod type from commands package
-type timePeriodForTest struct {
+// historyTimePeriodForTest mirrors the TimePeriod type from commands package
+type historyTimePeriodForTest struct {
 	Start time.Time
 	End   time.Time
 	Label string
 }
 
 // filterTransitionsByPeriodForHistory mimics the actual implementation for testing
-func filterTransitionsByPeriodForHistory(transitions []*models.ContextTransition, period timePeriodForTest) []*models.ContextTransition {
+func filterTransitionsByPeriodForHistory(transitions []*models.ContextTransition, period historyTimePeriodForTest) []*models.ContextTransition {
 	var filtered []*models.ContextTransition
 	for _, t := range transitions {
 		if t.Timestamp.After(period.Start) && t.Timestamp.Before(period.End) {
