@@ -71,7 +71,7 @@ func TestCascadeStopWarning(t *testing.T) {
 	cmd = exec.Command("go", "run", "../../cmd/my-context/main.go", "stop")
 	cmd.Dir = getProjectRoot()
 	cmd.Env = append(os.Environ(), "MY_CONTEXT_HOME="+tempDir)
-	output, err = cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
 	require.NoError(t, err)
 
 	outputStr := string(output)
