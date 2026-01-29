@@ -47,6 +47,7 @@ func init() {
 	rootCmd.AddCommand(commands.NewListCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewHistoryCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewExportCmd(&jsonOutput))
+	rootCmd.AddCommand(commands.NewImportCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewArchiveCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewDeleteCmd(&jsonOutput))
 	rootCmd.AddCommand(commands.NewTagCmd(&jsonOutput))
