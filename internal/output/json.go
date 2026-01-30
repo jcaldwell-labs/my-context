@@ -41,10 +41,12 @@ type StartData struct {
 
 // StopData represents stop command output data
 type StopData struct {
-	ContextName     string    `json:"context_name"`
-	StartTime       time.Time `json:"start_time"`
-	EndTime         time.Time `json:"end_time"`
-	DurationSeconds int       `json:"duration_seconds"`
+	ContextName       string    `json:"context_name"`
+	StartTime         time.Time `json:"start_time"`
+	EndTime           time.Time `json:"end_time"`
+	DurationSeconds   int       `json:"duration_seconds"`
+	StoppedChildren   []string  `json:"stopped_children,omitempty"`
+	ActiveChildrenCount int     `json:"active_children_count,omitempty"`
 }
 
 // NoteData represents note command output data

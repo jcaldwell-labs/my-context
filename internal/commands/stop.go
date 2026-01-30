@@ -12,12 +12,22 @@ import (
 )
 
 func NewStopCmd(jsonOutput *bool) *cobra.Command {
+	var cascade bool
+	
 	cmd := &cobra.Command{
 		Use:     "stop",
 		Aliases: []string{"p"},
 		Short:   "Stop the active context",
-		Long:    `Stop the currently active context without starting a new one.`,
-		Args:    cobra.NoArgs,
+		Long: `Stop the currently active context without starting a new one.
+
+If the active context has child contexts that are still active, a warning will be
+displayed by default. Use the --cascade flag to automatically stop all child
+contexts along with the parent.
+
+Examples:
+  my-context stop              # Stop active context, warn if children exist
+  my-context stop --cascade    # Stop active context and all its children`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Check if using database backend
 			if core.IsUsingDatabase() {
@@ -49,7 +59,73 @@ func NewStopCmd(jsonOutput *bool) *cobra.Command {
 				// Get context details
 				dbCtx, _ := backend.GetContext(contextName)
 
-				// Update context to stopped
+				// Check for active children
+				activeChildren, err := core.GetActiveChildrenDB(backend, contextName)
+				if err != nil {
+					activeChildren = []string{} // Continue even if we can't get children
+				}
+
+				var stoppedChildren []string
+				var warningShown bool
+
+				// Handle children based on cascade flag
+				if len(activeChildren) > 0 && !cascade {
+					// Warning mode: show warning but don't stop children
+					if !*jsonOutput {
+						fmt.Printf("⚠️  Warning: %d active child context(s) will remain active:\n", len(activeChildren))
+						for _, child := range activeChildren {
+							childCtx, _ := backend.GetContext(child)
+							if childCtx != nil {
+								duration := time.Since(childCtx.StartTime)
+								fmt.Printf("  - %s (active, %s)\n", child, output.FormatDuration(duration))
+							}
+						}
+						fmt.Printf("\nUse --cascade to stop them along with the parent.\n\n")
+					}
+					warningShown = true
+				} else if len(activeChildren) > 0 && cascade {
+					// Cascade mode: stop all descendants (children, grandchildren, etc.)
+					allDescendants, err := core.GetAllDescendantsDB(backend, contextName)
+					if err != nil {
+						if *jsonOutput {
+							jsonStr, _ := output.FormatJSONError("stop", 2, fmt.Sprintf("failed to get descendants: %v", err))
+							fmt.Print(jsonStr)
+							return nil
+						}
+						return fmt.Errorf("failed to get descendants: %w", err)
+					}
+
+					endTime := time.Now()
+
+					// Stop descendants in reverse order (leaves first, then parents)
+					for i := len(allDescendants) - 1; i >= 0; i-- {
+						descendantName := allDescendants[i]
+						descendantCtx, err := backend.GetContext(descendantName)
+						if err != nil || descendantCtx.Status != "active" {
+							continue // Skip if not found or not active
+						}
+
+						descendantCtx.Status = "stopped"
+						descendantCtx.EndTime = &endTime
+
+						if err := backend.UpdateContext(descendantCtx); err != nil {
+							// Log error but continue with other children
+							if !*jsonOutput {
+								fmt.Fprintf(cmd.ErrOrStderr(), "Warning: Failed to stop %s: %v\n", descendantName, err)
+							}
+							continue
+						}
+
+						stoppedChildren = append(stoppedChildren, descendantName)
+
+						if !*jsonOutput {
+							duration := endTime.Sub(descendantCtx.StartTime)
+							fmt.Printf("✓ Stopped: %s (%s)\n", descendantName, output.FormatDuration(duration))
+						}
+					}
+				}
+
+				// Update parent context to stopped
 				endTime := time.Now()
 				dbCtx.Status = "stopped"
 				dbCtx.EndTime = &endTime
@@ -83,7 +159,7 @@ func NewStopCmd(jsonOutput *bool) *cobra.Command {
 					Status:    "stopped",
 				}
 
-				// Output (simplified, skipping lifecycle guidance for database backend)
+				// Output
 				if *jsonOutput {
 					durationSeconds := int(context.Duration().Seconds())
 					data := output.StopData{
@@ -92,10 +168,22 @@ func NewStopCmd(jsonOutput *bool) *cobra.Command {
 						EndTime:         endTime,
 						DurationSeconds: durationSeconds,
 					}
-					jsonStr, _ := output.FormatJSON("stop", map[string]interface{}{"data": data})
-					fmt.Print(jsonStr)
+					if len(stoppedChildren) > 0 {
+						data.StoppedChildren = stoppedChildren
+					}
+					if warningShown {
+						data.ActiveChildrenCount = len(activeChildren)
+						jsonStr, _ := output.FormatJSON("stop", map[string]interface{}{
+							"data":    data,
+							"warning": fmt.Sprintf("%d active child context(s) will remain active. Use --cascade to stop them.", len(activeChildren)),
+						})
+						fmt.Print(jsonStr)
+					} else {
+						jsonStr, _ := output.FormatJSON("stop", map[string]interface{}{"data": data})
+						fmt.Print(jsonStr)
+					}
 				} else {
-					fmt.Printf("Stopped context: %s (duration: %s)\n",
+					fmt.Printf("✓ Stopped: %s (%s)\n",
 						context.Name,
 						output.FormatDuration(context.Duration()))
 				}
@@ -103,7 +191,100 @@ func NewStopCmd(jsonOutput *bool) *cobra.Command {
 				return nil
 			}
 
-			// File-based backend (existing code)
+			// File-based backend
+			// Get active context name before stopping
+			state, err := core.GetActiveContext()
+			if err != nil {
+				if *jsonOutput {
+					jsonStr, _ := output.FormatJSONError("stop", 2, err.Error())
+					fmt.Print(jsonStr)
+					return nil
+				}
+				return err
+			}
+
+			if !state.HasActiveContext() {
+				if *jsonOutput {
+					jsonStr, _ := output.FormatJSON("stop", map[string]interface{}{
+						"message": "No active context",
+					})
+					fmt.Print(jsonStr)
+				} else {
+					fmt.Println("No active context")
+				}
+				return nil
+			}
+
+			contextName := state.GetActiveContextName()
+
+			// Check for active children
+			activeChildren, err := core.GetActiveChildren(contextName)
+			if err != nil {
+				activeChildren = []string{} // Continue even if we can't get children
+			}
+
+			var stoppedChildren []string
+			var warningShown bool
+
+			// Handle children based on cascade flag
+			if len(activeChildren) > 0 && !cascade {
+				// Warning mode: show warning but don't stop children
+				if !*jsonOutput {
+					fmt.Printf("⚠️  Warning: %d active child context(s) will remain active:\n", len(activeChildren))
+					for _, child := range activeChildren {
+						childCtx, err := core.LoadContext(child)
+						if err == nil && childCtx.Status == "active" {
+							duration := time.Since(childCtx.StartTime)
+							fmt.Printf("  - %s (active, %s)\n", child, output.FormatDuration(duration))
+						}
+					}
+					fmt.Printf("\nUse --cascade to stop them along with the parent.\n\n")
+				}
+				warningShown = true
+			} else if len(activeChildren) > 0 && cascade {
+				// Cascade mode: stop all descendants (children, grandchildren, etc.)
+				allDescendants, err := core.GetAllDescendants(contextName)
+				if err != nil {
+					if *jsonOutput {
+						jsonStr, _ := output.FormatJSONError("stop", 2, fmt.Sprintf("failed to get descendants: %v", err))
+						fmt.Print(jsonStr)
+						return nil
+					}
+					return fmt.Errorf("failed to get descendants: %w", err)
+				}
+
+				endTime := time.Now()
+
+				// Stop descendants in reverse order (leaves first, then parents)
+				for i := len(allDescendants) - 1; i >= 0; i-- {
+					descendantName := allDescendants[i]
+					descendantCtx, err := core.LoadContext(descendantName)
+					if err != nil || descendantCtx.Status != "active" {
+						continue // Skip if not found or not active
+					}
+
+					// Stop the descendant context
+					descendantCtx.EndTime = &endTime
+					descendantCtx.Status = "stopped"
+
+					if err := core.WriteJSON(core.GetMetaJSONPath(descendantName), descendantCtx); err != nil {
+						// Log error but continue with other children
+						if !*jsonOutput {
+							fmt.Fprintf(cmd.ErrOrStderr(), "Warning: Failed to stop %s: %v\n", descendantName, err)
+						}
+						continue
+					}
+
+					stoppedChildren = append(stoppedChildren, descendantName)
+
+					if !*jsonOutput {
+						duration := endTime.Sub(descendantCtx.StartTime)
+						fmt.Printf("✓ Stopped: %s (%s)\n", descendantName, output.FormatDuration(duration))
+					}
+				}
+			}
+
+			// Stop the parent context
 			context, err := core.StopContext()
 			if err != nil {
 				if *jsonOutput {
@@ -114,7 +295,7 @@ func NewStopCmd(jsonOutput *bool) *cobra.Command {
 				return err
 			}
 
-			// No active context
+			// No active context (shouldn't happen, but handle it)
 			if context == nil {
 				if *jsonOutput {
 					jsonStr, _ := output.FormatJSON("stop", map[string]interface{}{
@@ -136,13 +317,25 @@ func NewStopCmd(jsonOutput *bool) *cobra.Command {
 					EndTime:         *context.EndTime,
 					DurationSeconds: durationSeconds,
 				}
-				jsonStr, err := output.FormatJSON("stop", map[string]interface{}{"data": data})
-				if err != nil {
-					return err
+				if len(stoppedChildren) > 0 {
+					data.StoppedChildren = stoppedChildren
 				}
-				fmt.Print(jsonStr)
+				if warningShown {
+					data.ActiveChildrenCount = len(activeChildren)
+					jsonStr, _ := output.FormatJSON("stop", map[string]interface{}{
+						"data":    data,
+						"warning": fmt.Sprintf("%d active child context(s) will remain active. Use --cascade to stop them.", len(activeChildren)),
+					})
+					fmt.Print(jsonStr)
+				} else {
+					jsonStr, err := output.FormatJSON("stop", map[string]interface{}{"data": data})
+					if err != nil {
+						return err
+					}
+					fmt.Print(jsonStr)
+				}
 			} else {
-				fmt.Printf("Stopped context: %s (duration: %s)\n",
+				fmt.Printf("✓ Stopped: %s (%s)\n",
 					context.Name,
 					output.FormatDuration(context.Duration()))
 
@@ -158,6 +351,8 @@ func NewStopCmd(jsonOutput *bool) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cascade, "cascade", false, "Stop child contexts along with the parent")
+	
 	return cmd
 }
 

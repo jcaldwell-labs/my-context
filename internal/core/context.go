@@ -303,10 +303,18 @@ func StopContext() (*intmodels.Context, error) {
 
 // stopContextInternal stops a context without clearing state (used internally)
 func stopContextInternal(contextName string) error {
-	// Read current context
-	var context intmodels.Context
-	if err := ReadJSON(GetMetaJSONPath(contextName), &context); err != nil {
-		return err
+	// Read current context with metadata to preserve all fields
+	context, _, _, _, err := GetContextWithMetadata(contextName)
+	if err != nil {
+		// Fallback to basic context if metadata read fails
+		var basicContext intmodels.Context
+		if err := ReadJSON(GetMetaJSONPath(contextName), &basicContext); err != nil {
+			return err
+		}
+		now := time.Now()
+		basicContext.EndTime = &now
+		basicContext.Status = "stopped"
+		return WriteJSON(GetMetaJSONPath(contextName), &basicContext)
 	}
 
 	// Update to stopped
@@ -314,8 +322,8 @@ func stopContextInternal(contextName string) error {
 	context.EndTime = &now
 	context.Status = "stopped"
 
-	// Write back
-	return WriteJSON(GetMetaJSONPath(contextName), &context)
+	// Write back (preserves metadata including parent, labels, etc.)
+	return WriteJSON(GetMetaJSONPath(contextName), context)
 }
 
 // AddNote adds a note to the active context
@@ -1146,6 +1154,128 @@ func GetRootContexts() ([]string, error) {
 	}
 
 	return roots, nil
+}
+
+// GetActiveChildren returns all active child contexts of a given parent
+func GetActiveChildren(parentName string) ([]string, error) {
+	children, err := GetChildren(parentName)
+	if err != nil {
+		return nil, err
+	}
+
+	var activeChildren []string
+	for _, childName := range children {
+		ctx, err := LoadContext(childName)
+		if err != nil {
+			continue // Skip contexts that can't be loaded
+		}
+		if ctx.Status == "active" {
+			activeChildren = append(activeChildren, childName)
+		}
+	}
+
+	return activeChildren, nil
+}
+
+// GetActiveChildrenDB returns all active child contexts of a given parent from database
+func GetActiveChildrenDB(backend interface{}, parentName string) ([]string, error) {
+	// Type assert to get the GetContextsByParent method
+	type parentGetter interface {
+		GetContextsByParent(parent string) ([]*pkgmodels.ContextWithMetadata, error)
+	}
+
+	pg, ok := backend.(parentGetter)
+	if !ok {
+		return nil, fmt.Errorf("backend does not support GetContextsByParent")
+	}
+
+	children, err := pg.GetContextsByParent(parentName)
+	if err != nil {
+		return nil, err
+	}
+
+	var activeChildren []string
+	for _, child := range children {
+		if child.Status == "active" {
+			activeChildren = append(activeChildren, child.Name)
+		}
+	}
+
+	return activeChildren, nil
+}
+
+// GetAllDescendants recursively collects all descendants (children, grandchildren, etc.)
+func GetAllDescendants(parentName string) ([]string, error) {
+	return getAllDescendantsHelper(parentName, make(map[string]bool))
+}
+
+func getAllDescendantsHelper(parentName string, visited map[string]bool) ([]string, error) {
+	// Prevent infinite loops
+	if visited[parentName] {
+		return nil, nil
+	}
+	visited[parentName] = true
+
+	children, err := GetChildren(parentName)
+	if err != nil {
+		return nil, err
+	}
+
+	var descendants []string
+	descendants = append(descendants, children...)
+
+	// Recursively get descendants of each child
+	for _, child := range children {
+		childDescendants, err := getAllDescendantsHelper(child, visited)
+		if err != nil {
+			continue // Skip children that have errors
+		}
+		descendants = append(descendants, childDescendants...)
+	}
+
+	return descendants, nil
+}
+
+// GetAllDescendantsDB recursively collects all descendants from database
+func GetAllDescendantsDB(backend interface{}, parentName string) ([]string, error) {
+	return getAllDescendantsDBHelper(backend, parentName, make(map[string]bool))
+}
+
+func getAllDescendantsDBHelper(backend interface{}, parentName string, visited map[string]bool) ([]string, error) {
+	// Prevent infinite loops
+	if visited[parentName] {
+		return nil, nil
+	}
+	visited[parentName] = true
+
+	// Type assert to get the GetContextsByParent method
+	type parentGetter interface {
+		GetContextsByParent(parent string) ([]*pkgmodels.ContextWithMetadata, error)
+	}
+
+	pg, ok := backend.(parentGetter)
+	if !ok {
+		return nil, fmt.Errorf("backend does not support GetContextsByParent")
+	}
+
+	children, err := pg.GetContextsByParent(parentName)
+	if err != nil {
+		return nil, err
+	}
+
+	var descendants []string
+	for _, child := range children {
+		descendants = append(descendants, child.Name)
+		
+		// Recursively get descendants of each child
+		childDescendants, err := getAllDescendantsDBHelper(backend, child.Name, visited)
+		if err != nil {
+			continue // Skip children that have errors
+		}
+		descendants = append(descendants, childDescendants...)
+	}
+
+	return descendants, nil
 }
 
 // ContextCounts holds count statistics for a context
