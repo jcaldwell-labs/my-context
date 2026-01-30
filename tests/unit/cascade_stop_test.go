@@ -27,19 +27,37 @@ func TestGetActiveChildren(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Create child contexts with parent link
+	// Note: Creating a new context stops the previous one, so we need to
+	// manually mark them as active after creation
 	child1 := "child-1"
 	_, _, err = core.CreateContextWithMetadata(child1, "", parentName, nil)
 	assert.NoError(t, err)
-	
+
 	child2 := "child-2"
 	_, _, err = core.CreateContextWithMetadata(child2, "", parentName, nil)
 	assert.NoError(t, err)
 
-	// Create child context and stop it
+	// Create child3 and stop it (this one stays stopped)
 	child3 := "child-3"
 	_, _, err = core.CreateContextWithMetadata(child3, "", parentName, nil)
 	assert.NoError(t, err)
 	_, err = core.StopContext()
+	assert.NoError(t, err)
+
+	// Manually set child1 and child2 to active (simulating multiple active children)
+	// This tests the GetActiveChildren logic, not the context lifecycle
+	child1Ctx, _, _, _, err := core.GetContextWithMetadata(child1)
+	assert.NoError(t, err)
+	child1Ctx.Status = "active"
+	child1Ctx.EndTime = nil
+	err = core.WriteJSON(core.GetMetaJSONPath(child1), child1Ctx)
+	assert.NoError(t, err)
+
+	child2Ctx, _, _, _, err := core.GetContextWithMetadata(child2)
+	assert.NoError(t, err)
+	child2Ctx.Status = "active"
+	child2Ctx.EndTime = nil
+	err = core.WriteJSON(core.GetMetaJSONPath(child2), child2Ctx)
 	assert.NoError(t, err)
 
 	// Get active children

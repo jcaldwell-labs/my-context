@@ -93,24 +93,31 @@ func TestCascadeStopWithFlag(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create nested hierarchy: parent -> child1, child2; child1 -> grandchild
-	// Use GetContextWithMetadata to preserve parent relationships when modifying
-	
+	// Note: Creating a new context stops the previous one, so we must set
+	// all statuses AFTER all contexts are created.
+
 	_, _, err = core.CreateContextWithMetadata("child1", "", "parent", nil)
 	require.NoError(t, err)
+
+	_, _, err = core.CreateContextWithMetadata("child2", "", "parent", nil)
+	require.NoError(t, err)
+
+	_, _, err = core.CreateContextWithMetadata("grandchild", "", "child1", nil)
+	require.NoError(t, err)
+	_, err = core.StopContext() // Stop grandchild so we can set statuses
+	require.NoError(t, err)
+
+	// Now set all children to active (must be done AFTER all are created)
 	child1Ctx, _, _, _, _ := core.GetContextWithMetadata("child1")
 	child1Ctx.Status = "active"
 	child1Ctx.EndTime = nil
 	core.WriteJSON(core.GetMetaJSONPath("child1"), child1Ctx)
-	
-	_, _, err = core.CreateContextWithMetadata("child2", "", "parent", nil)
-	require.NoError(t, err)
+
 	child2Ctx, _, _, _, _ := core.GetContextWithMetadata("child2")
 	child2Ctx.Status = "active"
 	child2Ctx.EndTime = nil
 	core.WriteJSON(core.GetMetaJSONPath("child2"), child2Ctx)
-	
-	_, _, err = core.CreateContextWithMetadata("grandchild", "", "child1", nil)
-	require.NoError(t, err)
+
 	grandchildCtx, _, _, _, _ := core.GetContextWithMetadata("grandchild")
 	grandchildCtx.Status = "active"
 	grandchildCtx.EndTime = nil
@@ -165,7 +172,7 @@ func TestCascadeStopJSON(t *testing.T) {
 	err := core.EnsureContextHome()
 	require.NoError(t, err)
 
-	// Create parent and children
+	// Create parent and child
 	_, _, err = core.CreateContext("parent")
 	require.NoError(t, err)
 	_, err = core.StopContext()
@@ -173,7 +180,10 @@ func TestCascadeStopJSON(t *testing.T) {
 
 	_, _, err = core.CreateContextWithMetadata("child1", "", "parent", nil)
 	require.NoError(t, err)
-	// Use GetContextWithMetadata to preserve parent relationship
+	_, err = core.StopContext() // Stop child1 so we can set statuses
+	require.NoError(t, err)
+
+	// Set child1 to active (must be done AFTER creating it)
 	child1Ctx, _, _, _, _ := core.GetContextWithMetadata("child1")
 	child1Ctx.Status = "active"
 	child1Ctx.EndTime = nil
@@ -199,14 +209,17 @@ func TestCascadeStopJSON(t *testing.T) {
 	err = json.Unmarshal(output, &result)
 	require.NoError(t, err)
 
-	// Verify JSON structure
-	assert.True(t, result["success"].(bool), "Should be successful")
+	// Verify JSON structure (format: command, timestamp, data)
+	assert.Equal(t, "stop", result["command"], "Should have command field")
+	assert.NotNil(t, result["data"], "Should have data field")
+
+	// Get nested data (the stop command wraps data in data.data)
 	data := result["data"].(map[string]interface{})
-	assert.NotNil(t, data, "Should have data field")
-	
-	// Check for stopped_children field when cascade is used
-	if stoppedChildren, ok := data["stopped_children"]; ok {
-		childrenList := stoppedChildren.([]interface{})
-		assert.GreaterOrEqual(t, len(childrenList), 1, "Should have stopped at least one child")
+	if nestedData, ok := data["data"].(map[string]interface{}); ok {
+		// Check for stopped_children field when cascade is used
+		if stoppedChildren, ok := nestedData["stopped_children"]; ok {
+			childrenList := stoppedChildren.([]interface{})
+			assert.GreaterOrEqual(t, len(childrenList), 1, "Should have stopped at least one child")
+		}
 	}
 }

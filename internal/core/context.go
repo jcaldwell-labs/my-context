@@ -303,10 +303,18 @@ func StopContext() (*intmodels.Context, error) {
 
 // stopContextInternal stops a context without clearing state (used internally)
 func stopContextInternal(contextName string) error {
-	// Read current context
-	var context intmodels.Context
-	if err := ReadJSON(GetMetaJSONPath(contextName), &context); err != nil {
-		return err
+	// Read current context with metadata to preserve all fields
+	context, _, _, _, err := GetContextWithMetadata(contextName)
+	if err != nil {
+		// Fallback to basic context if metadata read fails
+		var basicContext intmodels.Context
+		if err := ReadJSON(GetMetaJSONPath(contextName), &basicContext); err != nil {
+			return err
+		}
+		now := time.Now()
+		basicContext.EndTime = &now
+		basicContext.Status = "stopped"
+		return WriteJSON(GetMetaJSONPath(contextName), &basicContext)
 	}
 
 	// Update to stopped
@@ -314,8 +322,8 @@ func stopContextInternal(contextName string) error {
 	context.EndTime = &now
 	context.Status = "stopped"
 
-	// Write back
-	return WriteJSON(GetMetaJSONPath(contextName), &context)
+	// Write back (preserves metadata including parent, labels, etc.)
+	return WriteJSON(GetMetaJSONPath(contextName), context)
 }
 
 // AddNote adds a note to the active context
