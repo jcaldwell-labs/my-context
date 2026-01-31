@@ -11,12 +11,26 @@ import (
 )
 
 // buildShowJSONOutput creates JSON output for the show command with stale information
+// Only active contexts report staleness; stopped contexts always report is_stale=false
 func buildShowJSONOutput(ctx interface{}, internalCtx *models.Context, notes []*models.Note, files []*models.FileAssociation, touches []*models.TouchEvent) (string, error) {
-	lastActivity := core.GetLastActivityTime(internalCtx, notes, files, touches)
-	thresholds := core.GetStaleThresholds()
-	staleLevel := core.GetStaleLevel(lastActivity, thresholds)
-	isStale := core.IsStale(lastActivity, thresholds)
-	inactiveSince := time.Since(lastActivity).Hours()
+	var lastActivityPtr *time.Time
+	var inactiveSince float64
+	var isStale bool
+	var staleLevelStr string
+
+	if internalCtx.Status == "active" {
+		lastActivity := core.GetLastActivityTime(internalCtx, notes, files, touches)
+		thresholds := core.GetStaleThresholds()
+		staleLevel := core.GetStaleLevel(lastActivity, thresholds)
+		isStale = core.IsStale(lastActivity, thresholds)
+		inactiveSince = time.Since(lastActivity).Hours()
+		lastActivityPtr = &lastActivity
+		staleLevelStr = core.GetStaleLevelString(staleLevel)
+	} else {
+		// Stopped contexts are never stale
+		isStale = false
+		staleLevelStr = "none"
+	}
 
 	data := output.ContextData{
 		Context:        ctx,
@@ -24,8 +38,8 @@ func buildShowJSONOutput(ctx interface{}, internalCtx *models.Context, notes []*
 		Files:          files,
 		Touches:        touches,
 		IsStale:        isStale,
-		StaleLevel:     core.GetStaleLevelString(staleLevel),
-		LastActivity:   &lastActivity,
+		StaleLevel:     staleLevelStr,
+		LastActivity:   lastActivityPtr,
 		InactiveSinceH: inactiveSince,
 	}
 	return output.FormatJSON("show", map[string]interface{}{"data": data})

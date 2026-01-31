@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/jefferycaldwell/my-context-copilot/internal/core"
 	"github.com/jefferycaldwell/my-context-copilot/internal/filters"
@@ -126,18 +125,13 @@ func filterDBContextsByStale(dbContexts []*pkgmodels.ContextWithMetadata, backen
 			})
 		}
 
-		// Use LastTouchAt if available, otherwise calculate from activities
-		var lastActivity time.Time
+		// Compute lastActivity as max across notes, files, and optional touch timestamp
+		// LastTouchAt is treated as another candidate, not an override
+		var touches []*models.TouchEvent
 		if ctx.LastTouchAt != nil {
-			lastActivity = *ctx.LastTouchAt
-		} else {
-			// Create synthetic touches for calculation
-			var touches []*models.TouchEvent
-			if ctx.TouchCount > 0 && ctx.LastTouchAt != nil {
-				touches = append(touches, &models.TouchEvent{Timestamp: *ctx.LastTouchAt})
-			}
-			lastActivity = core.GetLastActivityTime(internalCtx, internalNotes, internalFiles, touches)
+			touches = append(touches, &models.TouchEvent{Timestamp: *ctx.LastTouchAt})
 		}
+		lastActivity := core.GetLastActivityTime(internalCtx, internalNotes, internalFiles, touches)
 
 		if core.IsStale(lastActivity, thresholds) {
 			filtered = append(filtered, ctx)
@@ -191,17 +185,12 @@ func buildContextSummariesFromDB(dbContexts []*pkgmodels.ContextWithMetadata, ba
 				})
 			}
 
-			// Use LastTouchAt if available
-			var lastActivity time.Time
+			// Compute lastActivity as max across notes, files, and optional touch timestamp
+			var touches []*models.TouchEvent
 			if ctx.LastTouchAt != nil {
-				lastActivity = *ctx.LastTouchAt
-			} else {
-				var touches []*models.TouchEvent
-				if ctx.TouchCount > 0 && ctx.LastTouchAt != nil {
-					touches = append(touches, &models.TouchEvent{Timestamp: *ctx.LastTouchAt})
-				}
-				lastActivity = core.GetLastActivityTime(internalCtx, internalNotes, internalFiles, touches)
+				touches = append(touches, &models.TouchEvent{Timestamp: *ctx.LastTouchAt})
 			}
+			lastActivity := core.GetLastActivityTime(internalCtx, internalNotes, internalFiles, touches)
 
 			staleLevel := core.GetStaleLevel(lastActivity, thresholds)
 			summary.IsStale = core.IsStale(lastActivity, thresholds)

@@ -1,7 +1,6 @@
 package unit
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -289,10 +288,10 @@ func TestStaleDetection_WithCustomThresholds(t *testing.T) {
 }
 
 func TestGetStaleThresholds_DefaultsWhenNoEnvVars(t *testing.T) {
-	// Explicitly unset environment variables to ensure clean test
-	os.Unsetenv("MC_STALE_WARN_HOURS")
-	os.Unsetenv("MC_STALE_HOURS")
-	os.Unsetenv("MC_STALE_CRITICAL_HOURS")
+	// Use t.Setenv with empty strings to clear env vars; auto-restores after test
+	t.Setenv("MC_STALE_WARN_HOURS", "")
+	t.Setenv("MC_STALE_HOURS", "")
+	t.Setenv("MC_STALE_CRITICAL_HOURS", "")
 
 	thresholds := core.GetStaleThresholds()
 

@@ -88,8 +88,8 @@ type ContextSummary struct {
 	NoteCount       int        `json:"note_count"`
 	FileCount       int        `json:"file_count"`
 	TouchCount      int        `json:"touch_count"`
-	IsStale         bool       `json:"is_stale,omitempty"`
-	StaleLevel      string     `json:"stale_level,omitempty"`
+	IsStale         bool       `json:"is_stale"`
+	StaleLevel      string     `json:"stale_level"`
 }
 
 // HistoryData represents history command output data
