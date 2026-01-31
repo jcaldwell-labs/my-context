@@ -8,11 +8,39 @@ import (
 	"github.com/jefferycaldwell/my-context-copilot/internal/models"
 	"github.com/jefferycaldwell/my-context-copilot/internal/output"
 	pkgmodels "github.com/jefferycaldwell/my-context-copilot/pkg/models"
+	"github.com/jefferycaldwell/my-context-copilot/pkg/storage"
 	"github.com/spf13/cobra"
 )
 
+// filterStaleContexts filters to show only stale active contexts
+func filterStaleContexts(contexts []*models.Context) []*models.Context {
+	thresholds := core.GetStaleThresholds()
+	var filtered []*models.Context
+
+	for _, ctx := range contexts {
+		// Only check active contexts
+		if ctx.Status != "active" {
+			continue
+		}
+
+		// Get last activity time - need to fetch full context data
+		_, notes, files, touches, err := core.GetContextWithMetadata(ctx.Name)
+		if err != nil {
+			continue
+		}
+
+		lastActivity := core.GetLastActivityTime(ctx, notes, files, touches)
+		if core.IsStale(lastActivity, thresholds) {
+			filtered = append(filtered, ctx)
+		}
+	}
+
+	return filtered
+}
+
 // buildContextSummaries builds context summaries for JSON output (file-based mode)
 func buildContextSummaries(contexts []*models.Context) []*output.ContextSummary {
+	thresholds := core.GetStaleThresholds()
 	summaries := make([]*output.ContextSummary, 0, len(contexts))
 	for i, ctx := range contexts {
 		notesLines, _ := core.ReadLog(core.GetNotesLogPath(ctx.Name))
@@ -30,6 +58,18 @@ func buildContextSummaries(contexts []*models.Context) []*output.ContextSummary 
 			FileCount:       len(filesLines),
 			TouchCount:      len(touchesLines),
 		}
+
+		// Add stale information for active contexts
+		if ctx.Status == "active" {
+			_, notes, files, touches, err := core.GetContextWithMetadata(ctx.Name)
+			if err == nil {
+				lastActivity := core.GetLastActivityTime(ctx, notes, files, touches)
+				staleLevel := core.GetStaleLevel(lastActivity, thresholds)
+				summary.IsStale = core.IsStale(lastActivity, thresholds)
+				summary.StaleLevel = core.GetStaleLevelString(staleLevel)
+			}
+		}
+
 		summaries = append(summaries, summary)
 	}
 	return summaries
@@ -46,8 +86,64 @@ func convertDBContextToInternal(dbCtx *pkgmodels.ContextWithMetadata) *models.Co
 	}
 }
 
+// filterDBContextsByStale filters to show only stale active contexts
+func filterDBContextsByStale(dbContexts []*pkgmodels.ContextWithMetadata, backend storage.Backend) []*pkgmodels.ContextWithMetadata {
+	thresholds := core.GetStaleThresholds()
+	var filtered []*pkgmodels.ContextWithMetadata
+
+	for _, ctx := range dbContexts {
+		// Only check active contexts
+		if ctx.Status != "active" {
+			continue
+		}
+
+		// Get last activity from database
+		notes, _ := backend.GetNotes(ctx.Name)
+		files, _ := backend.GetFiles(ctx.Name)
+
+		// Convert to internal models
+		internalCtx := &models.Context{
+			Name:      ctx.Name,
+			StartTime: ctx.StartTime,
+			EndTime:   ctx.EndTime,
+			Status:    ctx.Status,
+		}
+
+		var internalNotes []*models.Note
+		for _, n := range notes {
+			internalNotes = append(internalNotes, &models.Note{
+				Timestamp:   n.Timestamp,
+				TextContent: n.Content,
+			})
+		}
+
+		var internalFiles []*models.FileAssociation
+		for _, f := range files {
+			internalFiles = append(internalFiles, &models.FileAssociation{
+				Timestamp: f.Timestamp,
+				FilePath:  f.Path,
+			})
+		}
+
+		// Compute lastActivity as max across notes, files, and optional touch timestamp
+		// LastTouchAt is treated as another candidate, not an override
+		var touches []*models.TouchEvent
+		if ctx.LastTouchAt != nil {
+			touches = append(touches, &models.TouchEvent{Timestamp: *ctx.LastTouchAt})
+		}
+		lastActivity := core.GetLastActivityTime(internalCtx, internalNotes, internalFiles, touches)
+
+		if core.IsStale(lastActivity, thresholds) {
+			filtered = append(filtered, ctx)
+		}
+	}
+
+	return filtered
+}
+
 // buildContextSummariesFromDB builds context summaries from database models
-func buildContextSummariesFromDB(dbContexts []*pkgmodels.ContextWithMetadata) []*output.ContextSummary {
+func buildContextSummariesFromDB(dbContexts []*pkgmodels.ContextWithMetadata, backend storage.Backend) []*output.ContextSummary {
+	thresholds := core.GetStaleThresholds()
 	summaries := make([]*output.ContextSummary, 0, len(dbContexts))
 	for i, ctx := range dbContexts {
 		summary := &output.ContextSummary{
@@ -59,13 +155,55 @@ func buildContextSummariesFromDB(dbContexts []*pkgmodels.ContextWithMetadata) []
 			DurationSeconds: int(ctx.Duration().Seconds()),
 			TouchCount:      ctx.TouchCount,
 		}
+
+		// Add stale information for active contexts
+		if ctx.Status == "active" {
+			notes, _ := backend.GetNotes(ctx.Name)
+			files, _ := backend.GetFiles(ctx.Name)
+
+			// Convert to internal models
+			internalCtx := &models.Context{
+				Name:      ctx.Name,
+				StartTime: ctx.StartTime,
+				EndTime:   ctx.EndTime,
+				Status:    ctx.Status,
+			}
+
+			var internalNotes []*models.Note
+			for _, n := range notes {
+				internalNotes = append(internalNotes, &models.Note{
+					Timestamp:   n.Timestamp,
+					TextContent: n.Content,
+				})
+			}
+
+			var internalFiles []*models.FileAssociation
+			for _, f := range files {
+				internalFiles = append(internalFiles, &models.FileAssociation{
+					Timestamp: f.Timestamp,
+					FilePath:  f.Path,
+				})
+			}
+
+			// Compute lastActivity as max across notes, files, and optional touch timestamp
+			var touches []*models.TouchEvent
+			if ctx.LastTouchAt != nil {
+				touches = append(touches, &models.TouchEvent{Timestamp: *ctx.LastTouchAt})
+			}
+			lastActivity := core.GetLastActivityTime(internalCtx, internalNotes, internalFiles, touches)
+
+			staleLevel := core.GetStaleLevel(lastActivity, thresholds)
+			summary.IsStale = core.IsStale(lastActivity, thresholds)
+			summary.StaleLevel = core.GetStaleLevelString(staleLevel)
+		}
+
 		summaries = append(summaries, summary)
 	}
 	return summaries
 }
 
 // listFromDatabase handles listing contexts from database backend
-func listFromDatabase(jsonOutput *bool, projectFilter, searchTerm, tagFilter string, limitCount int, showAll, showArchived, activeOnly bool) error {
+func listFromDatabase(jsonOutput *bool, projectFilter, searchTerm, tagFilter string, limitCount int, showAll, showArchived, activeOnly, showStale bool) error {
 	backend, err := core.GetBackend()
 	if err != nil {
 		if *jsonOutput {
@@ -108,6 +246,11 @@ func listFromDatabase(jsonOutput *bool, projectFilter, searchTerm, tagFilter str
 	}
 	filteredDBContexts := filter.GetDBContexts()
 
+	// Apply stale filter if requested
+	if showStale {
+		filteredDBContexts = filterDBContextsByStale(filteredDBContexts, backend)
+	}
+
 	// Apply limit (default 10 unless --all)
 	totalCount := len(filteredDBContexts)
 	if !showAll && limitCount > 0 && len(filteredDBContexts) > limitCount {
@@ -122,7 +265,7 @@ func listFromDatabase(jsonOutput *bool, projectFilter, searchTerm, tagFilter str
 
 	// Output
 	if *jsonOutput {
-		summaries := buildContextSummariesFromDB(filteredDBContexts)
+		summaries := buildContextSummariesFromDB(filteredDBContexts, backend)
 		data := output.ListData{Contexts: summaries}
 		jsonStr, err := output.FormatJSON("list", map[string]interface{}{"data": data})
 		if err != nil {
@@ -150,6 +293,7 @@ func NewListCmd(jsonOutput *bool) *cobra.Command {
 		showAll       bool
 		showArchived  bool
 		activeOnly    bool
+		showStale     bool
 	)
 
 	cmd := &cobra.Command{
@@ -163,7 +307,7 @@ Supports filtering by project, search term, and archive status.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Check if using database backend
 			if core.IsUsingDatabase() {
-				return listFromDatabase(jsonOutput, projectFilter, searchTerm, tagFilter, limitCount, showAll, showArchived, activeOnly)
+				return listFromDatabase(jsonOutput, projectFilter, searchTerm, tagFilter, limitCount, showAll, showArchived, activeOnly, showStale)
 			}
 
 			// File-based backend
@@ -207,6 +351,11 @@ Supports filtering by project, search term, and archive status.`,
 			}
 			contexts := filter.GetFileContexts()
 
+			// Apply stale filter if requested
+			if showStale {
+				contexts = filterStaleContexts(contexts)
+			}
+
 			// Apply limit (default 10 unless --all)
 			totalCount := len(contexts)
 			if !showAll && limitCount > 0 && len(contexts) > limitCount {
@@ -243,9 +392,10 @@ Supports filtering by project, search term, and archive status.`,
 	cmd.Flags().BoolVar(&showAll, "all", false, "Show all contexts (no limit)")
 	cmd.Flags().BoolVar(&showArchived, "archived", false, "Show only archived contexts")
 	cmd.Flags().BoolVar(&activeOnly, "active-only", false, "Show only the active context")
+	cmd.Flags().BoolVar(&showStale, "stale", false, "Show only stale contexts (active with no recent activity)")
 
 	// Mark mutually exclusive flags
-	cmd.MarkFlagsMutuallyExclusive("archived", "active-only")
+	cmd.MarkFlagsMutuallyExclusive("archived", "active-only", "stale")
 
 	return cmd
 }

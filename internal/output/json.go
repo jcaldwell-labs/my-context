@@ -24,10 +24,14 @@ type JSONError struct {
 
 // ContextData represents context data for JSON output
 type ContextData struct {
-	Context interface{}               `json:"context"` // Can be *models.Context or *pkgmodels.ContextWithMetadata
-	Notes   []*models.Note            `json:"notes,omitempty"`
-	Files   []*models.FileAssociation `json:"files,omitempty"`
-	Touches []*models.TouchEvent      `json:"touches,omitempty"`
+	Context        interface{}               `json:"context"` // Can be *models.Context or *pkgmodels.ContextWithMetadata
+	Notes          []*models.Note            `json:"notes,omitempty"`
+	Files          []*models.FileAssociation `json:"files,omitempty"`
+	Touches        []*models.TouchEvent      `json:"touches,omitempty"`
+	IsStale        bool                      `json:"is_stale"`
+	StaleLevel     string                    `json:"stale_level"`
+	LastActivity   *time.Time                `json:"last_activity,omitempty"`
+	InactiveSinceH float64                   `json:"inactive_since_hours,omitempty"`
 }
 
 // StartData represents start command output data
@@ -86,6 +90,8 @@ type ContextSummary struct {
 	NoteCount       int        `json:"note_count"`
 	FileCount       int        `json:"file_count"`
 	TouchCount      int        `json:"touch_count"`
+	IsStale         bool       `json:"is_stale"`
+	StaleLevel      string     `json:"stale_level"`
 }
 
 // HistoryData represents history command output data
