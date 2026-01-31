@@ -10,6 +10,44 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// buildShowJSONOutput creates JSON output for the show command with stale information
+func buildShowJSONOutput(ctx interface{}, internalCtx *models.Context, notes []*models.Note, files []*models.FileAssociation, touches []*models.TouchEvent) (string, error) {
+	lastActivity := core.GetLastActivityTime(internalCtx, notes, files, touches)
+	thresholds := core.GetStaleThresholds()
+	staleLevel := core.GetStaleLevel(lastActivity, thresholds)
+	isStale := core.IsStale(lastActivity, thresholds)
+	inactiveSince := time.Since(lastActivity).Hours()
+
+	data := output.ContextData{
+		Context:        ctx,
+		Notes:          notes,
+		Files:          files,
+		Touches:        touches,
+		IsStale:        isStale,
+		StaleLevel:     core.GetStaleLevelString(staleLevel),
+		LastActivity:   &lastActivity,
+		InactiveSinceH: inactiveSince,
+	}
+	return output.FormatJSON("show", map[string]interface{}{"data": data})
+}
+
+// buildStaleInfo calculates stale information for active contexts
+func buildStaleInfo(internalCtx *models.Context, notes []*models.Note, files []*models.FileAssociation, touches []*models.TouchEvent) *output.StaleInfo {
+	if internalCtx.Status != "active" {
+		return nil
+	}
+	lastActivity := core.GetLastActivityTime(internalCtx, notes, files, touches)
+	thresholds := core.GetStaleThresholds()
+	staleLevel := core.GetStaleLevel(lastActivity, thresholds)
+	return &output.StaleInfo{
+		IsActive:          true,
+		LastActivity:      lastActivity,
+		StaleLevel:        core.GetStaleLevelString(staleLevel),
+		TimeSinceActivity: time.Since(lastActivity),
+		ContextStartTime:  internalCtx.StartTime,
+	}
+}
+
 func NewShowCmd(jsonOutput *bool) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "show [context-name]",
@@ -106,24 +144,7 @@ func NewShowCmd(jsonOutput *bool) *cobra.Command {
 
 				// Output
 				if *jsonOutput {
-					// Calculate stale information
-					lastActivity := core.GetLastActivityTime(context, notes, files, touches)
-					thresholds := core.GetStaleThresholds()
-					staleLevel := core.GetStaleLevel(lastActivity, thresholds)
-					isStale := core.IsStale(lastActivity, thresholds)
-					inactiveSince := time.Since(lastActivity).Hours()
-
-					data := output.ContextData{
-						Context:        dbCtx,
-						Notes:          notes,
-						Files:          files,
-						Touches:        touches,
-						IsStale:        isStale,
-						StaleLevel:     core.GetStaleLevelString(staleLevel),
-						LastActivity:   &lastActivity,
-						InactiveSinceH: inactiveSince,
-					}
-					jsonStr, err := output.FormatJSON("show", map[string]interface{}{"data": data})
+					jsonStr, err := buildShowJSONOutput(dbCtx, context, notes, files, touches)
 					if err != nil {
 						return err
 					}
@@ -145,20 +166,7 @@ func NewShowCmd(jsonOutput *bool) *cobra.Command {
 					output.PrintContextHomeHeader(homeDisplay, contextCount)
 
 					// Calculate stale info for display
-					var staleInfo *output.StaleInfo
-					if context.Status == "active" {
-						lastActivity := core.GetLastActivityTime(context, notes, files, touches)
-						thresholds := core.GetStaleThresholds()
-						staleLevel := core.GetStaleLevel(lastActivity, thresholds)
-						staleInfo = &output.StaleInfo{
-							IsActive:          true,
-							LastActivity:      lastActivity,
-							StaleLevel:        core.GetStaleLevelString(staleLevel),
-							TimeSinceActivity: time.Since(lastActivity),
-							ContextStartTime:  context.StartTime,
-						}
-					}
-
+					staleInfo := buildStaleInfo(context, notes, files, touches)
 					fmt.Print(output.FormatContextWithStaleInfo(context, notes, files, touches, staleInfo))
 				}
 
@@ -217,24 +225,7 @@ func NewShowCmd(jsonOutput *bool) *cobra.Command {
 
 			// Output
 			if *jsonOutput {
-				// Calculate stale information
-				lastActivity := core.GetLastActivityTime(internalCtx, notes, files, touches)
-				thresholds := core.GetStaleThresholds()
-				staleLevel := core.GetStaleLevel(lastActivity, thresholds)
-				isStale := core.IsStale(lastActivity, thresholds)
-				inactiveSince := time.Since(lastActivity).Hours()
-
-				data := output.ContextData{
-					Context:        context,
-					Notes:          notes,
-					Files:          files,
-					Touches:        touches,
-					IsStale:        isStale,
-					StaleLevel:     core.GetStaleLevelString(staleLevel),
-					LastActivity:   &lastActivity,
-					InactiveSinceH: inactiveSince,
-				}
-				jsonStr, err := output.FormatJSON("show", map[string]interface{}{"data": data})
+				jsonStr, err := buildShowJSONOutput(context, internalCtx, notes, files, touches)
 				if err != nil {
 					return err
 				}
@@ -244,20 +235,7 @@ func NewShowCmd(jsonOutput *bool) *cobra.Command {
 				output.PrintContextHomeHeader(core.GetContextHomeDisplay(), core.GetContextCount())
 
 				// Calculate stale info for display
-				var staleInfo *output.StaleInfo
-				if context.Status == "active" {
-					lastActivity := core.GetLastActivityTime(internalCtx, notes, files, touches)
-					thresholds := core.GetStaleThresholds()
-					staleLevel := core.GetStaleLevel(lastActivity, thresholds)
-					staleInfo = &output.StaleInfo{
-						IsActive:          true,
-						LastActivity:      lastActivity,
-						StaleLevel:        core.GetStaleLevelString(staleLevel),
-						TimeSinceActivity: time.Since(lastActivity),
-						ContextStartTime:  context.StartTime,
-					}
-				}
-
+				staleInfo := buildStaleInfo(internalCtx, notes, files, touches)
 				fmt.Print(output.FormatContextWithStaleInfo(context, notes, files, touches, staleInfo))
 			}
 
