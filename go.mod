@@ -1,8 +1,6 @@
 module github.com/jefferycaldwell/my-context-copilot
 
-go 1.24.0
-
-toolchain go1.24.7
+go 1.25.0
 
 require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
@@ -11,7 +9,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	golang.design/x/clipboard v0.7.1
-	golang.org/x/term v0.39.0
+	golang.org/x/term v0.42.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -27,6 +25,6 @@ require (
 	golang.org/x/image v0.28.0 // indirect
 	golang.org/x/mobile v0.0.0-20250606033058-a2a15c67f36f // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )
